@@ -258,11 +258,12 @@ export const forgotPassword = asyncHandler(async (req, res) => {
 
     const baseUrl = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
     const link = `${baseUrl}/reset-password/${token}`;
-    await sendMail({
+    // Fire email asynchronously with safety logging so slow SMTP never blocks or aborts the HTTP response
+    sendMail({
       to: user.email,
       subject: 'Reset your Track Here password',
       text: `Open this link within 30 minutes:\n${link}\n\nIf you did not ask for this, ignore this email.`,
-    }).catch((e) => console.error('mail_failed', e.message));
+    }).catch((e) => console.error('mail_failed:', e.message));
   }
 
   res.json({

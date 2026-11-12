@@ -9,6 +9,9 @@ const transport = process.env.MAIL_HOST
         user: process.env.MAIL_USER,
         pass: process.env.MAIL_PASS,
       },
+      connectionTimeout: 7000,
+      greetingTimeout: 7000,
+      socketTimeout: 10000,
     })
   : null;
 
@@ -17,6 +20,16 @@ export async function sendMail(m) {
     console.log('[mail fallback - not configured]', m.to, m.text);
     return; // safe fallback when SMTP is not configured yet
   }
-  return transport.sendMail({ from: process.env.MAIL_FROM || 'Track Here <no-reply@yourdomain.com>', ...m });
+  try {
+    const info = await transport.sendMail({
+      from: process.env.MAIL_FROM || 'Track Here <onboarding@resend.dev>',
+      ...m,
+    });
+    console.log('[mail sent successfully]:', info.messageId, 'to:', m.to);
+    return info;
+  } catch (err) {
+    console.error('❌ [mail send error]:', err.message);
+    throw err;
+  }
 }
 
