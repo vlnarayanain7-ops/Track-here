@@ -9,11 +9,11 @@ test('sign up, task, timer, streak smoke flow', async ({ page }) => {
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill('Passw0rd!x');
   await page.getByLabel('18 or older').check();
-  await page.getByLabel(/I agree to the Terms of Service and Privacy Policy/i).check();
+  await page.getByLabel(/I agree/i).check();
   await page.getByRole('button', { name: 'Create account' }).click();
 
   // 2. Expect onboarding or dashboard view
-  await expect(page.getByText(/Get set up|Dashboard|Welcome to Track Here/i)).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Get set up|Dashboard|Welcome/i }).first()).toBeVisible();
 
   // 3. Navigate to Tasks and create task
   await page.goto('/tasks');
@@ -44,6 +44,6 @@ test('sign up, task, timer, streak smoke flow', async ({ page }) => {
 
   // 5. Check Streak card on Streaks page
   await page.goto('/streaks');
-  await expect(page.getByText(/streak/i)).toBeVisible();
+  await expect(page.getByText(/streak/i).first()).toBeVisible();
 });
 
