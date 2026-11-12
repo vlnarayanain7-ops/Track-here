@@ -2,7 +2,8 @@ import { io } from 'socket.io-client';
 
 let socket = null;
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (
+const apiBase = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : '';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || apiBase || (
   typeof window !== 'undefined' && window.location.port === '5173'
     ? 'http://localhost:5000'
     : undefined
