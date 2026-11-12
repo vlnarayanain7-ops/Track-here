@@ -11,10 +11,18 @@ import { useTasks } from '@/hooks/useTasks';
 
 export default function SessionForm({ isOpen, onClose, sessionToEdit = null }) {
   const { user } = useAuth();
-  const userSubjects =
+  const rawSubjects =
     user?.subjects && Array.isArray(user.subjects)
-      ? user.subjects.map((s) => s.name)
+      ? user.subjects.map((s) => s.name || s)
       : [];
+
+  const userSubjects = Array.from(
+    new Set([
+      ...rawSubjects,
+      sessionToEdit?.category,
+      'General Study',
+    ].filter(Boolean))
+  );
 
   const createMutation = useCreateStudySession();
   const updateMutation = useUpdateStudySession();
@@ -38,7 +46,7 @@ export default function SessionForm({ isOpen, onClose, sessionToEdit = null }) {
 
   useEffect(() => {
     if (sessionToEdit) {
-      setCategory(sessionToEdit.category || userSubjects[0] || 'General');
+      setCategory(sessionToEdit.category || userSubjects[0] || 'General Study');
       setActivityType(sessionToEdit.activityType || 'Problem Solving');
       setTopic(sessionToEdit.topic || '');
       setSubtopic(sessionToEdit.subtopic || '');
@@ -53,7 +61,7 @@ export default function SessionForm({ isOpen, onClose, sessionToEdit = null }) {
       setNextAction(sessionToEdit.nextAction || '');
       setLinkedTask(sessionToEdit.linkedTask?._id || sessionToEdit.linkedTask || '');
     } else {
-      setCategory(userSubjects[0] || 'General');
+      setCategory(userSubjects[0] || 'General Study');
       setActivityType('Problem Solving');
       setTopic('');
       setSubtopic('');

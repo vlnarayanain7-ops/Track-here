@@ -25,10 +25,12 @@ export default function SessionList({
   onNewSession,
 }) {
   const { user } = useAuth();
-  const userSubjects =
-    user?.subjects && Array.isArray(user.subjects)
-      ? user.subjects.map((s) => s.name)
-      : [];
+  const userSubjects = Array.from(
+    new Set([
+      ...(user?.subjects && Array.isArray(user.subjects) ? user.subjects.map((s) => s.name || s) : []),
+      'General Study',
+    ].filter(Boolean))
+  );
 
   const [sessionToDelete, setSessionToDelete] = useState(null);
   const deleteMutation = useDeleteStudySession();
