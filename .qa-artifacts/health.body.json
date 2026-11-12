@@ -1,0 +1,1 @@
+{"success":true,"status":"healthy","database":{"status":"connected","host":"127.0.0.1","name":"trackhere"},"uptime":6628,"timestamp":"2026-11-02T16:43:28.008Z","env":"development","memory":{"rss":"57MB","heapUsed":"38MB"}}

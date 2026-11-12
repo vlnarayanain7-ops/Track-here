@@ -1,0 +1,1294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Track Here — Study OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F4F5F0;
+  --sf: #FFFFFF;
+  --sf2: #F8F9F5;
+  --ln: #E2E5DC;
+  --ln2: #ECEEE7;
+  --ink: #111513;
+  --mu: #5F6862;
+  --mu2: #8A948E;
+  --br: #1F6F43;
+  --br-h: #175734;
+  --brb: #E5F3E9;
+  --bar: #C2DEC9;
+  --rd: #B42318;
+  --rdb: #FDE6E4;
+  --am: #92400E;
+  --amb: #FEF0CD;
+  --s1: #1D4ED8;
+  --s1b: #E0E9FF;
+  --s2: #15803D;
+  --s2b: #DCF5E3;
+  --s3: #A15207;
+  --s3b: #FDEFC9;
+  --s4: #BE185D;
+  --s4b: #FCE3EF;
+  --h0: #E6E9E0;
+  --h1: #C5E3CF;
+  --h2: #8FCBA3;
+  --h3: #3F9A63;
+  --h4: #216E39;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ink);
+}
+button { cursor: pointer; }
+:focus-visible {
+  outline: 2px solid var(--br);
+  outline-offset: 2px;
+}
+.app {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+aside {
+  width: 256px;
+  flex: none;
+  background: #0F1512;
+  color: #FFFFFF;
+  padding: 24px 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  border-right: 1px solid #1C2420;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px 22px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+  color: #FFFFFF;
+}
+.logo i {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #C8F03C;
+  color: #0F1512;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nv {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 0;
+  background: transparent;
+  color: #A3B0A7;
+  font-weight: 500;
+  font-size: 13.5px;
+  text-align: left;
+  width: 100%;
+  transition: background 0.15s, color 0.15s;
+}
+.nv:hover {
+  background: #19221D;
+  color: #FFFFFF;
+}
+.nv.on {
+  background: #1E2B23;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+.nv.on svg {
+  stroke: #C8F03C;
+}
+.cap {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #6C7A72;
+  padding: 20px 14px 8px;
+  font-family: 'Space Grotesk', sans-serif;
+}
+.sj {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: #A3B0A7;
+}
+.sj b {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.streak {
+  margin-top: auto;
+  background: #17211B;
+  border: 1px solid #233129;
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.streak small {
+  display: block;
+  color: #9AA8A0;
+  font-size: 12px;
+  margin-top: 2px;
+}
+.streak b {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 15px;
+}
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 36px;
+  border-bottom: 1px solid var(--ln);
+  background: var(--sf);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.search {
+  flex: 1;
+  max-width: 440px;
+  height: 44px;
+  border: 1.5px solid var(--ln);
+  border-radius: 12px;
+  background: var(--sf2);
+  padding: 0 16px;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.search:focus {
+  border-color: var(--br);
+  background: var(--sf);
+}
+.sp { flex: 1; }
+.ibtn {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1.5px solid var(--ln);
+  background: var(--sf);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mu);
+  transition: background 0.15s;
+}
+.ibtn:hover {
+  background: var(--sf2);
+  color: var(--ink);
+}
+.dot {
+  position: absolute;
+  top: 10px;
+  right: 11px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--rd);
+  border: 2px solid var(--sf);
+}
+.tp {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  background: var(--brb);
+  color: var(--br);
+  border: 1px solid var(--bar);
+  border-radius: 22px;
+  padding: 0 16px;
+  height: 44px;
+  font-weight: 700;
+  font-family: 'Space Grotesk', monospace;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.av {
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  background: var(--ink);
+  color: var(--sf);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 15px;
+}
+#v {
+  padding: 32px 36px 64px;
+  max-width: 1184px;
+  width: 100%;
+}
+h1, h2, h3, .big {
+  font-family: 'Space Grotesk', sans-serif;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+h1 { font-size: 32px; font-weight: 700; }
+.sub { color: var(--mu); margin: 6px 0 26px; font-size: 14px; }
+.card {
+  background: var(--sf);
+  border: 1px solid var(--ln);
+  border-radius: 20px;
+  padding: 24px;
+}
+.card h3 {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--ink);
+}
+.btn {
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
+  border: 1.5px solid var(--ln);
+  background: var(--sf);
+  font-weight: 600;
+  font-size: 13.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn:hover {
+  background: var(--sf2);
+  border-color: var(--mu2);
+}
+.btn.p {
+  background: var(--ink);
+  color: var(--sf);
+  border: 0;
+}
+.btn.p:hover {
+  opacity: 0.92;
+}
+.btn.lime {
+  background: #C8F03C;
+  color: #0F1512;
+  border: 0;
+  height: 52px;
+  padding: 0 26px;
+  font-size: 15px;
+}
+.btn.lime:hover {
+  background: #BBE433;
+}
+.btn.g {
+  background: transparent;
+  color: #FFFFFF;
+  border-color: #38463F;
+  height: 52px;
+}
+.grid {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  margin-top: 24px;
+}
+.c2 {
+  flex: 2;
+  min-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.c1 {
+  flex: 1;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.hero {
+  background: #0F1512;
+  color: #F1F4EE;
+  border: 1px solid #233129;
+  border-radius: 24px;
+  padding: 32px;
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+.hl {
+  flex: 3;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: flex-start;
+}
+.hr {
+  flex: 2;
+  min-width: 260px;
+  border-left: 1px solid #233129;
+  padding-left: 32px;
+}
+.hero small {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #A3B0A7;
+  font-family: 'Space Grotesk', sans-serif;
+}
+.hl small {
+  color: #C8F03C;
+}
+.hero h2 {
+  font-size: 34px;
+  line-height: 1.15;
+  color: #FFFFFF;
+}
+.hero p {
+  color: #A3B0A7;
+  margin: 0;
+  font-size: 14px;
+}
+.big {
+  font-size: 52px;
+  font-weight: 700;
+  margin-top: 6px;
+  line-height: 1;
+}
+.big span {
+  font-size: 20px;
+  color: #A3B0A7;
+  font-weight: 500;
+}
+.seg {
+  display: flex;
+  gap: 6px;
+  margin: 14px 0 10px;
+}
+.seg i {
+  flex: 1;
+  height: 10px;
+  border-radius: 5px;
+  background: #233129;
+  overflow: hidden;
+}
+.seg b {
+  display: block;
+  height: 10px;
+  background: #C8F03C;
+}
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.strip div {
+  flex: 1;
+  min-width: 150px;
+  padding: 0 24px;
+  border-left: 1px solid var(--ln);
+}
+.strip div:first-child {
+  border: 0;
+  padding-left: 0;
+}
+.strip small {
+  color: var(--mu);
+  font-size: 13px;
+  display: block;
+}
+.strip b {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 28px;
+  display: block;
+  margin-top: 4px;
+  letter-spacing: -0.01em;
+}
+.strip em {
+  font-style: normal;
+  font-size: 12.5px;
+  color: var(--mu);
+}
+.pill {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+}
+.hi { color: var(--rd); background: var(--rdb); }
+.me { color: var(--am); background: var(--amb); }
+.lo { color: var(--br); background: var(--brb); }
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-top: 1px solid var(--ln);
+  transition: background 0.15s;
+}
+.row:hover {
+  background: var(--sf2);
+}
+.row .g {
+  flex: 1;
+  min-width: 0;
+}
+.row small {
+  display: block;
+  color: var(--mu);
+  font-size: 12px;
+  margin-top: 2px;
+}
+.chip {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.meter {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--ln);
+  margin-top: 8px;
+  overflow: hidden;
+}
+.meter b {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+}
+.ck {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 12px;
+  border: 2px solid var(--ln);
+  background: var(--sf);
+  color: var(--sf);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ck.on {
+  background: var(--br);
+  border-color: var(--br);
+}
+.bars {
+  display: flex;
+  gap: 12px;
+  height: 220px;
+  align-items: flex-end;
+  padding-top: 20px;
+}
+.bars div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  font-size: 12px;
+  font-family: 'Space Grotesk', sans-serif;
+}
+.bars i {
+  width: 100%;
+  max-width: 52px;
+  border-radius: 8px;
+  transition: height 0.3s;
+}
+input.f, select.f, textarea.f {
+  width: 100%;
+  min-height: 48px;
+  border: 1.5px solid var(--ln);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--sf);
+  outline: none;
+}
+input.f:focus, select.f:focus, textarea.f:focus {
+  border-color: var(--br);
+}
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 14px;
+  color: var(--ink);
+}
+label > .f {
+  margin-top: 6px;
+  font-weight: 400;
+}
+.tabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.tabs .btn.on {
+  border-radius: 22px;
+  font-weight: 700;
+}
+.empty {
+  text-align: center;
+  padding: 36px 16px;
+  color: var(--mu);
+}
+.timer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+.ringw {
+  position: relative;
+  width: 340px;
+  height: 340px;
+}
+.ringw svg { display: block; }
+.ringw > div {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.ringw .big {
+  font-size: 72px;
+  margin: 0;
+  font-family: 'Space Grotesk', monospace;
+}
+.hm {
+  display: grid;
+  grid-template-columns: repeat(21, 1fr);
+  gap: 5px;
+}
+.hm i {
+  aspect-ratio: 1;
+  border-radius: 4px;
+}
+.m30 {
+  display: flex;
+  gap: 6px;
+  height: 200px;
+  align-items: flex-end;
+}
+.m30 i {
+  flex: 1;
+  border-radius: 4px;
+}
+.notes {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.nl {
+  width: 300px;
+  padding: 12px;
+}
+.nl button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1.5px solid transparent;
+  background: transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+.nl button:hover {
+  background: var(--sf2);
+}
+.nl button.on {
+  border-color: var(--br);
+  background: var(--sf2);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th {
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  color: var(--mu);
+  text-align: left;
+  padding: 0 10px 12px;
+  font-family: 'Space Grotesk', sans-serif;
+}
+td {
+  padding: 14px 10px;
+  border-top: 1px solid var(--ln);
+  font-size: 14px;
+}
+tr:hover td {
+  background: var(--sf2);
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside id="side"></aside>
+  <div class="main">
+    <div class="top">
+      <input class="search" id="gsearch" placeholder="Search notes, tasks, problems" aria-label="Search" oninput="handleSearch(this.value)">
+      <div class="sp"></div>
+      <button class="btn p" onclick="go('tasks');setTimeout(()=>{const el=document.getElementById('nt');if(el)el.focus()},50)">+ Quick add</button>
+      <button class="ibtn" aria-label="Notifications" onclick="alert('All catchups clear. Ready for your study session.')">
+        <span id="ib"></span>
+        <span class="dot"></span>
+      </button>
+      <div class="tp" id="tp" onclick="go('study')"></div>
+      <div class="av">N</div>
+    </div>
+    <div id="v"></div>
+  </div>
+</div>
+<script>
+const SUB = ['Algorithms', 'Operating Systems', 'DBMS', 'Engg. Maths'];
+const IC = {
+  home: '<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  study: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  tasks: '<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>',
+  notes: '<path d="M6 3h9l4 4v14H6z"/><path d="M9 13h6M9 17h6"/>',
+  problems: '<path d="M8 8l-4 4 4 4M16 8l4 4-4 4"/>',
+  analytics: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  bell: '<path d="M6 9a6 6 0 0 1 12 0c0 6 3 7 3 7H3s3-1 3-7M10 20a2 2 0 0 0 4 0"/>',
+  flame: '<path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-6 1-9z"/>',
+  target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="5"/><circle cx="12" cy="12" r="1"/>',
+  check: '<path d="M5 12l5 5 9-10"/>',
+  play: '<path d="M7 4l13 8-13 8z"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
+};
+
+const ic = (n, s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n] || ''}</svg>`;
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = m => `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`;
+const SI = ['study', 'tasks', 'notes', 'analytics'];
+
+const seed = {
+  tasks: [
+    { t: 'Solve 5 graph problems', s: 0, p: 'High', d: 0 },
+    { t: 'Revise scheduling algorithms', s: 1, p: 'Medium', d: 0 },
+    { t: 'ER diagram practice', s: 2, p: 'Low', d: 0 },
+    { t: 'Plan the day', s: 3, p: 'Low', d: 1 }
+  ],
+  sessions: [
+    { s: 0, m: 45, ts: Date.now() - 3600000 },
+    { s: 1, m: 30, ts: Date.now() - 7200000 }
+  ],
+  notes: [
+    { t: 'Dijkstra’s algorithm', b: 'Always expand the closest unvisited node, then relax its edges.\n- Non-negative weights only\n- Binary heap: O((V + E) log V)' },
+    { t: 'Paging and TLB', b: 'Effective access time = hit ratio x TLB time + miss ratio x memory time.' }
+  ],
+  probs: [
+    { t: 'Shortest path in a weighted graph', s: 0, l: 'Medium', a: 3, st: 'Solved' },
+    { t: 'Banker’s algorithm safety check', s: 1, l: 'Hard', a: 4, st: 'Review' },
+    { t: 'Decompose to BCNF', s: 2, l: 'Medium', a: 1, st: 'Solved' }
+  ]
+};
+
+let S;
+try {
+  S = JSON.parse(localStorage.getItem('th')) || seed;
+  if (!S.tasks || !S.sessions || !S.notes || !S.probs) S = seed;
+} catch (e) {
+  S = seed;
+}
+
+let T;
+try {
+  T = JSON.parse(localStorage.getItem('tht')) || {};
+} catch (e) {
+  T = {};
+}
+T = { sub: 0, run: false, t0: 0, acc: 0, task: -1, ...T };
+
+let cur = 'dashboard';
+let ni = 0;
+let rng = '30';
+let searchQuery = '';
+
+const W = [760, 555, 425, 390];
+const BASE = 156;
+
+const saveS = () => localStorage.setItem('th', JSON.stringify(S));
+const saveT = () => localStorage.setItem('tht', JSON.stringify(T));
+
+const secs = () => T.acc + (T.run ? Math.floor((Date.now() - T.t0) / 1000) : 0);
+const today = () => BASE + S.sessions.reduce((a, x) => a + (x.m || 0), 0);
+const wk = i => W[i] + S.sessions.filter(x => x.s === i).reduce((a, x) => a + (x.m || 0), 0);
+
+const pill = (t, k) => `<span class="pill" style="color:var(--s${k + 1});background:var(--s${k + 1}b)">${esc(t)}</span>`;
+const PC = { High: 'hi', Medium: 'me', Low: 'lo' };
+const LC = { Hard: 'hi', Medium: 'me', Easy: 'lo' };
+
+const head = (t, s, a = '') => `<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap"><div><h1>${t}</h1><p class="sub">${s}</p></div><div>${a}</div></div>`;
+const chip = (k, i) => `<div class="chip" style="background:var(--s${k + 1}b);color:var(--s${k + 1})">${ic(i)}</div>`;
+
+const taskRow = (x, i) => `
+<div class="row">
+  <button class="ck ${x.d ? 'on' : ''}" aria-label="Toggle task" onclick="tog(${i})">
+    ${x.d ? ic('check', 18) : ''}
+  </button>
+  <div class="g">
+    <b style="${x.d ? 'text-decoration:line-through;color:var(--mu)' : ''}">${esc(x.t)}</b>
+  </div>
+  ${pill(SUB[x.s], x.s)}
+  <span class="pill ${PC[x.p]}">${x.p}</span>
+  <button class="btn" aria-label="Delete task" onclick="del(${i})">Delete</button>
+</div>`;
+
+function side() {
+  const n = [
+    ['dashboard', 'home', 'Dashboard'],
+    ['study', 'study', 'Study'],
+    ['tasks', 'tasks', 'Tasks'],
+    ['notes', 'notes', 'Notes'],
+    ['problems', 'problems', 'Problems'],
+    ['analytics', 'analytics', 'Analytics']
+  ];
+  const sideEl = document.getElementById('side');
+  if (!sideEl) return;
+  sideEl.innerHTML = `
+    <div class="logo"><i>${ic('target', 20)}</i>Track Here</div>
+    ${n.map(([k, i, l]) => `
+      <button class="nv ${cur === k ? 'on' : ''}" onclick="go('${k}')">
+        ${ic(i)}
+        <span>${l}</span>
+      </button>
+    `).join('')}
+    <div class="cap">SUBJECTS</div>
+    ${SUB.map((s, i) => `
+      <div class="sj">
+        <b style="background:var(--s${i + 1})"></b>
+        <span>${s}</span>
+      </div>
+    `).join('')}
+    <div class="streak" style="color:#C8F03C">
+      ${ic('flame', 22)}
+      <div style="color:#FFFFFF">
+        <b>12-day streak</b>
+        <small>${today() >= 25 ? 'Today is safe' : 'Study 25 minutes to keep it'}</small>
+      </div>
+    </div>
+  `;
+  const ib = document.getElementById('ib');
+  if (ib) ib.innerHTML = ic('bell');
+}
+
+function dash() {
+  const nt = S.tasks.findIndex(x => !x.d);
+  const t = S.tasks[nt];
+  const tm = today();
+  const dn = S.tasks.filter(x => x.d).length;
+  const seg = [0, 1, 2, 3, 4, 5].map(i => `<i><b style="width:${Math.max(0, Math.min(100, ((tm - i * 60) / 60) * 100))}%"></b></i>`).join('');
+  const sr = SUB.map((s, i) => {
+    const p = Math.min(100, Math.round(wk(i) / 9));
+    return `
+      <div class="row">
+        ${chip(i, SI[i])}
+        <div class="g">
+          <div style="display:flex;justify-content:space-between">
+            <b>${s}</b>
+            <span style="color:var(--mu);font-size:12.5px">${fmt(wk(i))} this week · ${p}%</span>
+          </div>
+          <div class="meter"><b style="width:${p}%;background:var(--s${i + 1})"></b></div>
+        </div>
+        <button class="btn" onclick="T.sub=${i};go('study')">Study</button>
+      </div>
+    `;
+  }).join('');
+  const wv = [3.5, 4.2, +(tm / 60).toFixed(1), 0, 0, 0, 0];
+  const wn = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const bars = wv.map((v, i) => `
+    <div>
+      <span>${v || ''}</span>
+      <i style="height:${Math.max(v * 30, 8)}px;background:${v ? (i === 2 ? 'var(--br)' : 'var(--bar)') : 'var(--ln)'}"></i>
+      <span style="${i === 2 ? 'font-weight:700;color:var(--ink)' : 'color:var(--mu)'}">${wn[i]}</span>
+    </div>
+  `).join('');
+  const rv = [
+    ['Deadlock conditions', '2 days overdue', 'hi'],
+    ['Normal forms', 'Due today', 'me'],
+    ['Binary search trees', 'Tomorrow', '']
+  ].map(r => `
+    <div class="row">
+      <b class="g">${r[0]}</b>
+      <span class="pill ${r[2]}" ${r[2] ? '' : 'style="background:var(--sf2);color:var(--mu)"'}>${r[1]}</span>
+    </div>
+  `).join('');
+
+  return head('Good morning, Narayana', 'Wednesday, 11 November · GATE 2027 · 142 days to exam') + `
+    <div class="hero">
+      <div class="hl">
+        <small>UP NEXT</small>
+        <h2>${t ? esc(t.t) : 'All done for today'}</h2>
+        <p>${t ? SUB[t.s] + ' · ' + t.p + ' priority' : 'Add a task to continue'}</p>
+        <button class="btn lime" onclick="startTask(${nt})">${ic('play', 16)} Start studying</button>
+      </div>
+      <div class="hr">
+        <small>TODAY’S FOCUS</small>
+        <div class="big">${fmt(tm)}<span> / 6h</span></div>
+        <div class="seg">${seg}</div>
+        <p>${fmt(Math.max(0, 360 - tm))} left to reach your target</p>
+      </div>
+    </div>
+    <div class="card strip" style="margin-top:24px;padding:20px 24px">
+      <div><small>Streak</small><b>12 days</b><em>Best: 21 days</em></div>
+      <div><small>This week</small><b>${fmt(618 + tm - BASE + 156)}</b><em style="color:var(--br)">+1h 40m vs last week</em></div>
+      <div><small>Tasks</small><b>${dn} of ${S.tasks.length}</b><em>done today</em></div>
+      <div><small>Revisions</small><b>3 due</b><em style="color:var(--rd)">1 overdue</em></div>
+    </div>
+    <div class="grid">
+      <div class="c2">
+        <div class="card">
+          <h3>Subjects</h3>
+          ${sr}
+        </div>
+        <div class="card">
+          <h3>Weekly focus <span style="float:right;font:600 13px Inter;color:var(--br)">Target 6h / day</span></h3>
+          <div class="bars">${bars}</div>
+        </div>
+      </div>
+      <div class="c1">
+        <div class="card">
+          <h3>Today’s tasks</h3>
+          ${S.tasks.slice(0, 4).map(taskRow).join('') || '<div class="empty">No tasks yet</div>'}
+        </div>
+        <div class="card">
+          <h3>Revisions</h3>
+          ${rv}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function study() {
+  const c = 6.28318 * 154;
+  return head('Study session', 'Pick a subject, start the timer, finish to save.') + `
+    <div class="grid" style="margin-top:0">
+      <div class="c2">
+        <div class="card timer" style="padding:32px">
+          <div class="tabs">
+            ${SUB.map((x, i) => `
+              <button class="btn ${T.sub === i ? 'on' : ''}" style="${T.sub === i ? `border-color:var(--s${i + 1});background:var(--s${i + 1}b);color:var(--s${i + 1})` : ''}" onclick="T.sub=${i};saveT();render()">${x}</button>
+            `).join('')}
+          </div>
+          <div class="ringw">
+            <svg width="340" height="340">
+              <circle cx="170" cy="170" r="154" fill="none" stroke="var(--ln)" stroke-width="12"/>
+              <circle id="rg" cx="170" cy="170" r="154" fill="none" stroke="var(--br)" stroke-width="12" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c}" transform="rotate(-90 170 170)"/>
+            </svg>
+            <div>
+              <div class="big" id="ck">00:00</div>
+              <span style="color:var(--mu);margin-top:4px">of 45 min · ${SUB[T.sub]}</span>
+            </div>
+          </div>
+          <div class="tabs" style="justify-content:center;margin-bottom:0">
+            <button class="btn" onclick="reset()">Reset</button>
+            <button class="btn p" style="height:56px;padding:0 36px" onclick="toggle()">${T.run ? 'Pause' : 'Start'}</button>
+            <button class="btn lime" onclick="finish()">Finish and save</button>
+          </div>
+          <div style="width:100%;margin-top:8px">
+            <label>Linked task
+              <select class="f" onchange="T.task=+this.value;saveT()">
+                <option value="-1">None</option>
+                ${S.tasks.map((x, i) => `<option value="${i}" ${T.task === i ? 'selected' : ''}>${esc(x.t)}</option>`).join('')}
+              </select>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="c1">
+        <div class="card">
+          <h3>Saved sessions</h3>
+          ${S.sessions.slice().reverse().map(x => `
+            <div class="row">
+              ${chip(x.s, SI[x.s])}
+              <div class="g">
+                <b>${SUB[x.s]}</b>
+                <small>${x.m >= 25 ? 'Counts toward streak' : 'Under 25 min'}</small>
+              </div>
+              <b style="font-family:'Space Grotesk',sans-serif">${x.m}m</b>
+            </div>
+          `).join('') || '<div class="empty">No sessions saved yet</div>'}
+        </div>
+        <div class="card" style="display:flex;gap:12px">
+          <span style="color:var(--br)">${ic('check', 22)}</span>
+          <div>
+            <b>25 minutes counts</b>
+            <div style="color:var(--mu);font-size:13px;margin-top:2px">Your timer survives a refresh and saves once.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function tasks() {
+  const displayedTasks = searchQuery
+    ? S.tasks.filter(x => x.t.toLowerCase().includes(searchQuery.toLowerCase()))
+    : S.tasks;
+
+  return head('Tasks', `${S.tasks.filter(x => !x.d).length} open`) + `
+    <div class="grid" style="margin-top:0">
+      <div class="c2">
+        <div class="card">
+          ${displayedTasks.map((x, i) => taskRow(x, i)).join('') || '<div class="empty"><b style="color:var(--ink)">No tasks yet</b><p style="margin-top:4px">Add your first task to plan the day.</p></div>'}
+        </div>
+      </div>
+      <div class="c1">
+        <div class="card">
+          <h3>New task</h3>
+          <label>Title<input class="f" id="nt" placeholder="What needs doing?" onkeydown="if(event.key==='Enter')addT()"></label>
+          <label>Subject<select class="f" id="ns">${SUB.map((x, i) => `<option value="${i}">${x}</option>`).join('')}</select></label>
+          <label>Priority<select class="f" id="np"><option>High</option><option selected>Medium</option><option>Low</option></select></label>
+          <button class="btn p" style="width:100%;height:52px" onclick="addT()">Add task</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function notes() {
+  const displayedNotes = searchQuery
+    ? S.notes.filter(x => x.t.toLowerCase().includes(searchQuery.toLowerCase()) || x.b.toLowerCase().includes(searchQuery.toLowerCase()))
+    : S.notes;
+  const n = S.notes[ni];
+  return head('Notes', `${S.notes.length} notes`, '<button class="btn p" onclick="addN()">+ New note</button>') + `
+    <div class="notes">
+      <div class="card nl">
+        ${displayedNotes.map((x, i) => `
+          <button class="${i === ni ? 'on' : ''}" onclick="ni=${i};render()">
+            <b>${esc(x.t)}</b>
+            <div style="color:var(--mu);font-size:13px;margin-top:4px">${esc(x.b.slice(0, 40))}${x.b.length > 40 ? '…' : ''}</div>
+          </button>
+        `).join('') || '<div class="empty">No notes match</div>'}
+      </div>
+      <div class="card" style="flex:1;min-width:420px">
+        ${n ? `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <input class="f" style="font:700 26px 'Space Grotesk';border:0;padding:0;background:transparent;flex:1" value="${esc(n.t)}" oninput="S.notes[ni].t=this.value;saveS()" aria-label="Note title">
+            <button class="btn" style="border:0;color:var(--rd)" onclick="delN(${ni})">Delete</button>
+          </div>
+          <textarea class="f" style="min-height:360px;line-height:1.7;border:0;padding:0;background:transparent;resize:vertical" oninput="S.notes[ni].b=this.value;saveS()" aria-label="Note body">${esc(n.b)}</textarea>
+        ` : '<div class="empty">No notes yet</div>'}
+      </div>
+    </div>
+  `;
+}
+
+function problems() {
+  const displayedProbs = searchQuery
+    ? S.probs.filter(x => x.t.toLowerCase().includes(searchQuery.toLowerCase()))
+    : S.probs;
+
+  return head('Problem journal', `${S.probs.length} problems`) + `
+    <div class="grid" style="margin-top:0">
+      <div class="c2">
+        <div class="card" style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr><th>PROBLEM</th><th>SUBJECT</th><th>LEVEL</th><th>TRIES</th><th>STATUS</th></tr>
+            </thead>
+            <tbody>
+              ${displayedProbs.map((p, i) => `
+                <tr>
+                  <td><b>${esc(p.t)}</b></td>
+                  <td>${pill(SUB[p.s], p.s)}</td>
+                  <td><span class="pill ${LC[p.l]}">${p.l}</span></td>
+                  <td style="font-family:'Space Grotesk',sans-serif">${p.a}</td>
+                  <td>
+                    <button class="btn" onclick="ps(${i})">
+                      <span class="pill ${p.st === 'Solved' ? 'lo' : 'me'}">${p.st}</span>
+                    </button>
+                  </td>
+                </tr>
+              `).join('') || '<tr><td colspan="5" class="empty">No problems recorded yet</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="c1">
+        <div class="card">
+          <h3>Log practice</h3>
+          <label>Problem<input class="f" id="pt" placeholder="Problem name" onkeydown="if(event.key==='Enter')addP()"></label>
+          <label>Subject<select class="f" id="ps">${SUB.map((x, i) => `<option value="${i}">${x}</option>`).join('')}</select></label>
+          <label>Level<select class="f" id="pl"><option>Easy</option><option selected>Medium</option><option>Hard</option></select></label>
+          <button class="btn p" style="width:100%;height:52px" onclick="addP()">Add problem</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function analytics() {
+  const n = +rng;
+  const b = Array.from({ length: n }, (_, i) => `
+    <i style="height:${Math.max(((i * 37) % 55) / 10 * 34, 6)}px;background:${i === n - 1 ? 'var(--br)' : 'var(--bar)'}"></i>
+  `).join('');
+  const hm = Array.from({ length: 84 }, (_, i) => `
+    <i style="background:var(--h${[0, 1, 2, 3, 4, 3, 2, 4, 3, 1, 2, 3, 0, 2, 3, 4][i % 16]})"></i>
+  `).join('');
+  const bk = [36, 26, 20, 18];
+  const bl = SUB.map((s, i) => `
+    <div class="row">
+      <span style="width:10px;height:10px;border-radius:3px;background:var(--s${i + 1})"></span>
+      <span class="g">${s}</span>
+      <b style="font-family:'Space Grotesk',sans-serif">${bk[i]}%</b>
+    </div>
+  `).join('');
+  const mt = [
+    ['Focused time', '48h 20m', 'Last 30 days'],
+    ['Sessions', '41', '1h 11m average'],
+    ['Consistency', '83%', '25 of 30 days'],
+    ['Problems solved', '27', '71% first try']
+  ].map(m => `
+    <div class="card" style="flex:1;min-width:200px;padding:20px">
+      <small style="color:var(--mu)">${m[0]}</small>
+      <div class="big" style="font-size:32px;color:var(--ink);margin:6px 0">${m[1]}</div>
+      <small style="color:var(--mu)">${m[2]}</small>
+    </div>
+  `).join('');
+
+  return head('Analytics', 'Where your time goes and how consistent you are', ['7', '30', '90'].map(r => `
+    <button class="btn ${rng === r ? 'p' : ''}" onclick="rng='${r}';render()">${r} days</button>
+  `).join(' ')) + `
+    <div style="display:flex;gap:20px;flex-wrap:wrap">${mt}</div>
+    <div class="grid">
+      <div class="c2">
+        <div class="card">
+          <h3>Daily focus</h3>
+          <div class="m30">${b}</div>
+        </div>
+        <div class="card">
+          <h3>Consistency · 12 weeks</h3>
+          <div class="hm">${hm}</div>
+        </div>
+      </div>
+      <div class="c1">
+        <div class="card">
+          <h3>By subject</h3>
+          ${bl}
+        </div>
+        <div class="card" style="display:flex;gap:14px;align-items:center">
+          <span style="color:var(--br)">${ic('flame', 28)}</span>
+          <div>
+            <div class="big" style="font-size:30px;margin:0">12 days</div>
+            <small style="color:var(--mu)">Longest: 21 days</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function handleSearch(q) {
+  searchQuery = q.trim();
+  render();
+}
+
+function tog(i) {
+  S.tasks[i].d = !S.tasks[i].d;
+  saveS();
+  render();
+}
+
+function del(i) {
+  S.tasks.splice(i, 1);
+  saveS();
+  render();
+}
+
+function delN(i) {
+  S.notes.splice(i, 1);
+  if (ni >= S.notes.length) ni = Math.max(0, S.notes.length - 1);
+  saveS();
+  render();
+}
+
+function addT() {
+  const el = document.getElementById('nt');
+  if (!el) return;
+  const t = el.value.trim();
+  if (!t) return;
+  S.tasks.push({
+    t,
+    s: +document.getElementById('ns').value,
+    p: document.getElementById('np').value,
+    d: 0
+  });
+  saveS();
+  render();
+}
+
+function addN() {
+  S.notes.unshift({ t: 'Untitled note', b: '' });
+  ni = 0;
+  saveS();
+  render();
+}
+
+function addP() {
+  const el = document.getElementById('pt');
+  if (!el) return;
+  const t = el.value.trim();
+  if (!t) return;
+  S.probs.unshift({
+    t,
+    s: +document.getElementById('ps').value,
+    l: document.getElementById('pl').value,
+    a: 1,
+    st: 'Review'
+  });
+  saveS();
+  render();
+}
+
+function ps(i) {
+  const p = S.probs[i];
+  p.st = p.st === 'Solved' ? 'Review' : 'Solved';
+  if (p.st === 'Solved') p.a += 1;
+  saveS();
+  render();
+}
+
+function startTask(i) {
+  if (i >= 0 && S.tasks[i]) {
+    T.task = i;
+    T.sub = S.tasks[i].s;
+  }
+  saveT();
+  go('study');
+}
+
+function toggle() {
+  if (T.run) {
+    T.acc = secs();
+    T.run = false;
+  } else {
+    T.t0 = Date.now();
+    T.run = true;
+  }
+  saveT();
+  render();
+}
+
+function reset() {
+  T.run = false;
+  T.acc = 0;
+  saveT();
+  render();
+}
+
+function finish() {
+  const m = Math.round(secs() / 60);
+  if (m >= 1) {
+    S.sessions.push({ s: T.sub, m, ts: Date.now() });
+    if (T.task >= 0 && S.tasks[T.task]) {
+      S.tasks[T.task].d = 1;
+    }
+    saveS();
+  }
+  T.run = false;
+  T.acc = 0;
+  T.task = -1;
+  saveT();
+  render();
+}
+
+function tick() {
+  const x = secs();
+  const c = 6.28318 * 154;
+  const k = document.getElementById('ck');
+  const r = document.getElementById('rg');
+  const p = document.getElementById('tp');
+
+  if (k) {
+    k.textContent = String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0');
+  }
+  if (r) {
+    r.setAttribute('stroke-dashoffset', c * (1 - Math.min(x / 2700, 1)));
+  }
+  if (p) {
+    p.style.display = x > 0 ? 'flex' : 'none';
+    p.innerHTML = ic('clock', 16) + ' ' + String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0') + ' · ' + SUB[T.sub];
+  }
+}
+
+const V = { dashboard: dash, study, tasks, notes, problems, analytics };
+
+function render() {
+  side();
+  const v = document.getElementById('v');
+  if (v && V[cur]) {
+    v.innerHTML = V[cur]();
+  }
+  tick();
+}
+
+function go(v) {
+  cur = v;
+  render();
+}
+
+setInterval(tick, 1000);
+render();
+</script>
+</body>
+</html>
+

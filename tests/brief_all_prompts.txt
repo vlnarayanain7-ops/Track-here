@@ -1,0 +1,762 @@
+<USER_REQUEST>
+# Track Here: build brief for Gemini Flash 3 (three parallel tracks)
+
+How to work: you run THREE tracks at the same time, each in its own Gemini chat and its own git branch. Paste PROMPT 0 first in every new chat, then only the prompts of that track, one prompt per message (Flash cuts off long answers; the parallel speed comes from the tracks, not from long messages).
+
+- TRACK A, look and feel (branch `ui`): Prompts 1, 2, 5, 7. Only touches src/styles, src/components, page files (visual changes) and index.html.
+- TRACK B, accounts and data (branch `data`): Prompts 3, 4, 6. Only touches src/auth, src/data, src/lib, route guards, and the backend server folder.
+- TRACK C, ship and test (branch `ship`): Prompt 8. Only touches deployment config, feedback, error reporting, tests and CI.
+
+Conflict rule: a track never edits another track's folders. If it needs a change there, it writes the request as a note and you pass it to the right chat.
+
+Checkpoints (merge order is always data, then ship, then ui; run the app and the checklist after every merge):
+1. Track B has auth and safe data, and Track C has a live link: give friends the link. They test the CURRENT design while the new design is still being built.
+2. Merge Track A shell, dashboard and Study page. Update the live link.
+3. Merge the remaining pages, phone polish and installable app.
+
+Decisions already made: solo owner, about 50 friends as beta testers, zero budget (free hosting, only a domain), laptop AND phone support, dark + light theme, under 13 blocked and 13+ allowed (age band stored, no birth date), habit tracker optional. Teen limits, plans and subscriptions are LATER and must NOT be built now.
+
+---
+
+## PROMPT 0: Context and rules (paste first)
+
+```
+You are a senior front-end and back-end engineer working inside an EXISTING app, "Track Here", a study productivity web app running on a Vite dev server (localhost:5173). Do NOT rewrite it from scratch.
+
+Existing routes you must keep working with the same paths: /, /tasks, /tasks?tab=timetable, /subjects, /analytics, plus the existing Study & Timer, Timetable, Notes, Practice and Settings routes. Existing sidebar items: Dashboard, Study & Timer, Tasks, Timetable, Syllabus & Goals, Notes, Practice, Statistics, Settings.
+
+Before writing any code, do this once:
+1. Read package.json, the folder tree, the router file, the global stylesheet and one existing page. Tell me in 7 lines: framework, styling approach (Tailwind or CSS), router, state management, where data is stored today (localStorage, IndexedDB or an API), whether a backend already exists (look for a server folder and anything listening on port 5000), and how users sign in today. KNOWN FACTS: a backend already exists. Opening http://localhost:5000 returns "Track Here: Study OS Backend API", version 1.0.0, status healthy, with these endpoints: /api/health, /api/auth, /api/users, /api/study-sessions, /api/tasks, /api/notes, /api/problems, /api/daily-plans, /api/daily-reviews, /api/revisions, /api/notifications, /api/analytics, /api/search, /api/mock-tests, /api/timetable. The client runs on http://localhost:5173. There is NO endpoint named subjects, syllabus, chapters or habits, so find where those live. The database type is unknown: find it.
+2. Adapt every snippet I give you to that stack. If I give plain CSS variables and you use Tailwind, map the variables into the Tailwind theme instead of duplicating them.
+
+Product facts you must respect:
+- Solo founder, no team. Zero budget: free hosting and one cheap domain. Keep dependencies few. Keep the existing backend if it is sound (see the Phase 4 audit).
+- About 50 friends will beta test, so there must be a feedback button and error reporting (Phase 8).
+- The app must work on laptops AND phones (360px to 1440px wide). Mobile is a first-class target, not an afterthought.
+- Age: "under 13" is blocked at sign-up; 13 and over are allowed. Store only the age band (13_17 or 18_plus), never a date of birth. Subscriptions, plans, usage limits and teen limits come LATER: do NOT build them now and do not add any upgrade, pricing or payment UI.
+- Habit tracker is optional: hidden by default.
+- You decide the stack details yourself by reading the code; do not ask me about them.
+
+Rules for every phase:
+- Work on one phase per message. List the files you will create or change before writing them.
+- New files: give the complete file. Existing files: give a minimal diff or the exact changed block with its location. Never output "rest of file unchanged" placeholders inside a block that I must paste.
+- If your answer is long, stop at a file boundary and end with "CONTINUE". Never truncate a file.
+- TypeScript strict. No `any`. No new dependency unless I approve it. Allowed: react-router, @supabase/supabase-js, @tanstack/react-query, zod, lucide-react.
+- Accessibility: every interactive element at least 44px tall, visible focus ring, every input has a visible label, icons that act as buttons have aria-label, body text at least 14px, helper text at least 13px, text contrast at least 4.5:1.
+- Colors only from design tokens (CSS variables). No hard-coded hex values in components.
+- Responsive: every screen must work at 360px, 768px, 1024px and 1440px wide with no horizontal page scroll. Inputs use 16px font on phones. Use 100dvh instead of 100vh.
+- Every data view needs four states: loading (skeleton), empty (explain + one action), error (message + retry), and loaded.
+- Dates: never use toISOString() for a date the user sees or picks. Use the local-date helper from Phase 4.
+- No console errors or warnings. No unused code. No lorem ipsum. Remove test data such as a subject named "ss".
+- After the code, give me a 5-item manual test checklist for that phase.
+Reply "Ready" and the 7-line summary only.
+```
+
+---
+
+## PROMPT 1: Design system (tokens and base components)
+
+```
+PHASE 1: Replace the visual foundation without changing behavior.
+
+Goal: a calmer, higher-contrast, cool-neutral dark theme (the current one is olive-brown and muddy), plus a light theme. Emerald stays the brand color. Default = dark, follow the system setting, user can override in Settings later.
+
+1) Create src/styles/tokens.css and import it first in the app entry. Replace the old color variables with these:
+```
+
+```css
+:root{
+  color-scheme:dark;
+  --bg:#0B100E; --surface:#111815; --surface-2:#17201C; --line:#25322B;
+  --text:#EAF1EC; --muted:#9AA9A0;
+  --primary:#34D399; --on-primary:#04251A; --primary-soft:#12342A;
+  --danger:#FF9B90; --danger-soft:#3F1A17; --warn:#F2B45B; --warn-soft:#3A2A10;
+  --ring:#34D399;
+  /* subject colors: foreground + tinted background. Store the KEY (blue, green...) in the database, never the hex */
+  --c-blue:#8DB0FF;--c-blue-bg:#1B2A4D; --c-green:#6FD58F;--c-green-bg:#183422;
+  --c-amber:#F2B45B;--c-amber-bg:#3A2A10; --c-rose:#F58BBB;--c-rose-bg:#3D1727;
+  --c-violet:#B7A4FF;--c-violet-bg:#2A2150; --c-cyan:#67D8E6;--c-cyan-bg:#123A40;
+  --c-orange:#FFA470;--c-orange-bg:#40220F; --c-slate:#AAB6C2;--c-slate-bg:#232C35;
+  --heat-0:#17201C;--heat-1:#16402F;--heat-2:#1F6B4C;--heat-3:#2FA06F;--heat-4:#6FE3B0;
+  --r-sm:10px;--r-md:14px;--r-lg:20px;
+  --font:'Inter',system-ui,sans-serif;--display:'Space Grotesk',var(--font);
+}
+:root[data-theme="light"]{
+  color-scheme:light;
+  --bg:#F3F5F2;--surface:#FFFFFF;--surface-2:#F7F9F6;--line:#DDE3DC;
+  --text:#101714;--muted:#56635B;
+  --primary:#047857;--on-primary:#FFFFFF;--primary-soft:#DDF3E8;
+  --danger:#B42318;--danger-soft:#FDE4E1;--warn:#92400E;--warn-soft:#FEF0CD;--ring:#047857;
+  --c-blue:#1D4ED8;--c-blue-bg:#E0E9FF;--c-green:#15803D;--c-green-bg:#DCF5E3;
+  --c-amber:#A15207;--c-amber-bg:#FDEFC9;--c-rose:#BE185D;--c-rose-bg:#FCE3EF;
+  --c-violet:#6D28D9;--c-violet-bg:#EDE7FF;--c-cyan:#0E7490;--c-cyan-bg:#D6F3F7;
+  --c-orange:#C2410C;--c-orange-bg:#FFE6D6;--c-slate:#475569;--c-slate-bg:#E8EDF2;
+  --heat-0:#E6EBE4;--heat-1:#C5E6D3;--heat-2:#8FCBA9;--heat-3:#3F9A6B;--heat-4:#1F6F43;
+}
+body{margin:0;background:var(--bg);color:var(--text);font:400 14px/1.5 var(--font)}
+h1,h2,h3{font-family:var(--display);letter-spacing:-.02em;margin:0}
+:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+```
+
+```
+2) Create src/styles/ui.css with the component classes below and import it after tokens.css.
+```
+
+```css
+.btn{min-height:44px;padding:0 18px;border-radius:var(--r-md);border:1.5px solid var(--line);background:var(--surface);color:var(--text);font:600 14px var(--font);display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:background .15s}
+.btn:hover{background:var(--surface-2)} .btn:disabled{opacity:.55;cursor:not-allowed}
+.btn-primary{background:var(--primary);color:var(--on-primary);border-color:transparent}.btn-primary:hover{filter:brightness(1.08);background:var(--primary)}
+.btn-ghost{background:transparent;border-color:transparent}.btn-danger{color:var(--danger);border-color:var(--danger-soft)}
+.btn-lg{min-height:52px;padding:0 24px;font-size:15px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:24px}
+.field{display:flex;flex-direction:column;gap:6px;font-weight:600}
+.field input,.field select,.field textarea{min-height:48px;border:1.5px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--text);padding:12px 14px;font:400 14px var(--font)}
+.field input::placeholder{color:var(--muted)}
+.field[data-invalid="true"] input{border-color:var(--danger)}
+.field small{font-weight:400;color:var(--muted);font-size:13px}.field small.err{color:var(--danger)}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:10px;font:600 12px var(--font);white-space:nowrap}
+.empty{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:32px 16px;color:var(--muted)}
+.empty h3{color:var(--text);font-size:17px}
+.skeleton{background:linear-gradient(90deg,var(--surface-2),var(--line),var(--surface-2));background-size:200% 100%;animation:sk 1.4s infinite;border-radius:8px;min-height:14px}
+@keyframes sk{to{background-position:-200% 0}}
+dialog.modal{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--text);padding:24px;width:min(520px,92vw)}
+dialog.modal::backdrop{background:rgba(0,0,0,.6)}
+```
+
+```
+3) Create src/components/ui.tsx with these components, then replace the existing ad-hoc buttons, cards, badges and empty states in the app with them (do the replacement page by page, keeping behavior identical):
+```
+
+```tsx
+import {useEffect,useId,useRef,type ButtonHTMLAttributes,type InputHTMLAttributes,type ReactNode} from 'react';
+
+export type ColorKey='blue'|'green'|'amber'|'rose'|'violet'|'cyan'|'orange'|'slate';
+
+export function Button({variant='secondary',size='md',loading,icon,children,...p}:
+  ButtonHTMLAttributes<HTMLButtonElement>&{variant?:'primary'|'secondary'|'ghost'|'danger';size?:'md'|'lg';loading?:boolean;icon?:ReactNode}){
+  const cls=['btn',variant==='primary'&&'btn-primary',variant==='ghost'&&'btn-ghost',variant==='danger'&&'btn-danger',size==='lg'&&'btn-lg'].filter(Boolean).join(' ');
+  return <button {...p} className={cls} disabled={p.disabled||loading} aria-busy={loading}>{icon}{loading?'Working…':children}</button>;
+}
+export const Card=({children,style}:{children:ReactNode;style?:React.CSSProperties})=><section className="card" style={style}>{children}</section>;
+
+export function Field({label,hint,error,...p}:InputHTMLAttributes<HTMLInputElement>&{label:string;hint?:string;error?:string}){
+  const id=useId();
+  return <label className="field" htmlFor={id} data-invalid={!!error}>{label}
+    <input id={id} aria-invalid={!!error} aria-describedby={`${id}-d`} {...p}/>
+    {(error||hint)&&<small id={`${id}-d`} className={error?'err':''} role={error?'alert':undefined}>{error||hint}</small>}</label>;
+}
+export const Badge=({color='slate',children}:{color?:ColorKey;children:ReactNode})=>
+  <span className="badge" style={{color:`var(--c-${color})`,background:`var(--c-${color}-bg)`}}>{children}</span>;
+
+export const EmptyState=({icon,title,text,action}:{icon?:ReactNode;title:string;text?:string;action?:ReactNode})=>
+  <div className="empty">{icon}<h3>{title}</h3>{text&&<p style={{margin:0,maxWidth:420}}>{text}</p>}{action}</div>;
+
+export const Skeleton=({w='100%',h=14}:{w?:string|number;h?:number})=><div className="skeleton" style={{width:w,height:h}} aria-hidden/>;
+
+export function Modal({open,onClose,title,children}:{open:boolean;onClose:()=>void;title:string;children:ReactNode}){
+  const ref=useRef<HTMLDialogElement>(null);
+  useEffect(()=>{const d=ref.current;if(!d)return;open&&!d.open?d.showModal():!open&&d.open&&d.close()},[open]);
+  return <dialog ref={ref} className="modal" onClose={onClose} aria-labelledby="m-t">
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+      <h2 id="m-t" style={{fontSize:20}}>{title}</h2><button className="btn btn-ghost" aria-label="Close" onClick={onClose}>✕</button></div>{children}</dialog>;
+}
+```
+
+```
+4) Add theme handling in src/lib/theme.ts: read localStorage "th-theme" ('dark'|'light'|'system'), default 'system', set document.documentElement.dataset.theme accordingly on load, and export setTheme().
+5) Delete the dashboard "Daily Philosophy" card and the duplicate quote in the sidebar footer (keep nothing; quotes are decoration).
+6) Increase all small text: nothing below 13px.
+```
+
+---
+
+## PROMPT 2: App shell (sidebar and top bar)
+
+```
+PHASE 2: Rebuild the shell only. Routes and page content stay untouched. The shell is responsive:
+- 1024px and wider: fixed 256px sidebar + top bar (as described below).
+- 768px to 1023px: sidebar hidden, a menu button in the top bar opens it as a drawer.
+- Below 768px: sidebar hidden, a bottom tab bar with 5 items (Home, Study, Tasks, Notes, More). "More" opens a sheet listing Timetable, Syllabus & Goals, Practice & Tests, Streaks & Heatmap, Revision Queue, Daily Journal, Statistics & Analytics, Settings. The top bar shows only the menu/brand, the timer pill when a timer runs, and the avatar; search becomes an icon button; Quick add becomes a floating "+" button above the tab bar.
+- Respect safe-area insets (iPhone notch and home bar).
+
+Sidebar (256px, sticky, one scroll area, no nested scrollbars):
+- Brand row: logo + "Track Here" (drop the tagline).
+- Keep the app's real navigation and its two group captions: WORKSPACE (Dashboard, Study & Timer, Tasks & Projects, Timetable, Syllabus & Goals, Notes Workspace, Practice & Tests) and GROWTH & REVIEW (Streaks & Heatmap, Revision Queue, Daily Journal, Statistics & Analytics). Settings pinned at the bottom. Use the existing route paths; the paths in the code below are placeholders for the ones I have not seen.
+- Today the last items ("Revision Queue" and others) are cut off by the streak card and the sidebar has a nested scrollbar. Fix it: one scroll area for the nav, the streak card and user card are always visible and compact.
+- Subjects: a compact list of the user's subjects (color dot + name, max 6, then "View all"). Its "Manage" link goes to Syllabus & Goals, which becomes the ONLY place to add, edit or delete subjects (today it is possible in three places: sidebar, Syllabus & Goals and Settings).
+- Footer: ONE compact streak card (flame, "N-day streak", one-line status) and the user menu (avatar, name, sign out). No quote.
+- Active item: primary-soft background, primary-colored icon, aria-current="page".
+- Information architecture fix: Timetable is the ONLY weekly schedule page. Remove the "Weekly Schedule" tab inside Tasks and redirect /tasks?tab=timetable to the Timetable route.
+
+Top bar: search field (opens a command palette on Ctrl/Cmd+K that searches tasks, notes, subjects, problems), "Quick add" menu button, notification bell (with unread dot only when there is something unread), running-timer pill (visible only while a timer runs, click goes to Study & Timer), avatar menu.
+
+Use this code as the base and adapt icons to the icon library already in the project:
+```
+
+```tsx
+import {NavLink,Outlet} from 'react-router-dom';
+import {useEffect,useState} from 'react';
+import {LayoutDashboard,Timer,CheckSquare,CalendarDays,Layers,FileText,Award,BarChart3,Settings,Flame,RotateCcw,Sun,Search,Plus,Bell,LogOut} from 'lucide-react';
+
+const GROUPS=[
+ {cap:'WORKSPACE',items:[['/','Dashboard',LayoutDashboard],['/study','Study & Timer',Timer],['/tasks','Tasks & Projects',CheckSquare],['/timetable','Timetable',CalendarDays],['/subjects','Syllabus & Goals',Layers],['/notes','Notes Workspace',FileText],['/practice','Practice & Tests',Award]]},
+ {cap:'GROWTH & REVIEW',items:[['/streaks','Streaks & Heatmap',Flame],['/revisions','Revision Queue',RotateCcw],['/journal','Daily Journal',Sun],['/analytics','Statistics & Analytics',BarChart3]]},
+] as const;
+
+export function AppShell({streak,onQuickAdd}:{streak:number;onQuickAdd:(kind:string)=>void}){
+  return <div className="shell">
+    <aside aria-label="Primary" className="sidebar">
+      <div style={{display:'flex',alignItems:'center',gap:10,padding:'0 12px 16px',font:'700 20px var(--display)'}}>Track Here</div>
+      {GROUPS.map(g=><nav key={g.cap} aria-label={g.cap}>
+        <div style={{font:'700 11px var(--font)',letterSpacing:'.08em',color:'var(--muted)',padding:'14px 12px 6px'}}>{g.cap}</div>
+        {g.items.map(([to,label,Icon])=><NavLink key={to} to={to} end={to==='/'} className="nav-item"><Icon size={18} aria-hidden/>{label}</NavLink>)}
+      </nav>)}
+      <div style={{marginTop:'auto',display:'flex',flexDirection:'column',gap:8}}>
+        <NavLink to="/settings" className="nav-item"><Settings size={18} aria-hidden/>Settings</NavLink>
+        <div style={{display:'flex',gap:12,alignItems:'center',padding:14,borderRadius:'var(--r-md)',background:'var(--warn-soft)',color:'var(--warn)'}}>
+          <Flame size={22} aria-hidden/><div><b>{streak}-day streak</b><div style={{fontSize:13}}>{streak>0?'Keep it going':'Study 25 min to start'}</div></div></div>
+      </div>
+    </aside>
+    <div style={{flex:1,minWidth:0}}>
+      <TopBar onQuickAdd={onQuickAdd}/>
+      <main className="page"><Outlet/></main>
+      <MobileTabBar/>
+    </div></div>;
+}
+
+function TopBar({onQuickAdd}:{onQuickAdd:(k:string)=>void}){
+  const [open,setOpen]=useState(false);
+  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')setOpen(false)};addEventListener('keydown',k);return()=>removeEventListener('keydown',k)},[]);
+  const kinds=[['task','Task'],['note','Note'],['goal','Goal'],['session','Focus session'],['mock','Mock test'],['problem','Problem']];
+  return <header className="topbar">
+    <button className="btn search-btn" style={{flex:1,maxWidth:460,justifyContent:'flex-start',color:'var(--muted)',fontWeight:400}} aria-label="Search (Ctrl K)"><Search size={16} aria-hidden/>Search notes, tasks, problems<kbd style={{marginLeft:'auto'}}>Ctrl K</kbd></button>
+    <div style={{flex:1}}/>
+    <div style={{position:'relative'}}>
+      <button className="btn btn-primary" aria-haspopup="menu" aria-expanded={open} onClick={()=>setOpen(!open)}><Plus size={16} aria-hidden/>Quick add</button>
+      {open&&<div role="menu" className="card" style={{position:'absolute',right:0,top:52,width:200,padding:8,zIndex:20}}>
+        {kinds.map(([k,l])=><button key={k} role="menuitem" className="btn btn-ghost" style={{width:'100%',justifyContent:'flex-start'}} onClick={()=>{setOpen(false);onQuickAdd(k)}}>{l}</button>)}</div>}
+    </div>
+    <button className="btn" aria-label="Notifications"><Bell size={18}/></button>
+  </header>;
+}
+```
+
+```css
+.nav-item{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:var(--r-md);color:var(--muted);text-decoration:none;font-weight:500}
+.nav-item:hover{background:var(--surface-2);color:var(--text)}
+.nav-item[aria-current="page"]{background:var(--primary-soft);color:var(--primary);font-weight:600}
+.shell{display:flex;min-height:100dvh}
+.sidebar{width:256px;flex:none;position:sticky;top:0;height:100dvh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--line);padding:20px 12px;display:flex;flex-direction:column;gap:4px}
+.topbar{display:flex;align-items:center;gap:16px;padding:12px 36px;border-bottom:1px solid var(--line);background:var(--surface);position:sticky;top:0;z-index:10}
+.page{max-width:1200px;margin:0 auto;padding:32px 36px 64px}
+.tabbar{display:none}
+@media (max-width:1023px){.sidebar{position:fixed;left:0;top:0;z-index:30;transform:translateX(-100%);transition:transform .2s}.sidebar[data-open="true"]{transform:none}.topbar{padding:12px 20px}.page{padding:24px 20px 96px}}
+@media (max-width:767px){.tabbar{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+.tabbar a,.tabbar button{flex:1;min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:600 12px var(--font);color:var(--muted);text-decoration:none;background:none;border:0}
+.tabbar a[aria-current="page"]{color:var(--primary)}.search-btn span,.search-btn kbd{display:none}.page{padding:20px 16px calc(96px + env(safe-area-inset-bottom))}
+input,select,textarea{font-size:16px!important}
+dialog.modal{margin:auto 0 0;width:100%;max-width:none;border-radius:20px 20px 0 0;padding-bottom:calc(24px + env(safe-area-inset-bottom))}}
+```
+
+```tsx
+// src/components/MobileTabBar.tsx (renders nothing visible above 767px because .tabbar is display:none there)
+import {NavLink} from 'react-router-dom';
+import {LayoutDashboard,Timer,CheckSquare,FileText,Menu} from 'lucide-react';
+export function MobileTabBar({onMore}:{onMore?:()=>void}){
+  const items=[['/','Home',LayoutDashboard],['/study','Study',Timer],['/tasks','Tasks',CheckSquare],['/notes','Notes',FileText]] as const;
+  return <nav className="tabbar" aria-label="Main">
+    {items.map(([to,l,Icon])=><NavLink key={to} to={to} end={to==='/'}><Icon size={22} aria-hidden/>{l}</NavLink>)}
+    <button onClick={onMore} aria-label="More"><Menu size={22} aria-hidden/>More</button>
+  </nav>;
+}
+```
+
+---
+
+## PROMPT 3: Sign in, Create account, Forgot and Reset password
+
+```
+PHASE 3 (Track B): Sign-in screens and route protection. If the app already has working sign-in (it looks like it does), KEEP its logic and only restyle and complete it: Sign in, Create account, Forgot password, Reset password, the age question, and route protection. If there is no real auth, use Supabase Auth (email + password, Google OAuth) as in the code below. Do not touch app pages except wrapping them in <RequireAuth/>. The backend already exposes /api/auth and /api/users: wherever my code below calls supabase.*, call the existing API through src/lib/api.ts (Prompt 4) instead, using the real route names you find. Add the age band to the existing user model and registration endpoint; reject "under13" on the server too.
+
+Create:
+- src/lib/supabase.ts, src/auth/AuthProvider.tsx (below)
+- src/auth/AuthLayout.tsx: split screen. Left (hidden under 900px): brand, headline "Plan it. Focus. Review.", one sentence of value, and a small static preview card of the dashboard. Right: centered form card, max-width 420px.
+- Pages: /signin, /signup, /forgot-password, /reset-password. Public. Everything else sits inside <RequireAuth/>.
+- Rules for forms: labels always visible, inline errors under the field, submit button shows loading and is disabled while loading, Enter submits, autoComplete attributes set (email, current-password, new-password), show/hide password toggle, never reveal whether an email exists (sign-in error is always "Email or password is incorrect"; forgot-password always says "If an account exists, we sent a link").
+- Sign up fields: Full name, Email, Password (min 8 chars, strength hint), a REQUIRED age group choice with three radio options ("Under 13", "13 to 17", "18 or older"), a required checkbox "I agree to the Terms and Privacy Policy" (link to /terms and /privacy), and a "Continue with Google" button. If "Under 13" is chosen, show "Track Here is for ages 13 and up." and do not submit. Store only the age band (13_17 or 18_plus) in the user metadata; never ask for a date of birth.
+- Google sign-ups skip the form, so add a RequireProfile guard: if the user's profile has no age_band, redirect to /complete-profile, which asks the same age question. If they pick "Under 13", call the delete-account function (built in Phase 6; until then just sign them out) and show the same message. Route nesting: RequireAuth > RequireProfile > AppShell.
+- Age is self-declared; that is acceptable for this stage.
+- After sign up with email confirmation on, show a "Check your email" screen with a resend button (30s cooldown). After sign in, go to the page they came from, else "/". New users with no subjects go to /onboarding (Phase 5).
+```
+
+```ts
+// src/lib/supabase.ts
+import {createClient} from '@supabase/supabase-js';
+export const supabase=createClient(import.meta.env.VITE_SUPABASE_URL as string,import.meta.env.VITE_SUPABASE_ANON_KEY as string);
+```
+
+```tsx
+// src/auth/AuthProvider.tsx
+import {createContext,useContext,useEffect,useState,type ReactNode} from 'react';
+import {Navigate,Outlet,useLocation} from 'react-router-dom';
+import type {Session} from '@supabase/supabase-js';
+import {supabase} from '../lib/supabase';
+
+const Ctx=createContext<{session:Session|null;loading:boolean}>({session:null,loading:true});
+export const useAuth=()=>useContext(Ctx);
+
+export function AuthProvider({children}:{children:ReactNode}){
+  const [session,setSession]=useState<Session|null>(null);
+  const [loading,setLoading]=useState(true);
+  useEffect(()=>{
+    supabase.auth.getSession().then(({data})=>{setSession(data.session);setLoading(false)});
+    const {data:{subscription}}=supabase.auth.onAuthStateChange((_e,s)=>setSession(s));
+    return()=>subscription.unsubscribe();
+  },[]);
+  return <Ctx.Provider value={{session,loading}}>{children}</Ctx.Provider>;
+}
+export function RequireAuth(){
+  const {session,loading}=useAuth(); const loc=useLocation();
+  if(loading) return <div role="status" style={{display:'grid',placeItems:'center',minHeight:'100vh'}}>Loading…</div>;
+  return session?<Outlet/>:<Navigate to="/signin" state={{from:loc}} replace/>;
+}
+```
+
+```tsx
+// src/auth/SignIn.tsx
+import {useState,type FormEvent} from 'react';
+import {Link,useLocation,useNavigate} from 'react-router-dom';
+import {supabase} from '../lib/supabase';
+import {Button,Field} from '../components/ui';
+import {AuthLayout} from './AuthLayout';
+
+export function SignIn(){
+  const nav=useNavigate(); const from=(useLocation().state as {from?:{pathname:string}}|null)?.from?.pathname??'/';
+  const [email,setEmail]=useState(''); const [password,setPassword]=useState('');
+  const [show,setShow]=useState(false); const [err,setErr]=useState(''); const [busy,setBusy]=useState(false);
+  async function submit(e:FormEvent){
+    e.preventDefault(); setErr(''); setBusy(true);
+    const {error}=await supabase.auth.signInWithPassword({email:email.trim(),password});
+    setBusy(false);
+    if(error) return setErr('Email or password is incorrect.');
+    nav(from,{replace:true});
+  }
+  return <AuthLayout title="Welcome back" sub="Sign in to continue your streak.">
+    <form onSubmit={submit} style={{display:'flex',flexDirection:'column',gap:16}} noValidate>
+      <Field label="Email" type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} required/>
+      <div style={{position:'relative'}}>
+        <Field label="Password" type={show?'text':'password'} autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} error={err} required/>
+        <button type="button" className="btn btn-ghost" style={{position:'absolute',right:4,top:26}} onClick={()=>setShow(!show)} aria-label={show?'Hide password':'Show password'}>{show?'Hide':'Show'}</button>
+      </div>
+      <Link to="/forgot-password" style={{color:'var(--primary)',fontWeight:600}}>Forgot password?</Link>
+      <Button variant="primary" size="lg" loading={busy} type="submit">Sign in</Button>
+      <Button type="button" size="lg" onClick={()=>supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin}})}>Continue with Google</Button>
+      <p style={{textAlign:'center',color:'var(--muted)'}}>New here? <Link to="/signup" style={{color:'var(--primary)',fontWeight:600}}>Create an account</Link></p>
+    </form></AuthLayout>;
+}
+```
+
+```tsx
+// src/auth/SignUp.tsx
+import {useState,type FormEvent} from 'react';
+import {Link} from 'react-router-dom';
+import {supabase} from '../lib/supabase';
+import {Button,Field} from '../components/ui';
+import {AuthLayout} from './AuthLayout';
+
+const strength=(p:string)=>[p.length>=8,/[A-Z]/.test(p),/[0-9]/.test(p),/[^A-Za-z0-9]/.test(p)].filter(Boolean).length;
+
+export function SignUp(){
+  const [f,setF]=useState({name:'',email:'',password:'',age:'' as ''|'under13'|'13_17'|'18_plus',terms:false});
+  const [err,setErr]=useState<Record<string,string>>({}); const [busy,setBusy]=useState(false); const [sent,setSent]=useState(false);
+  async function submit(e:FormEvent){
+    e.preventDefault();
+    const x:Record<string,string>={};
+    if(!f.name.trim()) x.name='Enter your name.';
+    if(!/^\S+@\S+\.\S+$/.test(f.email)) x.email='Enter a valid email.';
+    if(f.password.length<8) x.password='Use at least 8 characters.';
+    if(!f.age) x.age='Choose your age group.'; else if(f.age==='under13') x.age='Track Here is for ages 13 and up.';
+    if(!f.terms) x.terms='Please accept the Terms and Privacy Policy.';
+    setErr(x); if(Object.keys(x).length) return;
+    setBusy(true);
+    const {error}=await supabase.auth.signUp({email:f.email.trim(),password:f.password,options:{data:{full_name:f.name.trim(),age_band:f.age},emailRedirectTo:location.origin}});
+    setBusy(false);
+    if(error) return setErr({form:error.message}); setSent(true);
+  }
+  if(sent) return <AuthLayout title="Check your email" sub={`We sent a confirmation link to ${f.email}.`}><Link to="/signin" className="btn btn-primary btn-lg">Back to sign in</Link></AuthLayout>;
+  const s=strength(f.password);
+  return <AuthLayout title="Create your account" sub="Free while we’re in early access.">
+    <form onSubmit={submit} style={{display:'flex',flexDirection:'column',gap:16}} noValidate>
+      <Field label="Full name" autoComplete="name" value={f.name} onChange={e=>setF({...f,name:e.target.value})} error={err.name}/>
+      <Field label="Email" type="email" autoComplete="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})} error={err.email}/>
+      <Field label="Password" type="password" autoComplete="new-password" value={f.password} onChange={e=>setF({...f,password:e.target.value})} error={err.password} hint={f.password?['Weak','Weak','Okay','Good','Strong'][s]:'At least 8 characters.'}/>
+      <fieldset style={{border:0,padding:0,margin:0}}><legend style={{fontWeight:600,marginBottom:6}}>Age group</legend>
+        {([['under13','Under 13'],['13_17','13 to 17'],['18_plus','18 or older']] as const).map(([v,l])=>
+          <label key={v} style={{display:'flex',gap:10,alignItems:'center',minHeight:44}}><input type="radio" name="age" checked={f.age===v} onChange={()=>setF({...f,age:v})} style={{width:20,height:20}}/>{l}</label>)}</fieldset>
+      {err.age&&<small role="alert" style={{color:'var(--danger)'}}>{err.age}</small>}
+      <label style={{display:'flex',gap:10,alignItems:'center',minHeight:44}}><input type="checkbox" checked={f.terms} onChange={e=>setF({...f,terms:e.target.checked})} style={{width:20,height:20}}/><span>I agree to the <Link to="/terms">Terms</Link> and <Link to="/privacy">Privacy Policy</Link></span></label>
+      {err.terms&&<small role="alert" style={{color:'var(--danger)'}}>{err.terms}</small>}
+      {err.form&&<small role="alert" style={{color:'var(--danger)'}}>{err.form}</small>}
+      <Button variant="primary" size="lg" loading={busy} type="submit">Create account</Button>
+      <p style={{textAlign:'center',color:'var(--muted)'}}>Already have an account? <Link to="/signin" style={{color:'var(--primary)',fontWeight:600}}>Sign in</Link></p>
+    </form></AuthLayout>;
+}
+```
+
+```tsx
+// src/auth/ForgotReset.tsx (build both pages in this file using the same patterns as SignIn)
+// Forgot: supabase.auth.resetPasswordForEmail(email,{redirectTo:`${location.origin}/reset-password`}); always show the neutral success message.
+// Reset: two password fields (new + confirm, must match, min 8) then supabase.auth.updateUser({password}); on success navigate('/') .
+```
+
+```tsx
+// src/auth/RequireProfile.tsx: Google sign-ups have no age band until they answer
+import {useEffect,useState} from 'react';
+import {Navigate,Outlet} from 'react-router-dom';
+import {supabase} from '../lib/supabase';
+import {useAuth} from './AuthProvider';
+export function RequireProfile(){
+  const {session}=useAuth(); const [state,setState]=useState<'loading'|'missing'|'ok'>('loading');
+  useEffect(()=>{ if(!session) return;
+    supabase.from('profiles').select('age_band').eq('id',session.user.id).single()
+      .then(({data})=>setState(data?.age_band?'ok':'missing')); },[session]);
+  if(state==='loading') return <div role="status" style={{display:'grid',placeItems:'center',minHeight:'100dvh'}}>Loading…</div>;
+  return state==='missing'?<Navigate to="/complete-profile" replace/>:<Outlet/>;
+}
+// CompleteProfile page: the same age radios as sign-up. 13_17 or 18_plus: supabase.from('profiles').update({age_band}).eq('id',user.id) then navigate('/').
+```
+
+---
+
+## PROMPT 4: Backend hardening (keep the existing API), data layer, cold-start handling
+
+```
+PHASE 4 (Track B): The backend already exists (Express-style REST API on port 5000, endpoints listed in Prompt 0). KEEP IT. Do not migrate to another platform. Work in this order and stop after each step so I can test.
+
+Step 1, audit (no code changes): produce a table with one row per endpoint group: method + path, auth required?, filtered by the signed-in user's id on EVERY query (read, update, delete)?, input validated?, pagination?, and any problem. Also report: the database type and where it is hosted, how passwords are stored, how the session token is stored and how long it lives, whether CORS is locked down, whether there are rate limits, where secrets come from, and where "subjects", "syllabus/chapters" and settings are stored.
+Step 2, security fixes using the snippets below: helmet, locked CORS, rate limits (strict on /api/auth), validation on every write, strict schemas (so a client can never send userId, role or any field you did not list), ownership filter on every query, environment variable check at startup, central error handler that never leaks stack traces, indexes on the user id field.
+Step 3, data fixes: add ageBand ("13_17" or "18_plus", set once) to the user model; make streak and daily totals server-side in the user's timezone (use the function below); make sure every date the client sends is a plain YYYY-MM-DD local date, never a UTC timestamp for a date.
+Step 4, add or finish: GET /api/users/me/export (everything the user owns), DELETE /api/users/me (deletes the user and all their data), POST restore with validation (version field, shape, size limit) that only ever writes to the signed-in user's data.
+Step 5, tests: one automated test that proves user B cannot read, update or delete user A's data on every endpoint group (skeleton below). All tests must pass before I give the link to friends.
+Step 6, frontend data layer: create src/lib/api.ts (below), move every fetch call through it, and show a "Waking up the server, this can take about a minute" banner when a request takes longer than 4 seconds (free hosting sleeps when idle). Keep the existing TanStack Query or state code if present; do not rewrite pages.
+Also: render markdown in Notes through DOMPurify (sanitize) so a note cannot run script (XSS). Never use dangerouslySetInnerHTML with raw note text.
+```
+
+```js
+// server/security.js (adapt to the project's module style and existing names)
+import helmet from 'helmet'; import cors from 'cors'; import rateLimit from 'express-rate-limit';
+export function applySecurity(app){
+  app.disable('x-powered-by');
+  app.use(helmet());
+  const allowed=(process.env.CLIENT_URLS||'').split(',').map(x=>x.trim()).filter(Boolean);
+  app.use(cors({origin:(o,cb)=>(!o||allowed.includes(o))?cb(null,true):cb(new Error('CORS blocked')),credentials:true}));
+  app.use('/api/auth',rateLimit({windowMs:15*60*1000,limit:20,standardHeaders:true,legacyHeaders:false}));
+  app.use('/api',rateLimit({windowMs:60*1000,limit:300,standardHeaders:true,legacyHeaders:false}));
+}
+// server/env.js: fail fast at startup (use the real variable names)
+for(const k of ['JWT_SECRET','DATABASE_URL','CLIENT_URLS']) if(!process.env[k]) throw new Error(`Missing env var ${k}`);
+if(process.env.JWT_SECRET.length<32) throw new Error('JWT_SECRET must be at least 32 characters');
+```
+
+```js
+// server/validate.js: strict schemas block mass-assignment (a client can never set userId, role, plan...)
+import {z} from 'zod';
+export const validate=schema=>(req,res,next)=>{
+  const r=schema.safeParse(req.body);
+  if(!r.success) return res.status(400).json({error:'invalid_input',details:r.error.flatten().fieldErrors});
+  req.body=r.data; next();
+};
+export const TaskBody=z.object({
+  title:z.string().trim().min(1).max(200),
+  description:z.string().max(2000).optional(),
+  priority:z.enum(['low','medium','high']).default('medium'),
+  dueOn:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  subjectId:z.string().optional(),
+}).strict();
+// Ownership rule for EVERY query, whatever the database: the id from the token, never from the body.
+//   find one:   Model.findOne({_id:req.params.id, user:req.user.id})
+//   update:     Model.findOneAndUpdate({_id:req.params.id, user:req.user.id}, req.body)
+//   delete:     Model.deleteOne({_id:req.params.id, user:req.user.id})
+// If nothing matches, answer 404 (not 403) so ids cannot be probed.
+```
+
+```js
+// server/streak.js: current streak in the user's own timezone; 25+ focus minutes in a local day counts
+export function currentStreak(sessions,tz,graceDays=0,now=new Date()){
+  const fmt=new Intl.DateTimeFormat('en-CA',{timeZone:tz}), mins=new Map();
+  for(const s of sessions){const d=fmt.format(new Date(s.startedAt)); mins.set(d,(mins.get(d)||0)+s.durationSec/60)}
+  const ok=d=>(mins.get(d)||0)>=25;
+  const day=new Date(now);
+  if(!ok(fmt.format(day))) day.setDate(day.getDate()-1);      // today is still in progress, do not break the streak yet
+  let streak=0,gap=0;
+  for(let i=0;i<3650;i++){
+    if(ok(fmt.format(day))){streak++;gap=0} else if(++gap>graceDays) break;
+    day.setDate(day.getDate()-1);
+  }
+  return streak;
+}
+```
+
+```js
+// server/test/isolation.test.js (supertest + the project's test runner; fill SAMPLE with a valid body per resource)
+import request from 'supertest'; import app from '../app.js';
+const RES=['tasks','notes','problems','study-sessions','daily-plans','daily-reviews','revisions','mock-tests','timetable'];
+const SAMPLE={tasks:{title:'x'} /* ...one valid body per resource... */};
+const signup=async e=>(await request(app).post('/api/auth/register').send({name:'T',email:e,password:'Passw0rd!x',ageBand:'18_plus'})).body.token; // use the real route and field names
+describe.each(RES)('%s data isolation',res=>{
+  it('user B cannot read, change or delete user A data',async()=>{
+    const a=await signup(`a${Date.now()}@t.dev`), b=await signup(`b${Date.now()}@t.dev`);
+    const made=await request(app).post(`/api/${res}`).set('Authorization',`Bearer ${a}`).send(SAMPLE[res]);
+    const id=made.body.id??made.body._id;
+    for(const [m,body] of [['get'],['patch',{}],['delete']] as const) // drop the type syntax if the tests are plain JS
+      expect([403,404]).toContain((await (request(app) as any)[m](`/api/${res}/${id}`).set('Authorization',`Bearer ${b}`).send(body)).status);
+  });
+});
+```
+
+```ts
+// src/lib/api.ts: one place for every request, with cold-start feedback
+const BASE=(import.meta.env.VITE_API_URL as string|undefined)??'http://localhost:5000/api';
+let onWaking:(v:boolean)=>void=()=>{};
+export const setWakingHandler=(f:(v:boolean)=>void)=>{onWaking=f};   // show/hide the "Waking up the server" banner
+export class ApiError extends Error{constructor(public status:number,public code:string,msg:string){super(msg)}}
+const authHeader=():Record<string,string>=>{const t=localStorage.getItem('token');return t?{Authorization:`Bearer ${t}`}:{}}; // keep whatever the app uses today
+
+async function request<T>(method:string,path:string,body?:unknown,retry=method==='GET'):Promise<T>{
+  const ctrl=new AbortController(); const slow=setTimeout(()=>onWaking(true),4000); const kill=setTimeout(()=>ctrl.abort(),75000);
+  try{
+    const res=await fetch(BASE+path,{method,credentials:'include',signal:ctrl.signal,
+      headers:{'Content-Type':'application/json',...authHeader()},body:body===undefined?undefined:JSON.stringify(body)});
+    if(res.status===401){window.dispatchEvent(new Event('th:signed-out'));throw new ApiError(401,'unauthorized','Please sign in again.')}
+    const data=res.status===204?null:await res.json().catch(()=>null);
+    if(!res.ok) throw new ApiError(res.status,data?.error??'error',data?.message??'Something went wrong. Please try again.');
+    return data as T;
+  }catch(e){
+    if(retry&&!(e instanceof ApiError)) return request<T>(method,path,body,false);   // one retry for network errors on reads
+    throw e;
+  }finally{clearTimeout(slow);clearTimeout(kill);onWaking(false)}
+}
+export const api={get:<T>(p:string)=>request<T>('GET',p),post:<T>(p:string,b?:unknown)=>request<T>('POST',p,b),
+  patch:<T>(p:string,b?:unknown)=>request<T>('PATCH',p,b),del:<T>(p:string)=>request<T>('DELETE',p)};
+// App root: window.addEventListener('th:signed-out',()=>navigate('/signin')).
+```
+
+```ts
+// src/lib/dates.ts and src/data/useTasks.ts (same idea as before, now through the API client)
+export const localISODate=(d=new Date())=>new Intl.DateTimeFormat('en-CA').format(d);   // YYYY-MM-DD in the user's own timezone
+
+import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query';
+import {api} from '../lib/api';
+export type Task={id:string;title:string;priority:'low'|'medium'|'high';dueOn?:string;subjectId?:string;status?:string};
+export const useTasks=()=>useQuery({queryKey:['tasks'],queryFn:()=>api.get<Task[]>('/tasks')});
+export function useCreateTask(){
+  const qc=useQueryClient();
+  return useMutation({
+    mutationFn:(t:Omit<Task,'id'>)=>api.post<Task>('/tasks',{dueOn:localISODate(),...t}),
+    onMutate:async t=>{await qc.cancelQueries({queryKey:['tasks']});const prev=qc.getQueryData<Task[]>(['tasks'])??[];
+      qc.setQueryData<Task[]>(['tasks'],[...prev,{id:'tmp-'+Date.now(),...t}]);return{prev}},
+    onError:(_e,_v,c)=>qc.setQueryData(['tasks'],c?.prev),
+    onSettled:()=>qc.invalidateQueries({queryKey:['tasks']})});
+}
+// Repeat this pattern for every resource. The timer hook (useTimer) in Appendix A is not Supabase-specific; use it as written.
+```
+
+---
+
+## PROMPT 5: Pages (redesign with the new components)
+
+```
+PHASE 5: Redesign page by page. Do ONE page per message when I say "next". Start with Onboarding + Dashboard. Keep all existing features; remove only what is listed.
+
+KNOWN BUGS to fix while redesigning (found in my screenshots): the New Task due date defaults to yesterday (UTC vs local date; use localISODate); the Study calendar starts on Sunday although Settings says "Week starts on Monday" (every calendar and week view must honor that setting); the heatmap rows are misaligned; the habit tracker shows checks while the streak is 0; "General Study" is shown as a subject when the user has none; a leftover subject named "ss"; "Start session" is plain text instead of a button; large dead areas inside cards; subjects can be managed in three places.
+
+RESPONSIVE RULES for every page: two-column layouts become one column below 1024px (the narrow right column goes under the wide one); stat strips become a 2x2 grid below 768px; tables become stacked cards below 768px (each row a card with label/value pairs); the weekly chart and heatmap scroll inside their own container; modals become bottom sheets on phones; page titles shrink to 26px; the primary action of a page stays reachable without scrolling.
+
+ONBOARDING (/onboarding, shown once when the user has zero subjects): 3 steps with a progress indicator. 1) Goal: exam or goal name + date (optional) 2) Subjects: pick from presets (DSA, Operating Systems, DBMS, Computer Networks, Math, Competitive Programming) or add your own, each with a color key 3) Daily focus target (default 4h, choices 2h/3h/4h/6h). Save to profiles + subjects. Skippable. Ends on the dashboard.
+
+DASHBOARD layout (top to bottom):
+1. Header: greeting (no emoji), one-line subtitle, buttons: Morning Plan, Evening Review (secondary). Remove the separate "Start Focus" from the header; it lives in the hero.
+2. Hero card "Up next": the next undone task (or "Plan your day" if none), subject badge, estimate, a primary "Start focus" button, and today's focus progress (big number "1h 20m / 4h" with a segmented bar). Show this number ONLY here.
+3. Stat strip (one card, 4 cells, not 4 cards): Streak, This week, Tasks today, Revisions due. Never show a bare "0": show "No tasks yet" or the next step instead.
+4. Two columns. Left (wide): Today (merged schedule + tasks, with inline add), Subject tracks (progress bar per subject with weekly time and a Study button), Weekly progress chart with the daily target line. Right (narrow): mini month calendar (dots on days with sessions), Recent notes. The Habit tracker is OPTIONAL: hidden by default, enabled in Settings (profiles.prefs.show_habits). When shown it is compact and derived from real sessions and tasks, never inconsistent with the streak.
+5. Remove: Quick Actions card (Quick add covers it), Daily Philosophy card, the tall calendar card with empty space.
+First-run: while the user has no data, replace the stat strip with the FirstRunChecklist below.
+```
+
+```tsx
+// src/components/FirstRunChecklist.tsx
+import {Link} from 'react-router-dom';
+import {Card} from './ui';
+type Step={done:boolean;label:string;to:string};
+export function FirstRunChecklist({steps}:{steps:Step[]}){
+  const done=steps.filter(s=>s.done).length;
+  return <Card>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline'}}>
+      <h2 style={{fontSize:20}}>Get set up</h2><span style={{color:'var(--muted)'}}>{done} of {steps.length}</span></div>
+    <div role="progressbar" aria-valuenow={done} aria-valuemin={0} aria-valuemax={steps.length} style={{height:8,borderRadius:4,background:'var(--line)',margin:'12px 0 8px'}}>
+      <div style={{height:8,borderRadius:4,background:'var(--primary)',width:`${done/steps.length*100}%`}}/></div>
+    {steps.map(s=><Link key={s.label} to={s.to} className="nav-item" style={{justifyContent:'space-between'}}>
+      <span style={{textDecoration:s.done?'line-through':'none'}}>{s.label}</span><span aria-hidden>{s.done?'✓':'→'}</span></Link>)}
+  </Card>;
+}
+// Steps: Add your subjects · Create your first task · Run a 25-minute focus session · Write your first note
+```
+
+```tsx
+// src/components/Heatmap.tsx: fixes the misaligned, unlabeled grid
+import {useMemo} from 'react';
+export function Heatmap({minutesByDay,weeks=53}:{minutesByDay:Map<string,number>;weeks?:number}){
+  const cells=useMemo(()=>{
+    const end=new Date(); const start=new Date(end);
+    start.setDate(end.getDate()-(weeks-1)*7-end.getDay()); // begins on a Sunday so every column is a full week
+    const out:{key:string;m:number;future:boolean}[]=[];
+    for(let i=0;i<weeks*7;i++){const d=new Date(start);d.setDate(start.getDate()+i);
+      const key=new Intl.DateTimeFormat('en-CA').format(d); out.push({key,m:minutesByDay.get(key)??0,future:d>end})}
+    return out;},[minutesByDay,weeks]);
+  const level=(m:number)=>m>=240?4:m>=120?3:m>=60?2:m>=25?1:0;
+  return <div role="img" aria-label="Study activity for the last year" style={{overflowX:'auto'}}>
+    <div style={{display:'grid',gridAutoFlow:'column',gridTemplateRows:'repeat(7,14px)',gridAutoColumns:'14px',gap:4}}>
+      {cells.map(c=><div key={c.key} title={`${c.key}: ${c.m} min`} style={{borderRadius:3,background:c.future?'transparent':`var(--heat-${level(c.m)})`}}/>)}
+    </div>
+    <div style={{display:'flex',gap:6,alignItems:'center',marginTop:12,color:'var(--muted)',fontSize:13}}>Less{[0,1,2,3,4].map(l=><span key={l} style={{width:14,height:14,borderRadius:3,background:`var(--heat-${l})`}}/>)}More</div>
+  </div>;
+}
+```
+
+```
+NEXT PAGES (one per message, when I say "next"). For pages I have not shown you (Streaks & Heatmap, Revision Queue, Daily Journal, Practice & Tests details) apply the same page pattern: icon tile + title + one-line subtitle, ONE primary action at top right, a useful empty state, and the shared components.
+- STUDY & TIMER: one card with two equal columns. Left: a ring timer (clamp 240 to 340px) with a progress arc in the primary color on a faint track, big time, and a LARGE primary "Start session" button under it (then Pause / Finish and save / Reset). Right: "Session details" (rename "Target study parameters"): Subject (chips when 6 or fewer, otherwise a select; defaults to the last used; if the user has none show an inline "Add your first subject"), Activity type, Topic or chapter, Subtopic (optional). Show the "25 minutes keeps your streak" hint under the ring. Below: List/Calendar toggle and the filter bar (search, subject, activity; on phones the filters collapse into one "Filters" button). Calendar view: compact cells with minutes or dots, honors Week starts on, the selected-day panel sits to the right on desktop and below on phones.
+- TASKS & PROJECTS: tabs By Subject / All Tasks only (Weekly Schedule moves to Timetable). Create Task modal order: Title, Subject (select from the user's subjects, replaces "Category"), Priority, Due date (default today via localISODate), Estimate, Description, Tags, Repeat. Status is not asked on create. Empty table shows a "Create a task" button.
+- TIMETABLE: on desktop a real week grid (days per Week starts on, time rows 06:00 to 24:00, blocks colored by subject, today highlighted, actual focus sessions overlaid as a thinner bar so planned vs actual is visible). On phones keep the day tabs. Add Block modal (subject, start, end, repeat weekly). Keep "Recent completed focus" as a side panel.
+- SYLLABUS & GOALS: the ONLY place to manage subjects (add, rename, recolor, reorder, delete) plus chapters with checkboxes and a completion bar ("3 of 12 chapters done"). Two panes on desktop, stacked on phones. 8 color keys instead of 5.
+- NOTES WORKSPACE: keep the 3 panes. Folders pane gets a labeled "New folder" button (today it is an unlabeled icon). Note list shows title, 2-line snippet, date and subject badge. Editor has a toolbar (bold, italic, heading, list, checklist, code), Edit/Preview toggle, "Saved" indicator, pin. Empty editor pane shows ONE action only (remove the duplicate "Create Note"). On phones: list first, tapping opens the editor with a Back button.
+- PRACTICE & TESTS: tabs Mock Tests and Problem Journal. Use the SAME neutral card style as the rest of the app (no saturated tinted stat cards). Log forms in a modal.
+- STREAKS & HEATMAP: the Heatmap component, current and best streak, the 25-minute rule and the milestone badges. REVISION QUEUE: groups Overdue / Today / Upcoming, "Mark reviewed" button, spaced intervals 1, 3, 7, 14, 30 days. DAILY JOURNAL: one entry per local day with mood and three prompts (what I studied, what blocked me, tomorrow's first task) and a strip showing which days have entries.
+- STATISTICS & ANALYTICS: split into tabs (Consistency, Time, Practice) instead of one long page. Plain wording: "Topics you've covered", "Mistakes to review", "Solved without hints".
+- SETTINGS: keep the 4 tabs (Profile, Study Goals, Notifications, Data & Backup), they are good. Changes: Profile adds Theme (System/Dark/Light) and shows the age group read-only. Study Goals: replace the duplicate subject manager with a link to Syllabus & Goals; keep exam date, daily goal, timezone, week start, streak grace; add a "Show habit tracker" toggle (default off). Notifications: every toggle needs a label and aria-checked; replace the wording "backend-scheduled" with plain "Reminders"; explain that browser push needs permission. Data & Backup: keep Export, Restore and Danger Zone, but make Delete Account require typing DELETE; add a "Send feedback" button. Every tab: one Save button, a "Saved" confirmation, and a warning if the user leaves with unsaved changes.
+```
+
+---
+
+## PROMPT 6: Account, privacy and cleanup (Track B)
+
+```
+PHASE 6: Finish the account basics. Do NOT build subscriptions, plans, usage limits, teen limits, waitlists or any upgrade UI. Those come later.
+
+1. /terms and /privacy pages with plain-language placeholder text (I will replace it with reviewed text) and links to them from the sign-up form and Settings.
+2. Account deletion: typed confirmation (DELETE), then delete the user and ALL of their rows. On the Supabase path use an Edge Function with the service role (the browser can never delete auth users). On the keep-backend path add a protected endpoint. Also call it when someone chooses "Under 13" after a Google sign-up.
+3. Data export must include every table the user owns; restore must validate the file (version field, shape) before writing anything and must never overwrite another user's data.
+4. Do not add analytics, ad or tracking scripts. Store the age band only. Keep a `prefs` JSON column on profiles for future settings (theme, show_habits).
+5. Clean test data from my account (the "ss" subject) with a one-time script I run myself.
+```
+
+---
+
+## PROMPT 7: Phone and laptop polish, installable app (PWA)
+
+```
+PHASE 7: Make the app comfortable on phones and installable from the browser, using the responsive rules from Phases 2 and 5.
+
+1. Audit every page at 360px, 390px, 768px, 1024px and 1440px. Fix: horizontal scroll, text under 13px, tap targets under 44px, tables that do not stack, modals that are not bottom sheets, charts that overflow. Give me a before/after list.
+2. Timer page on phones: ring size clamp(240px, 70vw, 340px), Start/Pause button full width and 56px tall, screen stays awake while the timer runs (use the Screen Wake Lock API with a graceful fallback), and the page title shows the running time (document.title = "24:10 · Track Here").
+3. Add a long list guard: lists with more than 50 rows use "Load more" instead of rendering everything.
+4. Make the app installable. I approve one new dev dependency: vite-plugin-pwa. Provide icons at 192 and 512 (maskable) using a simple generated placeholder, an offline fallback page, and an "Update available, reload" toast.
+```
+
+```html
+<!-- index.html head additions -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B100E">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+```
+
+```ts
+// vite.config.ts addition
+import {VitePWA} from 'vite-plugin-pwa';
+// plugins: [react(), VitePWA({registerType:'prompt',manifest:{
+//   name:'Track Here',short_name:'Track Here',start_url:'/',display:'standalone',background_color:'#0B100E',theme_color:'#0B100E',
+//   icons:[{src:'/icons/icon-192.png',sizes:'192x192',type:'image/png'},{src:'/icons/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}]}})]
+```
+
+```css
+/* tables that become cards on phones: add data-label="Priority" etc. to each <td> */
+@media (max-width:767px){
+  .table-cards thead{display:none}
+  .table-cards tr{display:block;border:1px solid var(--line);border-radius:var(--r-md);padding:12px;margin-bottom:10px;background:var(--surface)}
+  .table-cards td{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border:0}
+  .table-cards td::before{content:attr(data-label);color:var(--muted)}
+}
+```
+
+---
+
+## PROMPT 8: Beta readiness for ~50 friends, zero budget deployment
+
+```
+PHASE 8: Get the app safely in front of about 50 testers using only free services (plus one cheap domain).
+
+1. Feedback: a "Send feedback" item in the user menu and in Settings. Modal with type (Bug, Idea, Other), message (3 to 2000 chars), and an automatic route + app version. Insert into the `feedback` table.
+2. Error reporting: add Sentry (free plan, I approve @sentry/react). Send errors only. Never send note text, task titles or emails. Do not enable session replay. Do not load any analytics or tracking script for any user.
+3. Smoke test: one Playwright test that signs up, creates a task, runs the timer for a few seconds, finishes a session, and checks the streak card. Run it with `npx playwright test`.
+4. Backend hosting: a Render free web service (Node). Use the build and start commands from package.json, health check path /api/health, every secret as an environment variable, CLIENT_URLS = my frontend URL(s). Free services sleep after 15 idle minutes and need about a minute to wake, so the "Waking up the server" banner from api.ts must work. Add the optional keep-warm GitHub Action below as best effort (it may not fully prevent sleeping).
+5. Frontend on Cloudflare Pages (free, commercial use allowed): build command `npm run build`, output directory `dist`, environment variable VITE_API_URL=https://api.<my-domain>/api. Add public/_redirects with `/* /index.html 200` so deep links work. Use my domain for the site and a subdomain (api.) for the backend so cookies, if used, stay first-party. Give me exact click-by-click steps.
+6. Database: tell me which database the backend uses (from the Phase 4 audit) and the best FREE hosted option for that exact type that does NOT expire or delete data. Never use a free database that expires. Give me the steps to move my existing local data into it.
+7. Backups: the Export button in Settings for users, plus a one-line monthly dump command for the real database type that I run on my own computer.
+8. Final checklist for me: two-account data isolation test (account B must not see account A's data), sign-up with each age group, under-13 blocked, theme switch, install on a phone, and a Lighthouse run (target 90+ for accessibility).
+```
+
+```yaml
+# .github/workflows/keep-api-warm.yml (best effort; GitHub may delay scheduled runs and free hosts may still sleep)
+name: keep-api-warm
+on:
+  schedule: [{cron: '*/10 * * * *'}]
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsS --max-time 90 "${{ secrets.API_URL }}/api/health"
+```
+
+```ts
+// e2e/smoke.spec.ts: skeleton; Gemini fills in the selectors from the real UI
+import {test,expect} from '@playwright/test';
+test('sign up, task, timer, streak',async({page})=>{
+  const email=`beta+${Date.now()}@example.com`;
+  await page.goto('/signup');
+  await page.getByLabel('Full name').fill('Test User');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill('Passw0rd!x');
+  await page.getByLabel('18 or older').check();
+  await page.getByLabel(/I agree/).check();
+  await page.getByRole('button',{name:'Create account'}).click();
+  await expect(page.getByText(/check your email|Get set up/i)).toBeVisible();
+});
+```
+
+```ts
+// src/lib/sentry.ts
+import * as Sentry from '@sentry/react';
+Sentry.init({dsn:import.meta.env.VITE_SENTRY_DSN,sendDefaultPii:false,tracesSampleRate:0,
+  beforeSend(e){delete e.user;delete e.request?.cookies;return e}});
+```
+
+---
+
+## APPENDIX A: Supabase fallback (ONLY if the Phase 4 audit says the existing backend must be replaced)
+
+If that happens, tell Gemini: "The audit says we replace the backend. Use Supabase (Postgres + Auth + Row Level Security) with one table per existing endpoint group, an RLS policy `user_id = auth.uid()` on every table, a profiles table with age_band (13_17 or 18_plus, set once, trigger blocks changes, under13 rejected in the signup trigger), a daily_minutes view and a current_streak() function in the user's timezone, a feedback table, and a useTimer hook based on timestamps (startedAt + accumulated milliseconds saved in localStorage, so a refresh never loses the timer)." Then ask it to write the SQL and hooks. Do not use this appendix while the existing API is being kept.
+
+
+execute one by one propmts and tell me after each propmt done 
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-11-12T02:52:53+05:30.
+
+The user's current state is as follows:
+Active Document: c:\Users\LAKSHMI NARAYANA\OneDrive\Pictures\Desktop\Track Here\tests\test-security.mjs (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 1
+Other open documents:
+- c:\Users\LAKSHMI NARAYANA\OneDrive\Pictures\Desktop\Track Here\server\controllers\userController.js (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>

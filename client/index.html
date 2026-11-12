@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#F8F9F5" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0B100E" media="(prefers-color-scheme: dark)" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <meta name="description" content="Track Here — Universal Study, Revision & Preparation Platform for GATE, NEET, JEE, UPSC, and Competitive Programming." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <!-- Google Fonts: Inter & Space Grotesk -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+
+    <title>Track Here — Study OS</title>
+
+    <script>
+      (function() {
+        try {
+          var t = localStorage.getItem('th-theme') || 'light';
+          document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+        } catch(e) {}
+      })();
+    </script>
+
+    <style>
+      :root {
+        --bg: #F8F9F5;
+        --sf: #FFFFFF;
+        --sf2: #F2F4EE;
+        --ln: #E5E8E1;
+        --ln2: #ECEFE8;
+        --ink: #141815;
+        --mu: #5F6862;
+        --mu2: #88928B;
+        --br: #216E39;
+        --brb: #EAF3EC;
+        --bar: #B8D8C2;
+        --rd: #B42318;
+        --rdb: #FDE6E4;
+        --am: #92400E;
+        --amb: #FEF0CD;
+        --s1: #2563EB;
+        --s1b: #EFF6FF;
+        --s2: #16A34A;
+        --s2b: #F0FDF4;
+        --s3: #D97706;
+        --s3b: #FFFBEB;
+        --s4: #E11D48;
+        --s4b: #FFF1F2;
+        --h0: #E6E9E0;
+        --h1: #C5E3CF;
+        --h2: #8FCBA3;
+        --h3: #3F9A63;
+        --h4: #216E39;
+      }
+      body {
+        margin: 0;
+        background-color: var(--bg);
+        color: var(--ink);
+        font-family: Inter, system-ui, -apple-system, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      #root {
+        min-height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

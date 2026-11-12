@@ -1,0 +1,117 @@
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #F8F9F5;
+  --surface: #FFFFFF;
+  --surface-2: #F2F4EE;
+  --line: #E5E8E1;
+  --text: #141815;
+  --muted: #5F6862;
+  --primary: #216E39;
+  --on-primary: #FFFFFF;
+  --primary-soft: #EAF3EC;
+  --danger: #B42318;
+  --danger-soft: #FDE4E1;
+  --warn: #92400E;
+  --warn-soft: #FEF0CD;
+  --ring: #216E39;
+
+  /* Subject colors: foreground + tinted background */
+  --c-blue: #1D4ED8;
+  --c-blue-bg: #E0E9FF;
+  --c-green: #15803D;
+  --c-green-bg: #DCF5E3;
+  --c-amber: #A15207;
+  --c-amber-bg: #FDEFC9;
+  --c-rose: #BE185D;
+  --c-rose-bg: #FCE3EF;
+  --c-violet: #6D28D9;
+  --c-violet-bg: #EDE7FF;
+  --c-cyan: #0E7490;
+  --c-cyan-bg: #D6F3F7;
+  --c-orange: #C2410C;
+  --c-orange-bg: #FFE6D6;
+  --c-slate: #475569;
+  --c-slate-bg: #E8EDF2;
+
+  --heat-0: #E6EBE4;
+  --heat-1: #C5E6D3;
+  --heat-2: #8FCBA9;
+  --heat-3: #3F9A6B;
+  --heat-4: #1F6F43;
+
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+
+  --font: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --display: 'Space Grotesk', var(--font);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0B100E;
+  --surface: #111815;
+  --surface-2: #17201C;
+  --line: #25322B;
+  --text: #EAF1EC;
+  --muted: #9AA9A0;
+  --primary: #34D399;
+  --on-primary: #04251A;
+  --primary-soft: #12342A;
+  --danger: #FF9B90;
+  --danger-soft: #3F1A17;
+  --warn: #F2B45B;
+  --warn-soft: #3A2A10;
+  --ring: #34D399;
+
+  /* Subject colors dark */
+  --c-blue: #8DB0FF;
+  --c-blue-bg: #1B2A4D;
+  --c-green: #6FD58F;
+  --c-green-bg: #183422;
+  --c-amber: #F2B45B;
+  --c-amber-bg: #3A2A10;
+  --c-rose: #F58BBB;
+  --c-rose-bg: #3D1727;
+  --c-violet: #B7A4FF;
+  --c-violet-bg: #2A2150;
+  --c-cyan: #67D8E6;
+  --c-cyan-bg: #123A40;
+  --c-orange: #FFA470;
+  --c-orange-bg: #40220F;
+  --c-slate: #AAB6C2;
+  --c-slate-bg: #232C35;
+
+  --heat-0: #17201C;
+  --heat-1: #16402F;
+  --heat-2: #1F6B4C;
+  --heat-3: #2FA06F;
+  --heat-4: #6FE3B0;
+}
+
+html, body {
+  margin: 0;
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+  font: 400 14px/1.5 var(--font);
+  min-height: 100dvh;
+}
+
+h1, h2, h3 {
+  font-family: var(--display);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

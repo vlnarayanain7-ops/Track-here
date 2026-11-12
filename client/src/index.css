@@ -1,0 +1,159 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --sf: var(--surface);
+    --sf2: var(--surface-2);
+    --ln: var(--line);
+    --ln2: var(--line);
+    --ink: var(--text);
+    --mu: var(--muted);
+    --mu2: var(--muted);
+    --br: var(--primary);
+    --br-h: var(--primary);
+    --brb: var(--primary-soft);
+    --bar: var(--primary-soft);
+    --rd: var(--danger);
+    --rdb: var(--danger-soft);
+    --am: var(--warn);
+    --amb: var(--warn-soft);
+    --s1: var(--c-blue);
+    --s1b: var(--c-blue-bg);
+    --s2: var(--c-green);
+    --s2b: var(--c-green-bg);
+    --s3: var(--c-amber);
+    --s3b: var(--c-amber-bg);
+    --s4: var(--c-rose);
+    --s4b: var(--c-rose-bg);
+    --h0: var(--heat-0);
+    --h1: var(--heat-1);
+    --h2: var(--heat-2);
+    --h3: var(--heat-3);
+    --h4: var(--heat-4);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+    background-color: var(--bg);
+    color: var(--ink);
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--ink);
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4, .font-heading {
+    font-family: 'Space Grotesk', sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--br);
+    outline-offset: 2px;
+  }
+
+  /* Clean subtle scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(140, 134, 126, 0.25);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(140, 134, 126, 0.45);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(140, 134, 126, 0.25) transparent;
+  }
+
+  ::selection {
+    background: #EAF3EC;
+    color: #16532B;
+  }
+}
+
+@layer components {
+  /* Tactile bento card */
+  .bento-card {
+    background-color: var(--sf);
+    border: 1px solid var(--ln);
+    border-radius: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.03);
+    padding: 24px;
+    transition: all 0.15s ease;
+  }
+
+  .bento-card:hover {
+    border-color: #D3D8CC;
+  }
+
+  /* 44px minimum tap target button */
+  .action-btn {
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: 12px;
+    border: 1px solid var(--ln);
+    background-color: var(--sf);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 13.5px;
+    color: var(--ink);
+    transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
+  }
+
+  .action-btn:hover {
+    background-color: var(--sf2);
+    border-color: #D3D8CC;
+  }
+
+  .action-btn:active {
+    transform: scale(0.98);
+  }
+
+  /* Soft pastel badges */
+  .badge-sage {
+    @apply bg-[#EAF3EC] text-[#216E39] border border-[#C2DEC9] font-medium;
+  }
+
+  .badge-amber {
+    @apply bg-[#FEF0CD] text-[#92400E] border border-[#FDE6A8] font-medium;
+  }
+
+  .badge-rose {
+    @apply bg-[#FCE3EF] text-[#BE185D] border border-[#F9C5DE] font-medium;
+  }
+
+  .badge-indigo {
+    @apply bg-[#EFF6FF] text-[#1D4ED8] border border-[#BFDBFE] font-medium;
+  }
+
+  .badge-slate {
+    @apply bg-[#F2F4EE] text-[#5F6862] border border-[#E5E8E1] font-medium;
+  }
+}

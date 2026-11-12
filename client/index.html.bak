@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en" data-theme="light" style="color-scheme: light only !important;">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#FBF9F6" />
+    <meta name="color-scheme" content="light only" />
+    <meta name="darkreader-lock" />
+    <meta name="description" content="Track Here — Universal Study, Revision & Preparation Platform for NEET, JEE, UPSC, GATE, Competitive Programming and more." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <!-- Preconnect to Google Fonts for faster loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <title>Track Here — Study OS</title>
+
+    <!-- Inline critical styles for strictly enforced light theme rendering -->
+    <style>
+      :root, html, body {
+        color-scheme: light only !important;
+        background-color: #FBF9F6 !important;
+        color: #1C1917 !important;
+      }
+      body {
+        margin: 0;
+        background-color: #FBF9F6 !important;
+        color: #1C1917 !important;
+      }
+      #root {
+        min-height: 100vh;
+        background-color: #FBF9F6 !important;
+      }
+    </style>
+
+    <!-- Anti-dark-inversion runtime script -->
+    <script>
+      (function() {
+        function enforceLight() {
+          if (document.documentElement.classList.contains('dark')) {
+            document.documentElement.classList.remove('dark');
+          }
+          document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.style.setProperty('color-scheme', 'light only', 'important');
+          
+          // Neutralize any extension injected styles (Dark Reader, Midnight Lizard, etc.)
+          var darkStyles = document.querySelectorAll('style.darkreader, link.darkreader, style[id*="dark"]');
+          darkStyles.forEach(function(el) {
+            el.remove();
+          });
+        }
+        enforceLight();
+        window.addEventListener('DOMContentLoaded', enforceLight);
+        window.addEventListener('load', enforceLight);
+
+        // Continuous observer to remove any dynamic dark injections
+        if (window.MutationObserver) {
+          var observer = new MutationObserver(function() {
+            if (document.documentElement.classList.contains('dark')) {
+              document.documentElement.classList.remove('dark');
+            }
+            var darkStyles = document.querySelectorAll('style.darkreader, link.darkreader');
+            if (darkStyles.length > 0) {
+              darkStyles.forEach(function(el) { el.remove(); });
+            }
+          });
+          observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+          if (document.head) {
+            observer.observe(document.head, { childList: true });
+          }
+        }
+      })();
+    </script>
+  </head>
+  <body style="background-color: #FBF9F6 !important; color: #1C1917 !important;">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
