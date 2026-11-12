@@ -256,7 +256,8 @@ export const forgotPassword = asyncHandler(async (req, res) => {
       }
     );
 
-    const link = `http://localhost:5173/reset-password/${token}`;
+    const baseUrl = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
+    const link = `${baseUrl}/reset-password/${token}`;
     await sendMail({
       to: user.email,
       subject: 'Reset your Track Here password',

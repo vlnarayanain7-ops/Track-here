@@ -16,7 +16,7 @@ for (const k of ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET']) {
 }
 
 if (process.env.NODE_ENV === 'production' && !process.env.MAIL_HOST) {
-  throw new Error('MAIL_HOST is required in production (password reset needs email)');
+  console.warn('⚠️ [config] MAIL_HOST is not set. Password reset emails will log to server console.');
 }
 
 if (process.env.DISABLE_RATE_LIMIT === 'true' && process.env.NODE_ENV === 'production') {
