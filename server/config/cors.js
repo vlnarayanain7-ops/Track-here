@@ -2,18 +2,24 @@ import env from './env.js';
 
 export const allowedOrigins = [
   env.CLIENT_URL,
+  'https://track-here.vercel.app',
   ...(env.CLIENT_URLS ? env.CLIENT_URLS.split(',').map((s) => s.trim()) : []),
   ...(env.NODE_ENV === 'development'
     ? ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173']
     : []),
 ].filter(Boolean);
 
+export const isOriginAllowed = (origin) => {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  if (/^https:\/\/.*\.vercel\.app$/.test(origin)) return true;
+  if (/^https:\/\/.*\.onrender\.com$/.test(origin)) return true;
+  return false;
+};
+
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, curl)
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes(origin)) {
+    if (isOriginAllowed(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));

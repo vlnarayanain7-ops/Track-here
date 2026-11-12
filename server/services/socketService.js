@@ -1,5 +1,5 @@
 import { Server } from 'socket.io';
-import { allowedOrigins } from '../config/cors.js';
+import { allowedOrigins, isOriginAllowed } from '../config/cors.js';
 import { verifyAccessToken } from '../utils/tokens.js';
 
 let ioInstance = null;
@@ -16,11 +16,14 @@ function readCookie(cookieHeader, name) {
  */
 export function initSocket(httpServer) {
   const io = new Server(httpServer, {
-    cors: { origin: allowedOrigins, credentials: true },
+    cors: {
+      origin: (origin, callback) => callback(null, isOriginAllowed(origin)),
+      credentials: true,
+    },
     allowRequest: (req, cb) => {
       // Runs for polling AND WebSocket upgrade handshake
       const o = req.headers.origin;
-      cb(null, !o || allowedOrigins.includes(o));
+      cb(null, isOriginAllowed(o));
     },
     pingTimeout: 30000,
     pingInterval: 25000,
@@ -29,7 +32,7 @@ export function initSocket(httpServer) {
   io.use(async (socket, next) => {
     try {
       const o = socket.handshake.headers.origin;
-      if (o && !allowedOrigins.includes(o)) {
+      if (o && !isOriginAllowed(o)) {
         return next(new Error('origin_not_allowed'));
       }
       const token = socket.handshake.auth?.token || readCookie(socket.handshake.headers.cookie, 'accessToken');
