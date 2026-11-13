@@ -12,7 +12,6 @@ import {
   setCsrfCookie,
   clearAuthCookies,
 } from '../utils/tokens.js';
-import { sendPasswordResetEmail } from '../services/emailService.js';
 import { sendMail } from '../services/mailer.js';
 import crypto from 'crypto';
 

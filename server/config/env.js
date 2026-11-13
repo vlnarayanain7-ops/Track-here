@@ -15,10 +15,6 @@ for (const k of ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET']) {
   if (process.env[k].length < 32) throw new Error(`${k} must be at least 32 characters`);
 }
 
-if (process.env.NODE_ENV === 'production' && !process.env.MAIL_HOST) {
-  console.warn('⚠️ [config] MAIL_HOST is not set. Password reset emails will log to server console.');
-}
-
 if (process.env.DISABLE_RATE_LIMIT === 'true' && process.env.NODE_ENV === 'production') {
   throw new Error('DISABLE_RATE_LIMIT must not be true in production');
 }
@@ -33,11 +29,8 @@ const env = {
   CLIENT_URLS: process.env.CLIENT_URLS || '',
   NODE_ENV: process.env.NODE_ENV || 'development',
   COOKIE_DOMAIN: process.env.COOKIE_DOMAIN || undefined,
-  MAIL_HOST: process.env.MAIL_HOST || undefined,
-  MAIL_PORT: parseInt(process.env.MAIL_PORT, 10) || 587,
-  MAIL_USER: process.env.MAIL_USER || undefined,
-  MAIL_PASS: process.env.MAIL_PASS || undefined,
-  MAIL_FROM: process.env.MAIL_FROM || 'Track Here <no-reply@yourdomain.com>',
+  BREVO_API_KEY: process.env.BREVO_API_KEY || undefined,
+  MAIL_FROM_EMAIL: process.env.MAIL_FROM_EMAIL || undefined,
   DISABLE_RATE_LIMIT: process.env.DISABLE_RATE_LIMIT === 'true',
   VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY || '',
   VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY || '',

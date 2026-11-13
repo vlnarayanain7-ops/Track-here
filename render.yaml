@@ -19,13 +19,7 @@ services:
         sync: false
       - key: CLIENT_URL
         sync: false
-      - key: MAIL_HOST
+      - key: BREVO_API_KEY
         sync: false
-      - key: MAIL_PORT
-        sync: false
-      - key: MAIL_USER
-        sync: false
-      - key: MAIL_PASS
-        sync: false
-      - key: MAIL_FROM
+      - key: MAIL_FROM_EMAIL
         sync: false
