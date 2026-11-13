@@ -44,6 +44,16 @@
   --r-md: 14px;
   --r-lg: 20px;
 
+  /* Calm reference variable aliases */
+  --ln: var(--line);
+  --sf: var(--surface);
+  --sf2: var(--surface-2);
+  --tx: var(--text);
+  --mu: var(--muted);
+  --pr: var(--primary);
+  --on: var(--on-primary);
+  --soft: var(--primary-soft);
+
   --font: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --display: 'Space Grotesk', var(--font);
 }
@@ -89,11 +99,164 @@
   --heat-3: #2FA06F;
   --heat-4: #4FC98F;
   --heat-5: #9BEBC4;
+
+  /* Calm reference variable aliases dark */
+  --ln: var(--line);
+  --sf: var(--surface);
+  --sf2: var(--surface-2);
+  --tx: var(--text);
+  --mu: var(--muted);
+  --pr: var(--primary);
+  --on: var(--on-primary);
+  --soft: var(--primary-soft);
 }
 
 /* touch targets: small on desktop, 44px on touch */
 .btn, .nav, .sidebar-nav {
   min-height: 36px;
+}
+
+.btn {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--ln);
+  background: var(--sf);
+  color: var(--tx);
+  font: 500 14px var(--font);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.btn:hover {
+  background: var(--sf2);
+}
+.btn.p {
+  background: var(--pr);
+  color: var(--on);
+  border-color: transparent;
+}
+.btn.p:hover {
+  filter: brightness(1.08);
+}
+.btn.g {
+  border-color: transparent;
+  background: none;
+  color: var(--mu);
+}
+.btn.g:hover {
+  background: var(--sf2);
+  color: var(--tx);
+}
+.btn.lg {
+  height: 44px;
+  padding: 0 22px;
+  font-size: 15px;
+}
+
+.center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 0;
+}
+.chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.chip {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 16px;
+  border: 1px solid var(--ln);
+  background: var(--sf);
+  color: var(--mu);
+  font: 500 13px var(--font);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.chip:hover {
+  background: var(--sf2);
+  color: var(--tx);
+}
+.chip.on {
+  background: var(--soft);
+  color: var(--pr);
+  border-color: transparent;
+  font-weight: 600;
+}
+.timer-ring, .ring {
+  position: relative;
+  width: min(240px, 70vw);
+  aspect-ratio: 1;
+  outline: none;
+  box-shadow: none !important;
+}
+.timer-ring:focus, .ring:focus {
+  outline: none;
+  box-shadow: none !important;
+}
+.timer-ring svg, .ring svg {
+  width: 100%;
+  height: 100%;
+}
+.time {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+.time b {
+  font: 700 52px var(--display);
+  letter-spacing: -0.03em;
+  color: var(--tx);
+  line-height: 1.1;
+}
+.time span {
+  color: var(--mu);
+  font-size: 13px;
+}
+.acts {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+.sec {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 24px 0 4px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--ln);
+}
+.g {
+  flex: 1;
+}
+.note {
+  color: var(--mu);
+  font-size: 13px;
+}
+.note a {
+  color: var(--pr);
 }
 
 @media (pointer: coarse), (max-width: 760px) {
