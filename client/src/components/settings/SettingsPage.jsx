@@ -16,43 +16,30 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Premium Header */}
-      <div className="flex items-start gap-3 pb-3 border-b border-border/60">
-        <div className="w-10 h-10 rounded-xl bg-surface flex items-center justify-center border border-border/80 shrink-0">
-          <Settings className="w-5 h-5 text-text-secondary" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-text-primary">Settings</h1>
-          <p className="text-[11px] text-text-muted mt-0.5">
-            Manage your account profile, study parameters, notifications and backups
-          </p>
-        </div>
+    <div className="w-full max-w-[880px] space-y-4 animate-fade-in">
+      {/* Calm Header */}
+      <div>
+        <h1 className="text-[26px] font-bold font-heading tracking-tight text-[var(--text)]">Settings</h1>
       </div>
 
-      {/* Premium Tabs */}
-      <div className="flex bg-surface/50 p-1 rounded-xl border border-border/60 w-fit overflow-x-auto">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 whitespace-nowrap ${
-                activeTab === tab.id
-                  ? 'bg-card text-text-primary shadow-sm border border-border/80'
-                  : 'text-text-secondary hover:text-text-primary'
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{tab.label}</span>
-            </button>
-          );
-        })}
+      {/* Calm Tabs */}
+      <div className="tabs" role="tablist">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`tb ${activeTab === tab.id ? 'on' : ''}`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Tab Panels */}
-      <div key={activeTab} className="animate-fade-in">
+      <div key={activeTab} className="pt-2 animate-fade-in">
         {activeTab === 'profile' && <ProfileSettings />}
         {activeTab === 'study' && <StudySettings />}
         {activeTab === 'notifications' && <NotificationSettings />}
