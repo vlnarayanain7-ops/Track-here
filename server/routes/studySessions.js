@@ -9,6 +9,7 @@ import {
   pauseTimer,
   resumeTimer,
   finishTimer,
+  cancelTimer,
   getActiveTimer,
   createSessionSchema,
   updateSessionSchema,
@@ -35,6 +36,7 @@ router.post('/timer/resume', resumeTimer);
 router.put('/timer/:id/finish', finishTimer);
 router.post('/timer/:id/finish', finishTimer);
 router.post('/timer/finish', finishTimer);
+router.post('/timer/cancel', cancelTimer);
 
 // CRUD routes
 router.get('/', getSessions);

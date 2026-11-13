@@ -4,18 +4,20 @@ import { cn } from '@/lib/utils';
 
 export default function SideSheet({
   open,
+  isOpen,
   onClose,
   title,
   children,
   className,
 }) {
+  const isSheetOpen = open ?? isOpen ?? false;
   const overlayRef = useRef(null);
 
   useEffect(() => {
     const handler = (e) => {
       if (e.key === 'Escape') onClose?.();
     };
-    if (open) {
+    if (isSheetOpen) {
       document.addEventListener('keydown', handler);
       document.body.style.overflow = 'hidden';
     }
@@ -23,9 +25,9 @@ export default function SideSheet({
       document.removeEventListener('keydown', handler);
       document.body.style.overflow = '';
     };
-  }, [open, onClose]);
+  }, [isSheetOpen, onClose]);
 
-  if (!open) return null;
+  if (!isSheetOpen) return null;
 
   return (
     <div

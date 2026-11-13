@@ -1,5 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useActiveTimer, useStartTimer, usePauseTimer, useResumeTimer, useFinishTimer } from './useStudySessions';
+import {
+  useActiveTimer,
+  useStartTimer,
+  usePauseTimer,
+  useResumeTimer,
+  useFinishTimer,
+  useCancelTimer,
+} from './useStudySessions';
 
 export function useTimer() {
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -23,6 +30,7 @@ export function useTimer() {
   const pauseMutation = usePauseTimer();
   const resumeMutation = useResumeTimer();
   const finishMutation = useFinishTimer();
+  const cancelMutation = useCancelTimer();
 
   // Recover active timer on mount
   useEffect(() => {
@@ -69,16 +77,33 @@ export function useTimer() {
   }, [isRunning, isPaused, session, getElapsedSeconds]);
 
   const startTimerFn = useCallback(async (data) => {
-    const result = await startMutation.mutateAsync(data);
-    const s = result?.data?.session || result?.session || result;
-    setSession(s);
-    startTimeRef.current = new Date(s.timerState?.startedAt || s.startTime);
-    accumulatedRef.current = 0;
-    setElapsedTime(0);
-    setIsRunning(true);
-    setIsPaused(false);
-    return result;
-  }, [startMutation]);
+    try {
+      const result = await startMutation.mutateAsync(data);
+      const s = result?.data?.session || result?.session || result;
+      setSession(s);
+      startTimeRef.current = new Date(s.timerState?.startedAt || s.startTime);
+      accumulatedRef.current = 0;
+      setElapsedTime(0);
+      setIsRunning(true);
+      setIsPaused(false);
+      return result;
+    } catch (err) {
+      // If 409 conflict, auto-cancel previous orphan and retry cleanly
+      if (err.response?.status === 409 || err.message?.includes('active timer session')) {
+        await cancelMutation.mutateAsync().catch(() => {});
+        const result = await startMutation.mutateAsync(data);
+        const s = result?.data?.session || result?.session || result;
+        setSession(s);
+        startTimeRef.current = new Date(s.timerState?.startedAt || s.startTime);
+        accumulatedRef.current = 0;
+        setElapsedTime(0);
+        setIsRunning(true);
+        setIsPaused(false);
+        return result;
+      }
+      throw err;
+    }
+  }, [startMutation, cancelMutation]);
 
   const pauseTimerFn = useCallback(async () => {
     if (!session?._id) return;
@@ -116,7 +141,7 @@ export function useTimer() {
     return result;
   }, [session, finishMutation]);
 
-  const resetTimer = useCallback(() => {
+  const resetTimer = useCallback(async () => {
     setIsRunning(false);
     setIsPaused(false);
     setElapsedTime(0);
@@ -126,7 +151,9 @@ export function useTimer() {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
-  }, []);
+    // Cancel any active timer session on the server
+    await cancelMutation.mutateAsync().catch(() => {});
+  }, [cancelMutation]);
 
   return {
     elapsedTime,

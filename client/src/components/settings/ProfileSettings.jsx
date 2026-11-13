@@ -97,15 +97,15 @@ export default function ProfileSettings() {
               className="opacity-70 bg-surface/50"
             />
 
-            {/* Age Group (Read-Only per Prompt 5) */}
+            {/* Age Group */}
             <div className="space-y-1">
               <label className="text-xs font-semibold text-[var(--muted)] block">
-                Age Group (Verified at sign-up)
+                Age Group
               </label>
-              <div className="h-[44px] px-3.5 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] text-xs font-mono text-[var(--muted)] flex items-center justify-between">
+              <div className="h-9 px-3 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-xs text-[var(--muted)] flex items-center justify-between">
                 <span>{ageDisplay}</span>
-                <span className="text-[10px] text-[var(--primary)] font-bold uppercase tracking-wider">
-                  Verified 13+
+                <span className="text-[11px] text-[var(--muted)] lowercase">
+                  verified
                 </span>
               </div>
             </div>

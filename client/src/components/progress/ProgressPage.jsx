@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, Check, Clock, FileText, AlertCircle, Sparkles } from 'lucide-react';
 import { useStreakData, useAnalytics } from '@/hooks/useAnalytics';
@@ -60,6 +60,18 @@ export default function ProgressPage() {
   const [mockScore, setMockScore] = useState('');
   const [mockTotal, setMockTotal] = useState('');
 
+  // Handle action param from Top Bar Add menu (e.g. ?tab=practice&action=mockTest)
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'mockTest' || action === 'mock') {
+      setPracticeType('mockTest');
+      setLogPracticeOpen(true);
+    } else if (action === 'problem') {
+      setPracticeType('problem');
+      setLogPracticeOpen(true);
+    }
+  }, [searchParams]);
+
   // Values from single source of truth
   const currentStreak = streakData?.currentStreak ?? 0;
   const longestStreak = streakData?.longestStreak ?? 0;
@@ -68,46 +80,65 @@ export default function ProgressPage() {
   const history = streakData?.history || [];
   const last7Days = streakData?.last7Days || [];
 
-  // Heatmap rendering logic (GitHub style, 53 weeks)
+  // Heatmap rendering logic (GitHub / LeetCode style calendar, 53 weeks)
   const heatmapData = useMemo(() => {
     const W = 53;
     const C = 12;
     const lv = (m) => (m <= 0 ? 0 : m < 25 ? 1 : m < 60 ? 2 : m < 120 ? 3 : m < 240 ? 4 : 5);
 
-    // Build month labels and cells
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+
+    // Monday of 52 weeks ago
+    const dayOfWeek = (today.getDay() + 6) % 7; // Monday = 0, Sunday = 6
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - dayOfWeek - 52 * 7);
+
+    // Index history by YYYY-MM-DD
+    const minutesByDate = {};
+    if (Array.isArray(history)) {
+      history.forEach((h) => {
+        if (h?.date) minutesByDate[h.date] = h.minutes || 0;
+      });
+    }
+
     const monthSpans = [];
     const cells = [];
     let prevMonth = -1;
 
     for (let w = 0; w < W; w++) {
-      const firstIdx = w * 7;
-      const firstItem = history[firstIdx];
-      if (firstItem?.date) {
-        const [y, m, d] = firstItem.date.split('-').map(Number);
-        const dateObj = new Date(y, m - 1, d);
-        const mo = dateObj.getMonth();
-        if (mo !== prevMonth) {
-          const shortMonth = dateObj.toLocaleDateString('en-US', { month: 'short' });
-          monthSpans.push(
-            <span
-              key={`m-${w}`}
-              style={{ gridColumn: w + 2, gridRow: 1 }}
-              className="font-medium text-[var(--mu)] text-xs"
-            >
-              {shortMonth}
-            </span>
-          );
-          prevMonth = mo;
-        }
+      const weekStartDate = new Date(startDate);
+      weekStartDate.setDate(startDate.getDate() + w * 7);
+      const mo = weekStartDate.getMonth();
+
+      if (mo !== prevMonth) {
+        const shortMonth = weekStartDate.toLocaleDateString('en-US', { month: 'short' });
+        monthSpans.push(
+          <span
+            key={`m-${w}`}
+            style={{ gridColumn: w + 2, gridRow: 1 }}
+            className="font-medium text-[var(--mu)] text-xs select-none"
+          >
+            {shortMonth}
+          </span>
+        );
+        prevMonth = mo;
       }
 
       for (let r = 0; r < 7; r++) {
-        const idx = w * 7 + r;
-        const item = history[idx];
-        const minutes = item ? item.minutes : 0;
-        const dateStr = item ? item.date : '';
-        const level = lv(minutes);
-        const tooltip = formatCellTooltip(dateStr, minutes);
+        const cellDate = new Date(startDate);
+        cellDate.setDate(startDate.getDate() + w * 7 + r);
+        const y = cellDate.getFullYear();
+        const m = String(cellDate.getMonth() + 1).padStart(2, '0');
+        const d = String(cellDate.getDate()).padStart(2, '0');
+        const dateStr = `${y}-${m}-${d}`;
+
+        const isFuture = cellDate > today;
+        const minutes = isFuture ? 0 : (minutesByDate[dateStr] || 0);
+        const level = isFuture ? 0 : lv(minutes);
+        const tooltip = isFuture
+          ? cellDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })
+          : formatCellTooltip(dateStr, minutes);
 
         cells.push(
           <i
@@ -121,7 +152,9 @@ export default function ProgressPage() {
               width: `${C}px`,
               height: `${C}px`,
               borderRadius: '3px',
-              backgroundColor: `var(--h${level})`,
+              backgroundColor: isFuture ? 'transparent' : `var(--h${level})`,
+              border: isFuture ? '1px dashed var(--ln)' : undefined,
+              opacity: isFuture ? 0.35 : 1,
             }}
           />
         );
@@ -136,7 +169,7 @@ export default function ProgressPage() {
           gridRow: i * 2 + 2,
           lineHeight: `${C}px`,
         }}
-        className="text-[var(--mu)] text-xs"
+        className="text-[var(--mu)] text-xs select-none"
       >
         {x}
       </span>
@@ -167,7 +200,7 @@ export default function ProgressPage() {
       for (const p of problems) {
         list.push({
           id: p._id || p.id,
-          title: p.title || p.name || 'Problem',
+          title: p.name || p.title || 'Problem',
           type: 'problem',
           status: p.status === 'Solved' || p.isSolved ? 'Solved' : 'Review',
           date: p.createdAt || p.date,
@@ -181,8 +214,8 @@ export default function ProgressPage() {
           id: m._id || m.id,
           title: m.title || m.name || 'Mock test',
           type: 'mock',
-          status: m.score !== undefined ? `${m.score}/${m.totalMarks || 100}` : 'Solved',
-          date: m.date || m.createdAt,
+          status: m.obtainedMarks !== undefined ? `${m.obtainedMarks}/${m.totalMarks || 100}` : 'Solved',
+          date: m.testDate || m.date || m.createdAt,
         });
       }
     }
@@ -199,9 +232,9 @@ export default function ProgressPage() {
     try {
       if (practiceType === 'problem') {
         await createProblemMutation.mutateAsync({
-          title: practiceTitle.trim(),
-          category: practiceSubject || 'Algorithms',
-          status: practiceStatus,
+          name: practiceTitle.trim(),
+          topic: practiceSubject.trim() || 'General',
+          status: practiceStatus === 'Solved' ? 'Solved' : 'Attempted',
           difficulty: 'Medium',
           platform: 'LeetCode',
         });
@@ -209,10 +242,10 @@ export default function ProgressPage() {
       } else {
         await createMockTestMutation.mutateAsync({
           title: practiceTitle.trim(),
-          examType: practiceSubject || 'Practice Exam',
-          score: Number(mockScore) || 0,
+          examType: 'Custom',
+          obtainedMarks: Number(mockScore) || 0,
           totalMarks: Number(mockTotal) || 100,
-          date: new Date().toISOString(),
+          testDate: new Date().toISOString(),
         });
         toast.success('Mock test logged');
       }
@@ -221,7 +254,7 @@ export default function ProgressPage() {
       setMockTotal('');
       setLogPracticeOpen(false);
     } catch (err) {
-      toast.error('Failed to log practice');
+      toast.error(err.response?.data?.message || err.message || 'Failed to log practice');
     }
   };
 
@@ -351,15 +384,29 @@ export default function ProgressPage() {
           <div className="card">
             <div className="lab">LAST 7 DAYS</div>
             <div className="bars">
-              {last7Days.map((v, i) => (
+              {(last7Days.length === 7
+                ? last7Days
+                : ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d) => ({ day: d, hours: 0 }))
+              ).map((v, i) => (
                 <div key={i}>
                   <span>{v.hours > 0 ? `${v.hours}h` : ''}</span>
-                  <i style={{ height: `${Math.max(v.hours * 28, 6)}px` }} />
+                  <i
+                    style={{
+                      height: `${Math.max(v.hours * 28, 4)}px`,
+                      opacity: v.hours > 0 ? 1 : 0.25,
+                    }}
+                  />
                   <span>{v.day}</span>
                 </div>
               ))}
             </div>
           </div>
+
+          {totalMinutesThisWeek === 0 && sessionsIn30Days === 0 && (
+            <p className="note text-center py-2 text-xs">
+              No study sessions recorded yet. Complete focus sessions to see your weekly study breakdown and habits appear here.
+            </p>
+          )}
         </div>
       )}
 
@@ -405,6 +452,7 @@ export default function ProgressPage() {
 
       {/* SideSheet to Log Practice */}
       <SideSheet
+        open={logPracticeOpen}
         isOpen={logPracticeOpen}
         onClose={() => setLogPracticeOpen(false)}
         title="Log Practice"

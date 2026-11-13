@@ -36,10 +36,15 @@ export default function AppLayout() {
     if (kind === 'session') {
       navigate('/study?action=start');
     } else if (kind === 'goal') {
-      navigate('/plan?tab=subjects');
-    } else {
-      setQuickAddType(kind);
-      setQuickAddOpen(true);
+      navigate('/plan?tab=subjects&action=new');
+    } else if (kind === 'task') {
+      navigate('/plan?tab=tasks&action=new');
+    } else if (kind === 'note') {
+      navigate('/notes?action=new');
+    } else if (kind === 'mock' || kind === 'mockTest') {
+      navigate('/progress?tab=practice&action=mockTest');
+    } else if (kind === 'problem') {
+      navigate('/progress?tab=practice&action=problem');
     }
   };
 
@@ -79,15 +84,6 @@ export default function AppLayout() {
         isOpen={commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}
       />
-
-      {/* Quick Add Modal */}
-      {quickAddOpen && (
-        <QuickActionsModal
-          isOpen={quickAddOpen}
-          initialType={quickAddType}
-          onClose={() => setQuickAddOpen(false)}
-        />
-      )}
     </div>
   );
 }

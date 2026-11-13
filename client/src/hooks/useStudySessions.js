@@ -118,6 +118,20 @@ export function useFinishTimer() {
   });
 }
 
+export function useCancelTimer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.cancelTimer(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['activeTimer'] });
+      qc.invalidateQueries({ queryKey: ['studySessions'] });
+    },
+    onError: (err) => {
+      console.warn('Failed to cancel timer on server:', err);
+    },
+  });
+}
+
 export function useActiveTimer() {
   return useQuery({
     queryKey: ['activeTimer'],

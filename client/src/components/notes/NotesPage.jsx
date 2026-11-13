@@ -59,21 +59,34 @@ export default function NotesPage() {
 
   // Autosave with 800ms debounce
   const triggerAutosave = (newTitle, newBody) => {
-    if (!activeNote?._id) return;
     setIsSaved(false);
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
     saveTimeoutRef.current = setTimeout(async () => {
       try {
-        await updateNoteMutation.mutateAsync({
-          id: activeNote._id,
-          data: {
-            title: newTitle || 'Untitled note',
+        if (activeNote?._id) {
+          await updateNoteMutation.mutateAsync({
+            id: activeNote._id,
+            data: {
+              title: newTitle || 'Untitled note',
+              contentMarkdown: newBody,
+              contentHtml: newBody,
+            },
+          });
+        } else if (newTitle?.trim() || newBody?.trim()) {
+          const res = await createNoteMutation.mutateAsync({
+            title: newTitle.trim() || 'Untitled note',
+            folder: selectedSubject || userSubjects[0] || 'General',
             contentMarkdown: newBody,
             contentHtml: newBody,
-          },
-        });
+          });
+          const created = res?.data?.note || res?.note || res;
+          if (created?._id) {
+            setActiveNoteId(created._id);
+          }
+          refetch();
+        }
         setIsSaved(true);
       } catch (err) {
         toast.error('Failed to save note');
@@ -177,10 +190,15 @@ export default function NotesPage() {
         <h1 className="text-[26px] font-bold font-heading tracking-tight text-[var(--tx)]">Notes</h1>
         <button
           type="button"
-          onClick={handleCreateNote}
-          className="btn p"
+          onClick={() => {
+            setActiveNoteId(null);
+            setTitle('');
+            setBody('');
+            setMobileEditing(true);
+          }}
+          className="btn flex items-center gap-1.5 cursor-pointer"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5" />
           New note
         </button>
       </div>
@@ -249,22 +267,22 @@ export default function NotesPage() {
             </span>
           </div>
 
-          {activeNote ? (
-            <>
-              {/* Top controls: Pin, Delete, Saved Indicator */}
-              <div className="flex items-center justify-between gap-2">
-                <input
-                  type="text"
-                  value={title}
-                  onChange={handleTitleChange}
-                  placeholder="Note title"
-                  aria-label="Title"
-                  className="tt"
-                />
-                <div className="flex items-center gap-2 shrink-0">
-                  <span data-testid="desktop-saved-indicator" className="text-xs text-[var(--mu)] hidden min-[761px]:inline">
-                    {isSaved ? 'Saved' : 'Saving...'}
-                  </span>
+          {/* Top controls: Pin, Delete, Saved Indicator */}
+          <div className="flex items-center justify-between gap-2">
+            <input
+              type="text"
+              value={title}
+              onChange={handleTitleChange}
+              placeholder="Note title"
+              aria-label="Title"
+              className="tt"
+            />
+            <div className="flex items-center gap-2 shrink-0">
+              <span data-testid="desktop-saved-indicator" className="text-xs text-[var(--mu)] hidden min-[761px]:inline">
+                {isSaved ? 'Saved' : 'Saving...'}
+              </span>
+              {activeNote && (
+                <>
                   <button
                     type="button"
                     onClick={handleTogglePin}
@@ -283,62 +301,58 @@ export default function NotesPage() {
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
-                </div>
-              </div>
-
-              {/* Formatting Toolbar: Appears ONLY while editor is focused */}
-              <div className="tools">
-                <button
-                  type="button"
-                  onClick={() => insertFormatting('**', '**')}
-                  title="Bold"
-                >
-                  B
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertFormatting('*', '*')}
-                  title="Italic"
-                >
-                  I
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertFormatting('### ')}
-                  title="Heading"
-                >
-                  H
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertFormatting('- ')}
-                  title="Bullet list"
-                >
-                  •
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertFormatting('`', '`')}
-                  title="Code snippet"
-                >
-                  &lt;/&gt;
-                </button>
-              </div>
-
-              {/* Editor Textarea */}
-              <textarea
-                ref={textareaRef}
-                value={body}
-                onChange={handleBodyChange}
-                placeholder="Write your note here... Markdown is supported."
-                aria-label="Note"
-              />
-            </>
-          ) : (
-            <div className="h-full flex items-center justify-center text-sm text-[var(--mu)] min-h-[300px]">
-              Select a note or click &quot;New note&quot; to begin writing.
+                </>
+              )}
             </div>
-          )}
+          </div>
+
+          {/* Formatting Toolbar: Appears ONLY while editor is focused */}
+          <div className="tools">
+            <button
+              type="button"
+              onClick={() => insertFormatting('**', '**')}
+              title="Bold"
+            >
+              B
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormatting('*', '*')}
+              title="Italic"
+            >
+              I
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormatting('### ')}
+              title="Heading"
+            >
+              H
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormatting('- ')}
+              title="Bullet list"
+            >
+              •
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormatting('`', '`')}
+              title="Code snippet"
+            >
+              &lt;/&gt;
+            </button>
+          </div>
+
+          {/* Editor Textarea */}
+          <textarea
+            ref={textareaRef}
+            value={body}
+            onChange={handleBodyChange}
+            placeholder="Write your note here... Markdown is supported."
+            aria-label="Note"
+          />
         </div>
       </div>
     </div>

@@ -2,8 +2,7 @@ import { useState } from 'react';
 import ProfileSettings from './ProfileSettings';
 import StudySettings from './StudySettings';
 import NotificationSettings from './NotificationSettings';
-import DataSettings from './DataSettings';
-import { Settings, User, Target, Bell, Database } from 'lucide-react';
+import { User, Target, Bell } from 'lucide-react';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
@@ -12,7 +11,6 @@ export default function SettingsPage() {
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'study', label: 'Study Goals', icon: Target },
     { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'data', label: 'Data & Backup', icon: Database },
   ];
 
   return (
@@ -43,7 +41,6 @@ export default function SettingsPage() {
         {activeTab === 'profile' && <ProfileSettings />}
         {activeTab === 'study' && <StudySettings />}
         {activeTab === 'notifications' && <NotificationSettings />}
-        {activeTab === 'data' && <DataSettings />}
       </div>
     </div>
   );

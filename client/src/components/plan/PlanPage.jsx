@@ -3,13 +3,13 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from '@/hooks/useTasks';
 import { useTimetableSlots, useCreateTimetableSlot, useDeleteTimetableSlot } from '@/hooks/useTimetable';
+import { useStudySessions } from '@/hooks/useStudySessions';
 import * as usersApi from '@/api/users';
 import { plural } from '@/lib/plural';
-import { Check, Plus, Trash2, ChevronDown, ChevronRight, X } from 'lucide-react';
+import { Check, Plus, Trash2, Edit2, ChevronDown, ChevronRight, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const HOURS = Array.from({ length: 18 }, (_, i) => i + 6); // 06:00 to 24:00 (18 hours = 648px)
 const SUBJECT_COLORS = ['--c-blue', '--c-green', '--c-amber', '--c-rose', '--c-violet', '--c-cyan', '--c-orange', '--c-slate'];
 
 export default function PlanPage() {
@@ -73,8 +73,11 @@ function TasksTab() {
   const { data } = useTasks();
   const createTaskMutation = useCreateTask();
   const updateTaskMutation = useUpdateTask();
+  const deleteTaskMutation = useDeleteTask();
 
   const [inputVal, setInputVal] = useState('');
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
 
   const tasks = useMemo(() => {
     return data?.data?.tasks || data?.tasks || [];
@@ -124,6 +127,33 @@ function TasksTab() {
     }
   };
 
+  const handleSaveEdit = async (taskId) => {
+    if (!editTitle.trim()) {
+      setEditingTaskId(null);
+      return;
+    }
+    try {
+      await updateTaskMutation.mutateAsync({
+        id: taskId,
+        data: { title: editTitle.trim() },
+      });
+      toast.success('Task updated');
+      setEditingTaskId(null);
+    } catch (err) {
+      toast.error('Failed to update task');
+    }
+  };
+
+  const handleDeleteTask = async (taskId, e) => {
+    e.stopPropagation();
+    try {
+      await deleteTaskMutation.mutateAsync(taskId);
+      toast.success('Task deleted');
+    } catch (err) {
+      toast.error('Failed to delete task');
+    }
+  };
+
   // Group tasks into Today, Later, Completed
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -147,9 +177,10 @@ function TasksTab() {
   const renderRow = (t) => {
     const isDone = t.status === 'Completed';
     const subjColor = subjectMap[t.subject] || 'var(--pr)';
+    const isEditing = editingTaskId === t._id;
 
     return (
-      <div key={t._id} className="row">
+      <div key={t._id} className="row group">
         <button
           type="button"
           onClick={() => handleToggle(t)}
@@ -158,11 +189,76 @@ function TasksTab() {
         >
           {isDone && <Check className="w-3.5 h-3.5" />}
         </button>
-        <span className={`g ${isDone ? 'dn' : ''}`}>{t.title}</span>
-        <span className="sj">
-          <i style={{ background: subjColor.startsWith('--') ? `var(${subjColor})` : subjColor }} />
-          {t.subject}
-        </span>
+
+        {isEditing ? (
+          <div className="flex-1 flex items-center gap-2">
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveEdit(t._id);
+                if (e.key === 'Escape') setEditingTaskId(null);
+              }}
+              autoFocus
+              className="flex-1 px-2.5 py-1 text-sm rounded-lg border border-[var(--pr)] bg-[var(--sf)] text-[var(--tx)] focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => handleSaveEdit(t._id)}
+              className="px-2 py-1 text-xs text-[var(--pr)] font-semibold rounded hover:bg-[var(--soft)]"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditingTaskId(null)}
+              className="px-2 py-1 text-xs text-[var(--mu)] rounded hover:bg-[var(--sf2)]"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <>
+            <span
+              className={`g ${isDone ? 'dn' : ''} cursor-pointer`}
+              onDoubleClick={() => {
+                setEditingTaskId(t._id);
+                setEditTitle(t.title);
+              }}
+              title="Double click to edit"
+            >
+              {t.title}
+            </span>
+            <span className="sj">
+              <i style={{ background: subjColor.startsWith('--') ? `var(${subjColor})` : subjColor }} />
+              {t.subject}
+            </span>
+            <div className="flex items-center gap-1 opacity-80 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingTaskId(t._id);
+                  setEditTitle(t.title);
+                }}
+                className="p-1 rounded text-[var(--mu)] hover:text-[var(--tx)] hover:bg-[var(--sf2)] transition-colors"
+                title="Edit task"
+                aria-label="Edit task"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => handleDeleteTask(t._id, e)}
+                className="p-1 rounded text-[var(--mu)] hover:text-red-500 hover:bg-[var(--sf2)] transition-colors"
+                title="Delete task"
+                aria-label="Delete task"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </>
+        )}
       </div>
     );
   };
@@ -224,11 +320,12 @@ function TasksTab() {
 }
 
 // -----------------------------------------------------------------------------------------
-// TAB 2: Week (18-hour 648px timetable on ONE screen, 7 day columns, today tinted, subject colors)
+// TAB 2: Week (Dynamic timetable showing actual studied sessions & blocks, active hours only)
 // -----------------------------------------------------------------------------------------
 function WeekTab() {
   const { user } = useAuth();
   const { data: slotsData } = useTimetableSlots();
+  const { data: sessionsData } = useStudySessions({ limit: 100 });
   const createSlotMutation = useCreateTimetableSlot();
   const deleteSlotMutation = useDeleteTimetableSlot();
 
@@ -265,6 +362,76 @@ function WeekTab() {
     return (h || 0) + (m || 0) / 60;
   };
 
+  // Extract actual study sessions for this week (Mon to Sun)
+  const weekSessions = useMemo(() => {
+    const rawSessions = sessionsData?.data?.sessions || sessionsData?.sessions || [];
+    const now = new Date();
+    const dayOfWeek = (now.getDay() + 6) % 7; // Monday = 0
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - dayOfWeek);
+    monday.setHours(0, 0, 0, 0);
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+
+    const list = [];
+    rawSessions.forEach((s) => {
+      const d = s.date ? new Date(s.date) : s.startTime ? new Date(s.startTime) : null;
+      if (!d || isNaN(d.getTime())) return;
+      if (d >= monday && d <= sunday) {
+        const sessionDay = (d.getDay() + 6) % 7; // 0 = Mon, 6 = Sun
+        const startH = d.getHours() + d.getMinutes() / 60;
+        const durHours = Math.max(0.4, (s.focusDuration || 25) / 60);
+        list.push({
+          id: s._id,
+          day: sessionDay,
+          startHour: startH,
+          endHour: startH + durHours,
+          durationMins: s.focusDuration || 25,
+          subject: s.category || s.topic || 'Focus',
+          topic: s.topic,
+          isStudySession: true,
+        });
+      }
+    });
+    return list;
+  }, [sessionsData]);
+
+  // Dynamically bound visible hours to where study sessions or blocks exist
+  const { minHour, maxHour, visibleHours } = useMemo(() => {
+    let min = 24;
+    let max = 0;
+
+    weekSessions.forEach((s) => {
+      min = Math.min(min, Math.floor(s.startHour));
+      max = Math.max(max, Math.ceil(s.endHour));
+    });
+
+    slots.forEach((s) => {
+      const start = parseHour(s.startTime);
+      const end = parseHour(s.endTime);
+      min = Math.min(min, Math.floor(start));
+      max = Math.max(max, Math.ceil(end));
+    });
+
+    // If no activity yet, show a clean, compact 09:00 - 17:00 window (8 hours, not 18)
+    if (min >= max) {
+      min = 9;
+      max = 17;
+    } else {
+      // 1 hour padding around studied hours
+      min = Math.max(0, min - 1);
+      max = Math.min(24, Math.max(min + 4, max + 1));
+    }
+
+    const hours = [];
+    for (let h = min; h < max; h++) {
+      hours.push(h);
+    }
+    return { minHour: min, maxHour: max, visibleHours: hours };
+  }, [weekSessions, slots]);
+
   const handleCellClick = (dayIdx, hour) => {
     setModalDay(dayIdx);
     const startStr = `${String(hour).padStart(2, '0')}:00`;
@@ -279,7 +446,7 @@ function WeekTab() {
     e.preventDefault();
     try {
       await createSlotMutation.mutateAsync({
-        dayOfWeek: (modalDay + 1) % 7, // Convert Mon=0 to standard day
+        dayOfWeek: (modalDay + 1) % 7,
         startTime: modalStart,
         endTime: modalEnd,
         subject: modalSubject,
@@ -304,18 +471,30 @@ function WeekTab() {
   return (
     <div className="overflow-x-auto pb-4">
       <div className="min-w-[680px]">
+        {/* Info label */}
+        <div className="flex items-center justify-between text-xs text-[var(--mu)] mb-2">
+          <span>
+            {weekSessions.length > 0
+              ? `${plural(weekSessions.length, 'study session')} recorded this week · Showing active hours`
+              : 'Showing active study hours · Click any cell to schedule a block'}
+          </span>
+          <span className="text-[11px] font-mono">
+            {String(minHour).padStart(2, '0')}:00 – {String(maxHour).padStart(2, '0')}:00
+          </span>
+        </div>
+
         {/* Timetable Header Row */}
         <div className="wk">
           <div /> {/* Top-left empty hour corner */}
           {DAYS.map((d, i) => (
-            <div key={d} className={`wd ${i === currentDayOfWeek ? 'td' : ''}`}>
+            <div key={d} className={`wd ${i === currentDayOfWeek ? 'td font-semibold' : ''}`}>
               {d}
             </div>
           ))}
 
-          {/* Hour labels (06:00 to 23:00) */}
+          {/* Dynamic Hour labels */}
           <div className="hrs">
-            {HOURS.map((h) => (
+            {visibleHours.map((h) => (
               <div key={h}>{String(h).padStart(2, '0')}:00</div>
             ))}
           </div>
@@ -323,25 +502,62 @@ function WeekTab() {
           {/* 7 Columns: Mon through Sun */}
           {DAYS.map((d, dayIdx) => {
             const isToday = dayIdx === currentDayOfWeek;
-            // Match slots for this day: dayOfWeek (0=Sun, 1=Mon, ..., 6=Sat)
             const targetDayNumber = (dayIdx + 1) % 7;
             const daySlots = slots.filter((s) => s.dayOfWeek === targetDayNumber);
+            const daySessions = weekSessions.filter((s) => s.day === dayIdx);
 
             return (
               <div
                 key={d}
                 className={`col ${isToday ? 'td' : ''}`}
+                style={{ height: `${visibleHours.length * 36}px` }}
                 onClick={(e) => {
                   const rect = e.currentTarget.getBoundingClientRect();
                   const y = e.clientY - rect.top;
-                  const clickedHour = Math.min(23, Math.max(6, Math.floor(y / 36) + 6));
+                  const clickedHour = Math.min(
+                    maxHour - 1,
+                    Math.max(minHour, Math.floor(y / 36) + minHour)
+                  );
                   handleCellClick(dayIdx, clickedHour);
                 }}
               >
+                {/* Render Actual Studied Sessions */}
+                {daySessions.map((sess) => {
+                  const top = Math.max(0, (sess.startHour - minHour) * 36);
+                  const height = Math.max(22, (sess.endHour - sess.startHour) * 36 - 2);
+                  const col = subjectColorMap[sess.subject] || 'var(--pr)';
+                  const colorVar = col.startsWith('--') ? `var(${col})` : col;
+
+                  return (
+                    <div
+                      key={`sess-${sess.id}`}
+                      className="blk group flex items-start justify-between shadow-xs z-10"
+                      style={{
+                        top: `${top}px`,
+                        height: `${height}px`,
+                        backgroundColor: colorVar,
+                        color: 'var(--on, #fff)',
+                        borderRadius: '6px',
+                        padding: '2px 6px',
+                      }}
+                      title={`${sess.subject} · ${sess.durationMins}m focused`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="truncate text-xs">
+                        <span className="block truncate font-bold leading-tight">
+                          {sess.subject}
+                        </span>
+                        <span className="text-[10px] opacity-90">{sess.durationMins}m</span>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Render Planned Timetable Blocks */}
                 {daySlots.map((slot) => {
                   const sHour = parseHour(slot.startTime);
                   const eHour = parseHour(slot.endTime);
-                  const top = Math.max(0, (sHour - 6) * 36);
+                  const top = Math.max(0, (sHour - minHour) * 36);
                   const height = Math.max(20, (eHour - sHour) * 36 - 2);
 
                   const col = subjectColorMap[slot.subject] || 'var(--pr)';

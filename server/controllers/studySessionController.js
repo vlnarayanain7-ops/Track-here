@@ -176,30 +176,37 @@ export const deleteSession = asyncHandler(async (req, res) => {
  */
 export const startTimer = asyncHandler(async (req, res) => {
   const now = new Date();
-  let session;
-  try {
-    session = await StudySession.create({
-      user: req.user.id,
-      category: req.body.category,
-      activityType: req.body.activityType,
-      topic: req.body.topic,
-      subtopic: req.body.subtopic,
-      date: now,
-      startTime: now,
-      focusDuration: 0,
-      isTimerSession: true,
-      activeTimerKey: 'active',
-      timerState: {
-        status: 'running',
-        startedAt: now,
-        totalPausedDuration: 0,
-        accumulatedDuration: 0,
+
+  // Clear any existing active timer sessions for this user so they are never blocked by 409
+  await StudySession.updateMany(
+    { user: req.user.id, activeTimerKey: 'active' },
+    {
+      $set: {
+        activeTimerKey: null,
+        'timerState.status': 'completed',
+        endTime: now,
       },
-    });
-  } catch (error) {
-    if (error?.code === 11000) throw ApiError.conflict('You already have an active timer session. Finish it first.');
-    throw error;
-  }
+    }
+  );
+
+  const session = await StudySession.create({
+    user: req.user.id,
+    category: req.body.category || 'Focus',
+    activityType: req.body.activityType || 'Problem Solving',
+    topic: req.body.topic || 'Focus session',
+    subtopic: req.body.subtopic,
+    date: now,
+    startTime: now,
+    focusDuration: 0,
+    isTimerSession: true,
+    activeTimerKey: 'active',
+    timerState: {
+      status: 'running',
+      startedAt: now,
+      totalPausedDuration: 0,
+      accumulatedDuration: 0,
+    },
+  });
 
   emitToUser(req.user.id, 'timer:started', session);
 
@@ -207,6 +214,21 @@ export const startTimer = asyncHandler(async (req, res) => {
     success: true,
     message: 'Timer started',
     data: { session },
+  });
+});
+
+/**
+ * POST /api/study-sessions/timer/cancel
+ */
+export const cancelTimer = asyncHandler(async (req, res) => {
+  await StudySession.deleteMany({
+    user: req.user.id,
+    activeTimerKey: 'active',
+  });
+  emitToUser(req.user.id, 'timer:cancelled', {});
+  res.json({
+    success: true,
+    message: 'Timer cancelled',
   });
 });
 

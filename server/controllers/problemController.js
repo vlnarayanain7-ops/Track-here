@@ -11,18 +11,37 @@ const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // ─── Validation Schemas ───────────────────────────────────────
 
 export const createProblemSchema = z.object({
-  name: z.string().trim().min(1, 'Problem name is required'),
+  name: z.string().trim().optional(),
+  title: z.string().trim().optional(),
   url: z.string().url().optional().or(z.literal('')).nullable(),
   platform: z.enum(['Codeforces', 'CodeChef', 'LeetCode', 'Other']).optional().nullable(),
   topic: z.string().trim().optional().nullable(),
+  category: z.string().trim().optional().nullable(),
   difficulty: z.enum(['Easy', 'Medium', 'Hard']).optional().nullable(),
   tags: z.array(z.string()).optional(),
-  status: z.enum(['Unsolved', 'Attempted', 'Solved']).optional(),
+  status: z.enum(['Unsolved', 'Attempted', 'Solved', 'Review']).optional(),
   solvedIndependently: z.boolean().optional(),
   nextRevisionDate: z.string().or(z.date()).optional().nullable(),
-}).strict();
+}).passthrough().transform((val) => ({
+  ...val,
+  name: val.name || val.title || 'Untitled Problem',
+  topic: val.topic || val.category || 'General',
+  status: val.status === 'Review' ? 'Attempted' : (val.status || 'Solved'),
+}));
 
-export const updateProblemSchema = createProblemSchema.partial().strict();
+export const updateProblemSchema = z.object({
+  name: z.string().trim().optional(),
+  title: z.string().trim().optional(),
+  url: z.string().url().optional().or(z.literal('')).nullable(),
+  platform: z.enum(['Codeforces', 'CodeChef', 'LeetCode', 'Other']).optional().nullable(),
+  topic: z.string().trim().optional().nullable(),
+  category: z.string().trim().optional().nullable(),
+  difficulty: z.enum(['Easy', 'Medium', 'Hard']).optional().nullable(),
+  tags: z.array(z.string()).optional(),
+  status: z.enum(['Unsolved', 'Attempted', 'Solved', 'Review']).optional(),
+  solvedIndependently: z.boolean().optional(),
+  nextRevisionDate: z.string().or(z.date()).optional().nullable(),
+}).passthrough();
 
 export const createAttemptSchema = z.object({
   duration: z.number().min(0).optional(),

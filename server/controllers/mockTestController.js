@@ -8,10 +8,11 @@ import { emitToUser } from '../services/socketService.js';
 
 export const createMockTestSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(200),
-  examType: z.enum(['NEET', 'JEE', 'UPSC', 'GATE', 'University', 'Placement', 'Competitive Programming', 'Custom']).optional(),
+  examType: z.string().optional().default('Custom'),
   testDate: z.string().or(z.date()).optional(),
-  totalMarks: z.number().min(1, 'Total marks must be greater than 0'),
-  obtainedMarks: z.number(),
+  totalMarks: z.number().or(z.string()).transform(Number).optional().default(100),
+  obtainedMarks: z.number().or(z.string()).transform(Number).optional(),
+  score: z.number().or(z.string()).transform(Number).optional(),
   totalQuestions: z.number().min(0).optional(),
   correctCount: z.number().min(0).optional(),
   incorrectCount: z.number().min(0).optional(),
@@ -27,9 +28,36 @@ export const createMockTestSchema = z.object({
   mistakes: z.string().trim().optional().nullable(),
   weakTopics: z.array(z.string().trim()).optional(),
   notes: z.string().trim().optional().nullable(),
-});
+}).passthrough().transform((val) => ({
+  ...val,
+  obtainedMarks: val.obtainedMarks !== undefined ? val.obtainedMarks : (val.score !== undefined ? val.score : 0),
+  totalMarks: val.totalMarks || 100,
+  examType: ['NEET', 'JEE', 'UPSC', 'GATE', 'University', 'Placement', 'Competitive Programming'].includes(val.examType) ? val.examType : 'Custom',
+}));
 
-export const updateMockTestSchema = createMockTestSchema.partial();
+export const updateMockTestSchema = z.object({
+  title: z.string().trim().max(200).optional(),
+  examType: z.string().optional(),
+  testDate: z.string().or(z.date()).optional(),
+  totalMarks: z.number().or(z.string()).transform(Number).optional(),
+  obtainedMarks: z.number().or(z.string()).transform(Number).optional(),
+  score: z.number().or(z.string()).transform(Number).optional(),
+  totalQuestions: z.number().min(0).optional(),
+  correctCount: z.number().min(0).optional(),
+  incorrectCount: z.number().min(0).optional(),
+  unattemptedCount: z.number().min(0).optional(),
+  durationMinutes: z.number().min(0).optional(),
+  subjectScores: z.array(
+    z.object({
+      subject: z.string().trim().min(1),
+      totalMarks: z.number().min(0).optional(),
+      obtainedMarks: z.number().optional(),
+    })
+  ).optional(),
+  mistakes: z.string().trim().optional().nullable(),
+  weakTopics: z.array(z.string().trim()).optional(),
+  notes: z.string().trim().optional().nullable(),
+}).passthrough();
 
 // ─── Controllers ──────────────────────────────────────────────
 
