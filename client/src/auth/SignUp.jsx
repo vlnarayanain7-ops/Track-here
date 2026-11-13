@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { Button, Field } from '../components/ui';
+import { Button, Field } from '../components/ui.jsx';
 import { AuthLayout } from './AuthLayout';
 import GoogleAuthButton from './GoogleAuthButton';
 import toast from 'react-hot-toast';

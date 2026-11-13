@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import * as userApi from '../api/users';
-import { Button } from '../components/ui';
+import { Button } from '../components/ui.jsx';
 import { AuthLayout } from './AuthLayout';
 import toast from 'react-hot-toast';
 

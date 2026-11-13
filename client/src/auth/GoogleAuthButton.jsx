@@ -13,6 +13,8 @@ export function GoogleAuthButton({ buttonText = 'Continue with Google' }) {
   const GOOGLE_CLIENT_ID = '66278150520-opea4khlpt7udornbleesgu5si21oi2d.apps.googleusercontent.com';
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID;
 
+  const [gsiReady, setGsiReady] = useState(false);
+
   useEffect(() => {
     if (!clientId) return;
 
@@ -55,8 +57,10 @@ export function GoogleAuthButton({ buttonText = 'Continue with Google' }) {
             size: 'large',
             width: '100%',
           });
+          setGsiReady(true);
         } catch (e) {
           console.error('[Google GSI Error]', e);
+          setGsiReady(false);
         }
       }
     }, 150);
@@ -81,11 +85,11 @@ export function GoogleAuthButton({ buttonText = 'Continue with Google' }) {
         {/* Render container for official Google Identity Services iframe */}
         <div
           ref={btnContainerRef}
-          className={clientId ? 'w-full flex justify-center min-h-[44px]' : 'hidden'}
+          className={clientId && gsiReady ? 'w-full flex justify-center min-h-[44px]' : 'hidden'}
         />
 
-        {/* Fallback button when clientId is not loaded or during hydration */}
-        {(!clientId || loading) && (
+        {/* Fallback button when GSI button is not yet rendered or during loading */}
+        {(!gsiReady || loading) && (
           <button
             type="button"
             onClick={handleFallbackClick}
