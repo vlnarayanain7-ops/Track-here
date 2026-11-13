@@ -1,4 +1,5 @@
 import Feedback from '../models/Feedback.js';
+import User from '../models/User.js';
 import ApiError from '../utils/ApiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { z } from 'zod';
@@ -37,10 +38,12 @@ export const submitFeedback = asyncHandler(async (req, res) => {
   const rawKind = parsed.data.kind || parsed.data.type || 'idea';
   const kindVal = rawKind.toLowerCase();
 
+  const user = await User.findById(req.user.id).select('name email');
+
   const feedback = await Feedback.create({
     user: req.user.id || req.user._id,
-    userEmail: req.user.email || null,
-    userName: req.user.name || null,
+    userEmail: user?.email || req.user.email || null,
+    userName: user?.name || req.user.name || null,
     type: kindVal,
     kind: kindVal,
     message: parsed.data.message,

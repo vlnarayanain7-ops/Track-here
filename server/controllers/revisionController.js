@@ -54,9 +54,11 @@ export const getRevisions = asyncHandler(async (req, res) => {
   const { status, type, search } = req.query;
 
   const query = { user: req.user.id };
-  if (status) query.status = status;
-  if (type) query.type = type;
-  if (search) query.title = { $regex: escapeRegex(search.slice(0, 100)), $options: 'i' };
+  if (typeof status === 'string' && status) query.status = status;
+  if (typeof type === 'string' && type) query.type = type;
+  if (typeof search === 'string' && search.trim()) {
+    query.title = { $regex: escapeRegex(search.trim().slice(0, 100)), $options: 'i' };
+  }
 
   const revisions = await Revision.find(query)
     .sort({ dueDate: 1 })

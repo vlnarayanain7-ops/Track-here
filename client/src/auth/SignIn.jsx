@@ -58,24 +58,32 @@ export function SignIn() {
         />
 
         <div className="relative">
-          <Field
-            label="Password"
-            type={show ? 'text' : 'password'}
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            error={err}
-            placeholder="••••••••"
-            required
-          />
-          <button
-            type="button"
-            className="btn btn-ghost absolute right-1 top-[28px] text-xs text-[var(--muted)] hover:text-[var(--text)] px-2.5 h-[38px]"
-            onClick={() => setShow(!show)}
-            aria-label={show ? 'Hide password' : 'Show password'}
-          >
-            {show ? 'Hide' : 'Show'}
-          </button>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-semibold text-[var(--text)] font-heading">Password</label>
+            <Link to="/forgot-password" className="text-[11px] text-[var(--primary)] hover:underline">
+              Forgot password?
+            </Link>
+          </div>
+          <div className="relative">
+            <input
+              type={show ? 'text' : 'password'}
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+              className="w-full h-10 px-3 pr-16 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] transition-colors"
+            />
+            <button
+              type="button"
+              className="absolute right-1 top-1 text-xs text-[var(--muted)] hover:text-[var(--text)] px-2.5 h-8 flex items-center justify-center cursor-pointer"
+              onClick={() => setShow(!show)}
+              aria-label={show ? 'Hide password' : 'Show password'}
+            >
+              {show ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          {err && <p className="text-[11px] text-[var(--danger)] mt-1">{err}</p>}
         </div>
 
         <Button variant="primary" size="lg" loading={busy} type="submit" className="w-full mt-1">

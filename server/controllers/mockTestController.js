@@ -4,6 +4,8 @@ import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { emitToUser } from '../services/socketService.js';
 
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 // ─── Validation Schemas ───────────────────────────────────────
 
 export const createMockTestSchema = z.object({
@@ -68,16 +70,20 @@ export const getMockTests = asyncHandler(async (req, res) => {
   const { examType, search, page = 1, limit = 20 } = req.query;
   const query = { user: req.user.id };
 
-  if (examType) query.examType = examType;
-  if (search) query.title = { $regex: search, $options: 'i' };
+  if (typeof examType === 'string' && examType) query.examType = examType;
+  if (typeof search === 'string' && search.trim()) {
+    query.title = { $regex: escapeRegex(search.trim().slice(0, 100)), $options: 'i' };
+  }
 
-  const skip = (Number(page) - 1) * Number(limit);
+  const safePage = Math.max(1, parseInt(page, 10) || 1);
+  const safeLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+  const skip = (safePage - 1) * safeLimit;
 
   const [tests, total] = await Promise.all([
     MockTest.find(query)
       .sort({ testDate: -1, createdAt: -1 })
       .skip(skip)
-      .limit(Number(limit)),
+      .limit(safeLimit),
     MockTest.countDocuments(query),
   ]);
 
@@ -86,10 +92,10 @@ export const getMockTests = asyncHandler(async (req, res) => {
     data: {
       tests,
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
+        page: safePage,
+        limit: safeLimit,
         total,
-        pages: Math.ceil(total / Number(limit)),
+        pages: Math.ceil(total / safeLimit),
       },
     },
   });

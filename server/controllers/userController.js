@@ -515,14 +515,21 @@ export const deleteAccount = asyncHandler(async (req, res) => {
   const isUnder13 = req.body?.reason === 'under13';
 
   if (!isUnder13) {
-    // Verify password (strictly required for normal deletion)
-    if (!req.body?.password) {
-      throw ApiError.badRequest('Password is required to confirm account deletion.');
-    }
-
-    const isMatch = await user.comparePassword(req.body.password);
-    if (!isMatch) {
-      throw ApiError.badRequest('Incorrect password. Account deletion aborted.');
+    if (user.password) {
+      // Email/password account: strictly verify current password
+      if (!req.body?.password) {
+        throw ApiError.badRequest('Password is required to confirm account deletion.');
+      }
+      const isMatch = await user.comparePassword(req.body.password);
+      if (!isMatch) {
+        throw ApiError.badRequest('Incorrect password. Account deletion aborted.');
+      }
+    } else {
+      // OAuth accounts without password: require typing email or confirmation keyword
+      const confirmInput = (req.body?.confirmation || req.body?.password || '').trim().toLowerCase();
+      if (confirmInput !== user.email.toLowerCase() && confirmInput !== 'delete') {
+        throw ApiError.badRequest(`Please confirm account deletion by entering your email (${user.email}) or 'delete'.`);
+      }
     }
   }
 

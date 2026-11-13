@@ -12,8 +12,9 @@ export const allowedOrigins = [
 export const isOriginAllowed = (origin) => {
   if (!origin) return true;
   if (allowedOrigins.includes(origin)) return true;
-  if (/^https:\/\/.*\.vercel\.app$/.test(origin)) return true;
-  if (/^https:\/\/.*\.onrender\.com$/.test(origin)) return true;
+  // Strictly permit only Track Here official domains and Vercel/Render preview deployments for this project
+  if (/^https:\/\/track-here(-[a-z0-9-]+)?\.vercel\.app$/.test(origin)) return true;
+  if (/^https:\/\/track-here(-[a-z0-9-]+)?\.onrender\.com$/.test(origin)) return true;
   return false;
 };
 

@@ -4,7 +4,6 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import MobileTabBar from './MobileTabBar';
 import CommandPalette from '@/components/search/CommandPalette';
-import QuickActionsModal from '@/components/dashboard/QuickActions';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import { cn } from '@/lib/utils';
 
@@ -12,8 +11,6 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [quickAddOpen, setQuickAddOpen] = useState(false);
-  const [quickAddType, setQuickAddType] = useState('task');
 
   // Determine if current view should use wide container (1040px for Plan and Progress)
   const isWide =
