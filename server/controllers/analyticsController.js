@@ -118,12 +118,8 @@ export const getStreaks = asyncHandler(async (req, res) => {
  * GET /api/analytics/heatmap
  */
 export const getHeatmap = asyncHandler(async (req, res) => {
-  const { year = new Date().getFullYear() } = req.query;
-  const user = await User.findById(req.user.id).select('timezone');
-  const timezone = user?.timezone || 'Asia/Kolkata';
-
-  const heatmap = await getHeatmapData(req.user.id, parseInt(year, 10), timezone);
-  res.json(heatmap);
+  const streakInfo = await getStreakInfo(req.user.id);
+  res.json(streakInfo.history);
 });
 
 /**

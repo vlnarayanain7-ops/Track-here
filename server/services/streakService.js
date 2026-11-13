@@ -7,67 +7,46 @@ import User from '../models/User.js';
 const MINIMUM_ACTIVE_MINUTES = 25;
 
 /**
- * Get the current date string in user's timezone (YYYY-MM-DD).
+ * Calculate streak, heatmap history, and activity info for a user.
+ * Single source of truth for both streaks and heatmap.
+ *
+ * @param {string} userId
+ * @returns {Promise<{
+ *   currentStreak: number,
+ *   longestStreak: number,
+ *   activeDaysThisYear: number,
+ *   isActiveToday: boolean,
+ *   nextMilestone: number,
+ *   history: Array<{ date: string, minutes: number }>,
+ *   last7Days: Array<{ day: string, date: string, minutes: number, hours: number, isActive: boolean }>
+ * }>}
  */
-function getTodayInTimezone(timezone) {
+export async function getStreakInfo(userId) {
+  const user = await User.findById(userId).select('timezone streakGraceDays');
+  const timezone = user?.timezone || 'Asia/Kolkata';
+  const graceDays = user?.streakGraceDays || 0;
+
+  // User's current local date
   const now = toZonedTime(new Date(), timezone);
-  return format(now, 'yyyy-MM-dd');
-}
+  const todayStr = format(now, 'yyyy-MM-dd');
+  const currentYear = format(now, 'yyyy');
 
-/**
- * Get date string for a given date in user's timezone.
- */
-function getDateStringInTimezone(date, timezone) {
-  const zonedDate = toZonedTime(date, timezone);
-  return format(zonedDate, 'yyyy-MM-dd');
-}
+  // Heatmap window: 53 weeks (371 days) ending with current week's Sunday
+  // Monday is day 0, Sunday is day 6
+  const dayOfWeek = (now.getDay() + 6) % 7;
+  const startDate = subDays(now, dayOfWeek + (53 - 1) * 7);
 
-/**
- * Check if a specific date (YYYY-MM-DD) was an active study day.
- * An active day has >= MINIMUM_ACTIVE_MINUTES of focused study.
- */
-async function isDayActive(userId, dateString, timezone) {
-  // Create date range for the entire day in user's timezone
-  const dayStart = new Date(`${dateString}T00:00:00`);
-  const dayEnd = new Date(`${dateString}T23:59:59.999`);
-  const userObjId = new mongoose.Types.ObjectId(userId);
-
-  const result = await StudySession.aggregate([
-    {
-      $match: {
-        user: userObjId,
-        date: { $gte: dayStart, $lte: dayEnd },
-      },
-    },
-    {
-      $group: {
-        _id: null,
-        totalMinutes: { $sum: '$focusDuration' },
-      },
-    },
-  ]);
-
-  const totalMinutes = result.length > 0 ? result[0].totalMinutes : 0;
-  return totalMinutes >= MINIMUM_ACTIVE_MINUTES;
-}
-
-/**
- * Get daily study totals for a range of dates in user's timezone.
- */
-async function getDailyTotals(userId, startDate, endDate, timezone = 'Asia/Kolkata') {
   const userObjId = new mongoose.Types.ObjectId(userId);
   const results = await StudySession.aggregate([
     {
       $match: {
         user: userObjId,
-        date: { $gte: startDate, $lte: endDate },
+        date: { $exists: true, $ne: null },
       },
     },
     {
       $group: {
-        _id: {
-          $dateToString: { format: '%Y-%m-%d', date: '$date', timezone },
-        },
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$date', timezone } },
         totalMinutes: { $sum: '$focusDuration' },
       },
     },
@@ -78,91 +57,115 @@ async function getDailyTotals(userId, startDate, endDate, timezone = 'Asia/Kolka
   for (const r of results) {
     map[r._id] = r.totalMinutes;
   }
-  return map;
-}
 
-/**
- * Calculate streak information for a user.
- * @returns {{ currentStreak: number, longestStreak: number, isActiveToday: boolean }}
- */
-export async function getStreakInfo(userId) {
-  const user = await User.findById(userId).select('timezone streakGraceDays');
-  const timezone = user?.timezone || 'Asia/Kolkata';
-  const graceDays = user?.streakGraceDays || 0;
+  // Build the 53-week history array
+  const history = [];
+  const totalDays = 53 * 7;
+  for (let i = 0; i < totalDays; i++) {
+    const d = new Date(startDate.getTime() + i * 86400000);
+    const dateStr = format(d, 'yyyy-MM-dd');
+    const minutes = map[dateStr] || 0;
+    history.push({
+      date: dateStr,
+      minutes,
+    });
+  }
 
-  const todayStr = getTodayInTimezone(timezone);
+  // Count active days this year from map
+  let activeDaysThisYear = 0;
+  for (const [dStr, mins] of Object.entries(map)) {
+    if (dStr.startsWith(currentYear) && mins >= MINIMUM_ACTIVE_MINUTES) {
+      activeDaysThisYear++;
+    }
+  }
 
-  // Fetch last 400 days of study data to calculate streaks
-  const lookbackDays = 400;
-  const startDate = subDays(new Date(`${todayStr}T00:00:00`), lookbackDays);
-  const endDate = new Date(`${todayStr}T23:59:59.999`);
-
-  const dailyTotals = await getDailyTotals(userId, startDate, endDate, timezone);
-
-  const isActiveToday = (dailyTotals[todayStr] || 0) >= MINIMUM_ACTIVE_MINUTES;
-
-  // Calculate current streak: count consecutive active days going backward
+  // Calculate current streak
+  const isActiveToday = (map[todayStr] || 0) >= MINIMUM_ACTIVE_MINUTES;
   let currentStreak = 0;
-  let checkDate = isActiveToday ? todayStr : format(subDays(new Date(`${todayStr}T12:00:00`), 1), 'yyyy-MM-dd');
-  let consecutiveGraceDaysUsed = 0;
+  let checkOffset = isActiveToday ? 0 : 1;
+  let graceUsed = 0;
 
-  for (let i = 0; i < lookbackDays; i++) {
-    const dateStr = format(subDays(new Date(`${todayStr}T12:00:00`), isActiveToday ? i : i + 1), 'yyyy-MM-dd');
-    const minutes = dailyTotals[dateStr] || 0;
+  for (let i = checkOffset; i < 400; i++) {
+    const d = subDays(now, i);
+    const dateStr = format(d, 'yyyy-MM-dd');
+    const minutes = map[dateStr] || 0;
 
     if (minutes >= MINIMUM_ACTIVE_MINUTES) {
       currentStreak++;
-      consecutiveGraceDaysUsed = 0; // Reset grace counter
-    } else if (consecutiveGraceDaysUsed < graceDays) {
-      consecutiveGraceDaysUsed++;
-      // Grace day — streak continues but doesn't increment
+      graceUsed = 0;
+    } else if (graceUsed < graceDays) {
+      graceUsed++;
     } else {
       break;
     }
   }
 
-  // Calculate longest streak
-  // Build sorted array of all active dates
-  const activeDates = Object.entries(dailyTotals)
+  // Calculate longest streak across all days in map
+  const activeDates = Object.entries(map)
     .filter(([, mins]) => mins >= MINIMUM_ACTIVE_MINUTES)
     .map(([date]) => date)
     .sort();
 
   let longestStreak = 0;
   let tempStreak = 0;
-  let tempGraceUsed = 0;
 
   for (let i = 0; i < activeDates.length; i++) {
     if (i === 0) {
       tempStreak = 1;
       continue;
     }
-
-    const prevDate = new Date(`${activeDates[i - 1]}T12:00:00`);
-    const currDate = new Date(`${activeDates[i]}T12:00:00`);
-    const diffDays = Math.round((currDate - prevDate) / (1000 * 60 * 60 * 24));
+    const prev = new Date(`${activeDates[i - 1]}T12:00:00`);
+    const curr = new Date(`${activeDates[i]}T12:00:00`);
+    const diffDays = Math.round((curr - prev) / (1000 * 60 * 60 * 24));
 
     if (diffDays === 1) {
       tempStreak++;
-      tempGraceUsed = 0;
     } else if (diffDays <= graceDays + 1) {
-      // Within grace period
       tempStreak++;
     } else {
       longestStreak = Math.max(longestStreak, tempStreak);
       tempStreak = 1;
-      tempGraceUsed = 0;
     }
   }
-  longestStreak = Math.max(longestStreak, tempStreak);
+  longestStreak = Math.max(longestStreak, tempStreak, currentStreak);
 
-  // Ensure current streak is included in longest
-  longestStreak = Math.max(longestStreak, currentStreak);
+  // Next milestone
+  const MILESTONES = [3, 7, 14, 30, 60, 100, 180, 365];
+  let nextMilestone = 3;
+  for (const m of MILESTONES) {
+    if (currentStreak < m) {
+      nextMilestone = m;
+      break;
+    }
+    nextMilestone = currentStreak + 10;
+  }
+
+  // Last 7 days (M, T, W, T, F, S, S)
+  const dayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  const last7Days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = subDays(now, i);
+    const dateStr = format(d, 'yyyy-MM-dd');
+    const dayIdx = (d.getDay() + 6) % 7;
+    const minutes = map[dateStr] || 0;
+    const hours = Math.round((minutes / 60) * 10) / 10;
+    last7Days.push({
+      day: dayNames[dayIdx],
+      date: dateStr,
+      minutes,
+      hours,
+      isActive: minutes >= MINIMUM_ACTIVE_MINUTES,
+    });
+  }
 
   return {
     currentStreak,
     longestStreak,
+    activeDaysThisYear,
     isActiveToday,
+    nextMilestone,
+    history,
+    last7Days,
   };
 }
 

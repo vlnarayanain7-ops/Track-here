@@ -40,6 +40,13 @@
   --heat-3: #3F9A6B;
   --heat-4: #1F6F43;
 
+  --h0: #EAECE6;
+  --h1: #C5E3CF;
+  --h2: #8FCBA3;
+  --h3: #3F9A63;
+  --h4: #216E39;
+  --h5: #134E27;
+
   --r-sm: 10px;
   --r-md: 14px;
   --r-lg: 20px;
@@ -99,6 +106,13 @@
   --heat-3: #2FA06F;
   --heat-4: #4FC98F;
   --heat-5: #9BEBC4;
+
+  --h0: #1E2622;
+  --h1: #1B3A2D;
+  --h2: #1F6B4C;
+  --h3: #2FA06F;
+  --h4: #4FC98F;
+  --h5: #9BEBC4;
 
   /* Calm reference variable aliases dark */
   --ln: var(--line);
@@ -525,4 +539,108 @@ h1, h2, h3 {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* Progress Styles */
+.nums {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.nums b {
+  display: block;
+  font: 700 40px 'Space Grotesk', var(--font);
+  letter-spacing: -0.03em;
+  color: var(--tx);
+  line-height: 1.1;
+}
+.nums span {
+  color: var(--mu);
+  font-size: 13px;
+}
+.week {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  color: var(--mu);
+  font-size: 13px;
+}
+.week i {
+  font-style: normal;
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  border: 1.5px solid var(--ln);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  color: var(--mu);
+}
+.week i.on {
+  background: var(--pr);
+  border-color: var(--pr);
+  color: var(--on);
+}
+.heat {
+  display: grid;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--mu);
+  width: max-content;
+}
+.heat span {
+  white-space: nowrap;
+}
+.leg {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: flex-end;
+  color: var(--mu);
+  font-size: 12px;
+  margin-top: 12px;
+}
+.leg i {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+.pill {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 10px;
+  background: var(--soft);
+  color: var(--pr);
+}
+.bars {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  height: 140px;
+  margin-top: 16px;
+}
+.bars div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--mu);
+}
+.bars i {
+  width: 100%;
+  max-width: 40px;
+  border-radius: 8px;
+  background: var(--h2);
+}
+.lab {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  color: var(--mu);
 }
