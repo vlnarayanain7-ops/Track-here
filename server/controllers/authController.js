@@ -14,6 +14,7 @@ import {
 } from '../utils/tokens.js';
 import { sendMail } from '../services/mailer.js';
 import crypto from 'crypto';
+import env from '../config/env.js';
 
 // ─── Validation Schemas ───────────────────────────────────────
 
@@ -99,6 +100,10 @@ export const login = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email }).select('+password');
   if (!user) {
     throw ApiError.unauthorized('Invalid email or password');
+  }
+
+  if (!user.password) {
+    throw ApiError.badRequest('This account was created with Google. Please use Continue with Google to sign in.');
   }
 
   // Check password
@@ -308,5 +313,104 @@ export const resetPassword = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     message: 'Password reset successfully. Please log in with your new password.',
+  });
+});
+
+/**
+ * POST /api/auth/google
+ * Sign in or register using Google OAuth ID token (credential).
+ */
+export const googleAuth = asyncHandler(async (req, res) => {
+  const { credential } = req.body;
+  if (!credential) {
+    throw ApiError.badRequest('Google credential is required');
+  }
+
+  let payload;
+  try {
+    const gRes = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    if (!gRes.ok) {
+      throw new Error(`Google token validation failed with status ${gRes.status}`);
+    }
+    payload = await gRes.json();
+  } catch (err) {
+    console.error('[Google Auth Verification Error]', err.message);
+    throw ApiError.unauthorized('Invalid or expired Google token');
+  }
+
+  // Validate audience if GOOGLE_CLIENT_ID is configured
+  const expectedClientId = env.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
+  if (expectedClientId && payload.aud !== expectedClientId) {
+    throw ApiError.unauthorized('Google token audience mismatch');
+  }
+
+  const email = payload.email?.toLowerCase().trim();
+  if (!email) {
+    throw ApiError.badRequest('Google account did not provide an email address');
+  }
+
+  // Find existing user by googleId or email
+  let user = await User.findOne({
+    $or: [{ googleId: payload.sub }, { email }],
+  });
+
+  if (!user) {
+    // New user registration via Google
+    user = await User.create({
+      name: payload.name || email.split('@')[0],
+      email,
+      googleId: payload.sub,
+      isVerified: payload.email_verified === 'true' || payload.email_verified === true,
+      avatar: payload.picture,
+      ageBand: '18_plus',
+      dailyStudyGoal: 240,
+      timezone: 'Asia/Kolkata',
+      subjects: [],
+      onboardingCompleted: false,
+    });
+  } else {
+    // Existing user: link Google ID and avatar if missing
+    let needsSave = false;
+    if (!user.googleId) {
+      user.googleId = payload.sub;
+      needsSave = true;
+    }
+    if (payload.picture && !user.avatar) {
+      user.avatar = payload.picture;
+      needsSave = true;
+    }
+    if (!user.isVerified && (payload.email_verified === 'true' || payload.email_verified === true)) {
+      user.isVerified = true;
+      needsSave = true;
+    }
+    if (needsSave) {
+      await user.save();
+    }
+  }
+
+  // Issue access and refresh tokens
+  const accessToken = generateAccessToken(user._id.toString());
+  const refreshToken = generateRefreshToken();
+
+  await RefreshSession.create({
+    user: user._id,
+    tokenHash: hashRefreshToken(refreshToken),
+    familyId: crypto.randomUUID(),
+    userAgent: req.headers['user-agent'] || '',
+    ip: req.ip,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+  });
+
+  setAuthCookies(res, accessToken, refreshToken);
+  const csrfToken = generateCsrfToken();
+  setCsrfCookie(res, csrfToken);
+
+  res.status(200).json({
+    success: true,
+    message: 'Signed in with Google successfully',
+    data: { user, csrfToken, accessToken },
   });
 });

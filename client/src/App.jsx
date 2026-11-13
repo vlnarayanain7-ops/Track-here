@@ -11,7 +11,6 @@ import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
 // Auth Pages & Guards
 import { SignIn } from './auth/SignIn';
 import { SignUp } from './auth/SignUp';
-import { ForgotPassword, ResetPassword } from './auth/ForgotReset';
 import { RequireAuth, RequireProfile, CompleteProfile } from './auth/RequireProfile';
 
 // Legal Pages
@@ -82,30 +81,10 @@ export default function App() {
           </GuestRoute>
         }
       />
-      <Route
-        path="/forgot-password"
-        element={
-          <GuestRoute>
-            <ForgotPassword />
-          </GuestRoute>
-        }
-      />
-      <Route
-        path="/reset-password"
-        element={
-          <GuestRoute>
-            <ResetPassword />
-          </GuestRoute>
-        }
-      />
-      <Route
-        path="/reset-password/:token"
-        element={
-          <GuestRoute>
-            <ResetPassword />
-          </GuestRoute>
-        }
-      />
+      {/* Redirect old forgot/reset password links to signin */}
+      <Route path="/forgot-password" element={<Navigate to="/signin" replace />} />
+      <Route path="/reset-password" element={<Navigate to="/signin" replace />} />
+      <Route path="/reset-password/:token" element={<Navigate to="/signin" replace />} />
 
       {/* Aliases for legacy paths */}
       <Route path="/login" element={<Navigate to="/signin" replace />} />

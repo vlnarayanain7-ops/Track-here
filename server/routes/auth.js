@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   register,
   login,
+  googleAuth,
   logout,
   refresh,
   getMe,
@@ -23,6 +24,7 @@ const router = Router();
 router.get('/csrf', getCsrfToken);
 router.post('/register', authLimiter, csrfProtection, validate(registerSchema), register);
 router.post('/login', authLimiter, csrfProtection, validate(loginSchema), login);
+router.post('/google', authLimiter, csrfProtection, googleAuth);
 router.post('/logout', csrfProtection, logout);
 router.post('/refresh', csrfProtection, refresh);
 router.get('/me', auth, getMe);

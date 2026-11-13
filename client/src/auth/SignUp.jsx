@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button, Field } from '../components/ui';
 import { AuthLayout } from './AuthLayout';
+import GoogleAuthButton from './GoogleAuthButton';
 import toast from 'react-hot-toast';
 
 const calculateStrength = (p) =>
@@ -62,10 +63,6 @@ export function SignUp() {
     } finally {
       setBusy(false);
     }
-  }
-
-  function handleGoogleAuth() {
-    toast('Google sign-in will be enabled with your domain setup.', { icon: 'ℹ️' });
   }
 
   const strengthScore = calculateStrength(form.password);
@@ -184,14 +181,7 @@ export function SignUp() {
           </div>
         </div>
 
-        <Button
-          type="button"
-          size="lg"
-          onClick={handleGoogleAuth}
-          className="w-full"
-        >
-          Continue with Google
-        </Button>
+        <GoogleAuthButton buttonText="Sign up with Google" />
 
         <p className="text-center text-xs text-[var(--muted)] mt-2">
           Already have an account?{' '}

@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button, Field } from '../components/ui';
 import { AuthLayout } from './AuthLayout';
+import GoogleAuthButton from './GoogleAuthButton';
 import toast from 'react-hot-toast';
 
 export function SignIn() {
@@ -43,10 +44,6 @@ export function SignIn() {
     }
   }
 
-  function handleGoogleAuth() {
-    toast('Google sign-in will be enabled with your domain setup.', { icon: 'ℹ️' });
-  }
-
   return (
     <AuthLayout title="Welcome back" sub="Sign in to continue your streak.">
       <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
@@ -81,15 +78,6 @@ export function SignIn() {
           </button>
         </div>
 
-        <div className="flex justify-end">
-          <Link
-            to="/forgot-password"
-            className="text-xs text-[var(--primary)] hover:underline font-semibold"
-          >
-            Forgot password?
-          </Link>
-        </div>
-
         <Button variant="primary" size="lg" loading={busy} type="submit" className="w-full mt-1">
           Sign in
         </Button>
@@ -103,14 +91,7 @@ export function SignIn() {
           </div>
         </div>
 
-        <Button
-          type="button"
-          size="lg"
-          onClick={handleGoogleAuth}
-          className="w-full"
-        >
-          Continue with Google
-        </Button>
+        <GoogleAuthButton buttonText="Continue with Google" />
 
         <p className="text-center text-xs text-[var(--muted)] mt-2">
           New here?{' '}

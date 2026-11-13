@@ -79,6 +79,7 @@ api.interceptors.response.use(
       originalRequest?.url?.includes('/auth/me') ||
       originalRequest?.url?.includes('/auth/login') ||
       originalRequest?.url?.includes('/auth/register') ||
+      originalRequest?.url?.includes('/auth/google') ||
       originalRequest?.url?.includes('/auth/refresh') ||
       originalRequest?.url?.includes('/auth/forgot-password') ||
       originalRequest?.url?.includes('/auth/reset-password');

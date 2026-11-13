@@ -63,6 +63,15 @@ export function AuthProvider({ children }) {
     return u;
   };
 
+  const googleLogin = async (credential) => {
+    await initializeCsrf();
+    const res = await authApi.googleLogin(credential);
+    await initializeCsrf();
+    const u = res?.data?.user || res?.user || res;
+    setUser(u);
+    return u;
+  };
+
   const logout = async () => {
     try {
       disconnectSocket();
@@ -79,6 +88,7 @@ export function AuthProvider({ children }) {
     isAuthenticated: !!user,
     login,
     register,
+    googleLogin,
     logout,
     checkAuth,
     initializeCsrf,
