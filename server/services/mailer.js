@@ -19,5 +19,8 @@ export async function sendMail({ to, subject, text }) {
     }),
     signal: AbortSignal.timeout(7000),
   });
-  if (!res.ok) throw new Error(`mail_failed_${res.status}`);
+  if (!res.ok) {
+    const errorText = await res.text().catch(() => '');
+    throw new Error(`mail_failed_${res.status}: ${errorText}`);
+  }
 }
