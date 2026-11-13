@@ -50,20 +50,20 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0B100E;
-  --surface: #111815;
-  --surface-2: #17201C;
-  --line: #25322B;
-  --text: #EAF1EC;
-  --muted: #9AA9A0;
-  --primary: #34D399;
-  --on-primary: #04251A;
-  --primary-soft: #12342A;
+  --bg: #0F1311;
+  --surface: #161B18;
+  --surface-2: #1C2320;
+  --line: #27302B;
+  --text: #EDF2EE;
+  --muted: #9AA79F;
+  --primary: #4ADE80;
+  --on-primary: #06220F;
+  --primary-soft: #16301F;
   --danger: #FF9B90;
   --danger-soft: #3F1A17;
   --warn: #F2B45B;
   --warn-soft: #3A2A10;
-  --ring: #34D399;
+  --ring: #4ADE80;
 
   /* Subject colors dark */
   --c-blue: #8DB0FF;
@@ -83,11 +83,23 @@
   --c-slate: #AAB6C2;
   --c-slate-bg: #232C35;
 
-  --heat-0: #17201C;
-  --heat-1: #16402F;
+  --heat-0: #1E2622;
+  --heat-1: #1B3A2D;
   --heat-2: #1F6B4C;
   --heat-3: #2FA06F;
-  --heat-4: #6FE3B0;
+  --heat-4: #4FC98F;
+  --heat-5: #9BEBC4;
+}
+
+/* touch targets: small on desktop, 44px on touch */
+.btn, .nav, .sidebar-nav {
+  min-height: 36px;
+}
+
+@media (pointer: coarse), (max-width: 760px) {
+  .btn, .nav, .sidebar-nav, .tb, .chip {
+    min-height: 44px;
+  }
 }
 
 html, body {

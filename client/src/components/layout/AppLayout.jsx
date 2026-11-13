@@ -1,18 +1,24 @@
 import { useState, useEffect } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import MobileTabBar from './MobileTabBar';
 import CommandPalette from '@/components/search/CommandPalette';
 import QuickActionsModal from '@/components/dashboard/QuickActions';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import { cn } from '@/lib/utils';
 
 export default function AppLayout() {
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [quickAddType, setQuickAddType] = useState('task');
+
+  // Determine if current view should use wide container (1040px for Plan and Progress)
+  const isWide =
+    location.pathname.startsWith('/plan') ||
+    location.pathname.startsWith('/progress');
 
   // Global Keyboard shortcut for Command Palette (Ctrl+K or Cmd+K)
   useEffect(() => {
@@ -30,7 +36,7 @@ export default function AppLayout() {
     if (kind === 'session') {
       navigate('/study?action=start');
     } else if (kind === 'goal') {
-      navigate('/subjects');
+      navigate('/plan?tab=subjects');
     } else {
       setQuickAddType(kind);
       setQuickAddOpen(true);
@@ -39,43 +45,34 @@ export default function AppLayout() {
 
   return (
     <div className="shell min-h-[100dvh] w-full bg-[var(--bg)] flex text-[var(--text)] antialiased relative">
-      {/* 1. Desktop Persistent Left Sidebar (>= 1024px) */}
-      <div className="hidden lg:block w-64 h-[100dvh] sticky top-0 shrink-0">
+      {/* 1. Desktop Persistent Left Sidebar (216px, >= 768px) */}
+      <div className="hidden md:block w-[216px] h-[100dvh] sticky top-0 shrink-0">
         <Sidebar />
       </div>
 
-      {/* 2. Tablet / Mobile Drawer Sidebar (768px - 1023px and drawer trigger) */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden flex">
-          <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
-            onClick={() => setSidebarOpen(false)}
-          />
-          <div className="relative w-64 max-w-[85vw] h-full z-10 animate-slide-in-left shadow-2xl">
-            <Sidebar onClose={() => setSidebarOpen(false)} />
-          </div>
-        </div>
-      )}
-
-      {/* 3. Main Content Flow */}
+      {/* 2. Main Content Flow */}
       <div className="flex-1 flex flex-col min-w-0 min-h-[100dvh]">
-        {/* Responsive Top Bar */}
+        {/* Calm Top Bar */}
         <Header
-          onOpenSidebar={() => setSidebarOpen(true)}
           onOpenCommandPalette={() => setCommandPaletteOpen(true)}
           onQuickAdd={handleQuickAdd}
         />
 
-        {/* Dynamic Page Content with Safe Area Padding */}
-        <main className="flex-1 page w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pb-[calc(88px+env(safe-area-inset-bottom))] md:pb-12">
+        {/* Dynamic Page Content: 880px for Today/Focus/Notes, 1040px for Plan/Progress */}
+        <main
+          className={cn(
+            'flex-1 page w-full mx-auto px-4 sm:px-8 py-4 sm:py-6 pb-[calc(72px+env(safe-area-inset-bottom))] md:pb-12 transition-all',
+            isWide ? 'max-w-[1040px]' : 'max-w-[880px]'
+          )}
+        >
           <ErrorBoundary>
             <Outlet />
           </ErrorBoundary>
         </main>
       </div>
 
-      {/* 4. Phone Bottom Navigation & Floating Quick Add (< 768px) */}
-      <MobileTabBar onQuickAdd={handleQuickAdd} />
+      {/* 3. Mobile Bottom Tab Bar (< 768px) */}
+      <MobileTabBar />
 
       {/* Global Command Palette */}
       <CommandPalette

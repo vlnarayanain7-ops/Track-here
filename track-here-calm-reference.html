@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Track Here, calm reference</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F8F9F5;--sf:#fff;--sf2:#F3F5EF;--ln:#E5E8E1;--tx:#141815;--mu:#5F6862;--pr:#216E39;--on:#fff;--soft:#EAF3EC;
+--h0:#EAECE6;--h1:#C5E3CF;--h2:#8FCBA3;--h3:#3F9A63;--h4:#216E39;--h5:#134E27;--c1:#2563EB;--c2:#BE185D;--c3:#A15207}
+[data-theme=dark]{--bg:#0F1311;--sf:#161B18;--sf2:#1C2320;--ln:#27302B;--tx:#EDF2EE;--mu:#9AA79F;--pr:#4ADE80;--on:#06220F;--soft:#16301F;
+--h0:#1E2622;--h1:#1B3A2D;--h2:#1F6B4C;--h3:#2FA06F;--h4:#4FC98F;--h5:#9BEBC4;--c1:#8DB0FF;--c2:#F58BBB;--c3:#F2B45B}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.5 Inter,sans-serif}
+:focus-visible{outline:2px solid var(--pr);outline-offset:2px}
+.app{display:flex;min-height:100vh}
+aside{width:216px;flex:none;padding:20px 12px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--ln);position:sticky;top:0;height:100vh}
+.brand{font:700 18px 'Space Grotesk';padding:4px 10px 20px}
+.nav{display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;border-radius:10px;color:var(--mu);border:0;background:none;font:500 14px Inter;cursor:pointer;width:100%;text-align:left}
+.nav:hover{background:var(--sf2)}.nav[aria-current=page]{background:var(--soft);color:var(--pr)}
+main{flex:1;min-width:0}
+.top{display:flex;align-items:center;gap:8px;padding:12px 32px;justify-content:flex-end}
+.btn{height:36px;padding:0 14px;border-radius:10px;border:1px solid var(--ln);background:var(--sf);color:var(--tx);font:500 14px Inter;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--sf2)}.btn.p{background:var(--pr);color:var(--on);border-color:transparent}.btn.p:hover{filter:brightness(1.08)}
+.btn.g{border-color:transparent;background:none;color:var(--mu)}.lg{height:44px;padding:0 22px}
+.chipst{display:flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:18px;background:var(--soft);color:var(--pr);font-weight:600}
+.av{width:36px;height:36px;border-radius:18px;background:var(--tx);color:var(--bg);display:grid;place-items:center;font-weight:700;border:0}
+.page{max-width:880px;margin:0 auto;padding:8px 32px 64px}.wide{max-width:1040px}
+h1{font:700 26px 'Space Grotesk';letter-spacing:-.02em;margin:0}h2{font:600 16px Inter;margin:0}
+.sub{color:var(--mu);margin:2px 0 0}.hd{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.card{background:var(--sf);border:1px solid var(--ln);border-radius:16px;padding:20px}
+.lab{font:600 12px Inter;letter-spacing:.06em;color:var(--mu)}.big{font:700 22px 'Space Grotesk';letter-spacing:-.01em;margin:4px 0 2px}
+.now{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:24px 0 12px}
+.bar{display:flex;align-items:center;gap:12px;color:var(--mu);font-size:13px;margin-bottom:32px}
+.bar div{flex:1;height:4px;border-radius:2px;background:var(--ln)}.bar i{display:block;height:4px;border-radius:2px;background:var(--pr)}
+.sec{display:flex;justify-content:space-between;align-items:center;margin:24px 0 4px}
+.row{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--ln)}.g{flex:1}
+.ck{width:24px;height:24px;border-radius:12px;border:1.5px solid var(--ln);background:var(--sf);color:var(--on);display:grid;place-items:center;padding:0;cursor:pointer}
+.ck.on{background:var(--pr);border-color:var(--pr)}.dn{color:var(--mu);text-decoration:line-through}
+.sj{display:flex;align-items:center;gap:6px;color:var(--mu);font-size:13px}.sj i{width:8px;height:8px;border-radius:4px}
+.note{color:var(--mu);font-size:13px}.note a{color:var(--pr)}
+.tabs{display:flex;gap:4px;margin:16px 0 20px;border-bottom:1px solid var(--ln)}
+.tb{border:0;background:none;padding:8px 12px;color:var(--mu);font:500 14px Inter;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tb[aria-selected=true]{color:var(--tx);border-color:var(--pr)}
+.center{display:flex;flex-direction:column;align-items:center;gap:24px;padding:16px 0}
+.chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.chip{height:32px;padding:0 14px;border-radius:16px;border:1px solid var(--ln);background:var(--sf);color:var(--mu);font:500 13px Inter;cursor:pointer}
+.chip.on{background:var(--soft);color:var(--pr);border-color:transparent}
+.ring{position:relative;width:min(240px,70vw);aspect-ratio:1}.ring svg{width:100%;height:100%}
+.time{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.time b{font:700 52px 'Space Grotesk';letter-spacing:-.03em}.time span{color:var(--mu);font-size:13px}.acts{display:flex;gap:8px}
+.notes{display:grid;grid-template-columns:220px 1fr;gap:24px;min-height:420px;margin-top:20px}
+.nl{display:flex;flex-direction:column;gap:2px}
+.ni{text-align:left;border:0;background:none;padding:10px;border-radius:10px;cursor:pointer;color:var(--tx);font:inherit;display:flex;flex-direction:column}
+.ni span{color:var(--mu);font-size:12px}.ni.on,.ni:hover{background:var(--sf2)}
+.ed{display:flex;flex-direction:column;gap:8px}.tt{border:0;background:none;font:700 24px 'Space Grotesk';color:var(--tx);outline:0;padding:0}
+.tools{display:none;gap:4px}.ed:focus-within .tools{display:flex}
+.tools button{height:30px;min-width:30px;border:0;border-radius:8px;background:var(--sf2);color:var(--tx);cursor:pointer}
+.ed textarea{flex:1;border:0;background:none;resize:none;color:var(--tx);font:15px/1.7 Inter;outline:0;min-height:320px}
+.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px}
+.nums b{display:block;font:700 40px 'Space Grotesk';letter-spacing:-.03em}.nums span{color:var(--mu);font-size:13px}
+.week{display:flex;align-items:center;gap:8px;margin-bottom:20px;color:var(--mu);font-size:13px}
+.week i{font-style:normal;width:28px;height:28px;border-radius:14px;border:1.5px solid var(--ln);display:grid;place-items:center;font-size:12px}
+.week i.on{background:var(--pr);border-color:var(--pr);color:var(--on)}
+.heat{display:grid;gap:3px;font-size:12px;color:var(--mu);width:max-content}.heat span{white-space:nowrap}
+.leg{display:flex;gap:4px;align-items:center;justify-content:flex-end;color:var(--mu);font-size:12px;margin-top:12px}.leg i{width:12px;height:12px;border-radius:3px}
+.pill{font-size:12px;font-weight:600;padding:2px 10px;border-radius:10px;background:var(--soft);color:var(--pr)}
+.bars{display:flex;gap:12px;align-items:flex-end;height:140px;margin-top:16px}
+.bars div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;font-size:12px;color:var(--mu)}
+.bars i{width:100%;max-width:40px;border-radius:8px;background:var(--h2)}
+.wk{display:grid;grid-template-columns:48px repeat(7,1fr)}.wd{text-align:center;font-size:13px;color:var(--mu);padding:6px 0}.wd.td{color:var(--pr);font-weight:600}
+.hrs div{height:36px;font-size:12px;color:var(--mu);transform:translateY(-8px)}
+.col{position:relative;height:648px;border-left:1px solid var(--ln);background-image:repeating-linear-gradient(var(--ln) 0 1px,transparent 1px 36px)}.col.td{background-color:var(--soft)}
+.blk{position:absolute;left:3px;right:3px;border-radius:8px;padding:4px 8px;font-size:12px;font-weight:600;overflow:hidden}
+.input{width:100%;height:40px;border:1px solid var(--ln);border-radius:10px;background:var(--sf);color:var(--tx);padding:0 12px;font:inherit;margin:8px 0}
+.meter{height:4px;border-radius:2px;background:var(--ln);margin-top:6px}.meter i{display:block;height:4px;border-radius:2px;background:var(--pr)}
+@media(max-width:760px){
+ aside{position:fixed;top:auto;bottom:0;left:0;right:0;width:100%;height:60px;flex-direction:row;padding:6px;border-right:0;border-top:1px solid var(--ln);background:var(--bg);z-index:5}
+ .brand,.set{display:none}.nav{flex-direction:column;justify-content:center;gap:2px;height:48px;font-size:11px;flex:1;padding:0;width:auto}
+ .page{padding:8px 16px 96px}.top{padding:8px 16px}.notes{grid-template-columns:1fr}.now{flex-direction:column;align-items:stretch}.nums b{font-size:28px}.hd{flex-direction:column}}
+</style></head><body><div id="root"></div>
+<script>
+/* DESIGN REFERENCE ONLY: the sample data below is for the picture. The real app must show real data and honest empty states. */
+const IC={today:'<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',focus:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/>',plan:'<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>',notes:'<path d="M6 3h9l4 4v14H6z"/><path d="M9 13h6M9 17h6"/>',progress:'<path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-6 1-9z"/>',plus:'<path d="M12 5v14M5 12h14"/>',moon:'<path d="M20 14A8 8 0 0 1 10 4a8 8 0 1 0 10 10z"/>',search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/>',check:'<path d="M5 12l5 5 9-10"/>',play:'<path d="M7 4l13 8-13 8z"/>',gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>'};
+const ic=(n,s=18)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
+const NAV=[['today','Today'],['focus','Focus'],['plan','Plan'],['notes','Notes'],['progress','Progress']];
+let view='today',tab={plan:'Tasks',progress:'Streak'};
+const tasks=[{t:'Solve 5 graph problems',s:'Algorithms',c:'--c1',d:0},{t:'Revise scheduling algorithms',s:'Operating Systems',c:'--c2',d:0},{t:'Plan the day',s:'Maths',c:'--c3',d:1}];
+const go=v=>{view=v;render()};
+const tabs=(k,items)=>`<div class="tabs" role="tablist">${items.map(i=>`<button class="tb" role="tab" aria-selected="${tab[k]===i}" onclick="tab.${k}='${i}';render()">${i}</button>`).join('')}</div>`;
+const taskRow=t=>`<div class="row"><button class="ck ${t.d?'on':''}" aria-label="Mark done">${t.d?ic('check',14):''}</button><span class="g ${t.d?'dn':''}">${t.t}</span><span class="sj"><i style="background:var(${t.c})"></i>${t.s}</span></div>`;
+const sess=(s,t,m)=>`<div class="row"><span class="g">${t}<span class="note"> · ${s}</span></span><b>${m}</b></div>`;
+
+function heat(){
+  const W=53,C=12,today=new Date();today.setHours(12);
+  const start=new Date(today);start.setDate(today.getDate()-((today.getDay()+6)%7)-(W-1)*7);
+  const mins=d=>{const i=Math.round((today-d)/864e5);return i<0?-1:i<12?30+(i*53)%150:((i*37)%11<4?0:(i*53)%200)};
+  const lv=m=>m<=0?0:m<25?1:m<60?2:m<120?3:m<240?4:5;
+  let cells='',months='',prev=-1;
+  for(let w=0;w<W;w++){
+    const first=new Date(start);first.setDate(start.getDate()+w*7);const mo=first.getMonth();
+    if(mo!==prev){months+=`<span style="grid-column:${w+2};grid-row:1">${first.toLocaleString('en',{month:'short'})}</span>`;prev=mo}
+    for(let r=0;r<7;r++){const d=new Date(start);d.setDate(start.getDate()+w*7+r);const m=mins(d);
+      cells+=`<i title="${d.toDateString()}${m<0?'':' · '+m+' min'}" style="grid-column:${w+2};grid-row:${r+2};width:${C}px;height:${C}px;border-radius:3px;background:${m<0?'transparent':`var(--h${lv(m)})`}"></i>`}}
+  const lab=['Mon','Wed','Fri'].map((x,i)=>`<span style="grid-column:1;grid-row:${i*2+2};line-height:${C}px">${x}</span>`).join('');
+  return `<div style="overflow-x:auto"><div class="heat" style="grid-template-columns:30px repeat(${W},${C}px)">${months}${lab}${cells}</div></div>
+  <div class="leg">Less ${[0,1,2,3,4,5].map(l=>`<i style="background:var(--h${l})"></i>`).join('')} More</div>`;
+}
+function week(){
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],B=[[0,9,10.5,'Algorithms','--c1'],[2,9,10.5,'Algorithms','--c1'],[4,14,16,'Maths','--c3'],[1,18,19.5,'OS','--c2']];
+  return `<div class="wk"><div></div>${days.map((d,i)=>`<div class="wd ${i==4?'td':''}">${d}</div>`).join('')}
+  <div class="hrs">${Array.from({length:18},(_,i)=>`<div>${String(i+6).padStart(2,'0')}:00</div>`).join('')}</div>
+  ${days.map((d,i)=>`<div class="col ${i==4?'td':''}">${B.filter(b=>b[0]==i).map(b=>`<div class="blk" style="top:${(b[1]-6)*36}px;height:${(b[2]-b[1])*36-2}px;background:color-mix(in srgb,var(${b[4]}) 16%,transparent);color:var(${b[4]})">${b[3]}</div>`).join('')}</div>`).join('')}</div>`;
+}
+const V={
+ today:()=>`<div class="hd"><div><h1>Good evening, Narayana</h1><p class="sub">Friday, 13 November</p></div><div><button class="btn g">Morning plan</button><button class="btn g">Evening review</button></div></div>
+  <div class="card now"><div><div class="lab">UP NEXT</div><div class="big">Solve 5 graph problems</div><div class="sub">Algorithms · 45 min</div></div><button class="btn p lg" onclick="go('focus')">${ic('play',14)} Start focus</button></div>
+  <div class="bar"><span>Today 25m of 4h</span><div><i style="width:10%"></i></div></div>
+  <div class="sec"><h2>Today</h2><button class="btn g">${ic('plus',14)} Add task</button></div>${tasks.map(taskRow).join('')}
+  <p class="note" style="margin-top:20px">2 reviews are due · <a href="#">Start review</a></p>`,
+ focus:()=>`<div class="center"><div class="chips"><button class="chip on">Algorithms</button><button class="chip">Operating Systems</button><button class="chip">Maths</button></div>
+  <div class="ring"><svg viewBox="0 0 240 240" aria-hidden="true"><circle cx="120" cy="120" r="108" fill="none" stroke="var(--ln)" stroke-width="6"/><circle cx="120" cy="120" r="108" fill="none" stroke="var(--pr)" stroke-width="6" stroke-linecap="round" stroke-dasharray="679" stroke-dashoffset="500" transform="rotate(-90 120 120)"/></svg><div class="time"><b>11:08</b><span>of 45 min</span></div></div>
+  <div class="acts"><button class="btn lg">Reset</button><button class="btn p lg">Pause</button><button class="btn lg">Finish</button></div>
+  <p class="note">25 minutes keeps your streak · <a href="#">Add details</a></p></div>
+  <div class="sec"><h2>Today's sessions</h2></div>${sess('Algorithms','Dijkstra','25m')}${sess('Maths','Linear algebra','40m')}`,
+ plan:()=>`<h1>Plan</h1>${tabs('plan',['Tasks','Week','Subjects'])}`+(tab.plan==='Tasks'?`<input class="input" placeholder="Add a task and press Enter">${tasks.map(taskRow).join('')}`
+  :tab.plan==='Week'?week()
+  :`<div class="sec" style="margin-top:0"><span class="note">Subjects you create appear everywhere else.</span><button class="btn g">${ic('plus',14)} Add subject</button></div>${[['Algorithms','--c1',40],['Operating Systems','--c2',20],['Maths','--c3',65]].map(s=>`<div class="row" style="display:block"><div style="display:flex;justify-content:space-between"><span class="sj" style="color:var(--tx);font-size:14px"><i style="background:var(${s[1]})"></i>${s[0]}</span><span class="note">${s[2]}% of chapters</span></div><div class="meter"><i style="width:${s[2]}%"></i></div></div>`).join('')}`),
+ notes:()=>`<div class="hd"><h1>Notes</h1><button class="btn">${ic('plus',14)} New note</button></div>
+  <div class="notes"><div class="nl"><button class="ni on"><b>Dijkstra's algorithm</b><span>Today</span></button><button class="ni"><b>Paging and TLB</b><span>Yesterday</span></button></div>
+  <div class="ed"><input class="tt" value="Dijkstra's algorithm" aria-label="Title"><div class="tools"><button>B</button><button>I</button><button>H</button><button>•</button><button>&lt;/&gt;</button></div>
+  <textarea aria-label="Note">Always expand the closest unvisited node, then relax its edges.&#10;&#10;- Non-negative weights only&#10;- Binary heap: O((V + E) log V)</textarea></div></div>`,
+ progress:()=>`<h1>Progress</h1>${tabs('progress',['Streak','Stats','Practice'])}`+(tab.progress==='Streak'?
+  `<div class="nums"><div><b>12</b><span>day streak</span></div><div><b>21</b><span>longest streak</span></div><div><b>134</b><span>active days this year</span></div></div>
+   <div class="week"><span>This week</span>${['M','T','W','T','F','S','S'].map((d,i)=>`<i class="${i<5?'on':''}">${d}</i>`).join('')}</div>
+   <div class="card">${heat()}</div><p class="note" style="margin-top:12px">25+ focused minutes in a day counts toward your streak.</p>`
+  :tab.progress==='Stats'?`<div class="nums"><div><b>10h 18m</b><span>this week</span></div><div><b>41</b><span>sessions in 30 days</span></div><div><b>1h 11m</b><span>average session</span></div></div>
+   <div class="card"><div class="lab">LAST 7 DAYS</div><div class="bars">${[3.5,4.2,2.6,0,0,0,0].map((v,i)=>`<div><span>${v||''}</span><i style="height:${Math.max(v*28,6)}px"></i><span>${'MTWTFSS'[i]}</span></div>`).join('')}</div></div>`
+  :`<div class="sec" style="margin-top:0"><span class="note">Mock tests and problems you log</span><button class="btn">${ic('plus',14)} Log practice</button></div>
+   <div class="row"><span class="g">Shortest path in a weighted graph</span><span class="pill">Solved</span></div><div class="row"><span class="g">Banker's algorithm safety check</span><span class="pill" style="background:var(--sf2);color:var(--mu)">Review</span></div>`)
+};
+function render(){
+  const dark=document.documentElement.dataset.theme==='dark';
+  document.getElementById('root').innerHTML=`<div class="app"><aside aria-label="Primary"><div class="brand">Track Here</div>
+   ${NAV.map(([k,l])=>`<button class="nav" ${view===k?'aria-current="page"':''} onclick="go('${k}')">${ic(k)}${l}</button>`).join('')}
+   <button class="nav set" style="margin-top:auto">${ic('gear')}Settings</button></aside>
+   <main><div class="top"><button class="btn g" aria-label="Search (Ctrl K)">${ic('search')}</button><div class="chipst">${ic('progress',14)} 12</div>
+    <button class="btn">${ic('plus',14)} Add</button><button class="btn g" aria-label="Toggle theme" onclick="document.documentElement.dataset.theme='${dark?'light':'dark'}';render()">${ic('moon')}</button><button class="av" aria-label="Account">N</button></div>
+   <div class="page ${view==='progress'||(view==='plan'&&tab.plan==='Week')?'wide':''}">${V[view]()}</div></main></div>`;
+}
+render();
+</script></body></html>
+

@@ -19,15 +19,9 @@ import { TermsPage, PrivacyPage } from '@/components/legal/LegalPages';
 // Main Application Modules
 import DashboardPage from '@/components/dashboard/DashboardPage';
 import StudyPage from '@/components/study/StudyPage';
-import SubjectsPage from '@/components/subjects/SubjectsPage';
-import TimetablePage from '@/components/timetable/TimetablePage';
-import PracticePage from '@/components/practice/PracticePage';
-import TasksPage from '@/components/tasks/TasksPage';
+import PlanPage from '@/components/plan/PlanPage';
 import NotesPage from '@/components/notes/NotesPage';
-import AccountabilityPage from '@/components/accountability/AccountabilityPage';
-import StreaksPage from '@/components/streaks/StreaksPage';
-import RevisionsPage from '@/components/revisions/RevisionsPage';
-import AnalyticsPage from '@/components/analytics/AnalyticsPage';
+import ProgressPage from '@/components/progress/ProgressPage';
 import SettingsPage from '@/components/settings/SettingsPage';
 
 // Guest Guard (redirect already logged-in users to home)
@@ -103,17 +97,21 @@ export default function App() {
           <Route path="/" element={<AppLayout />}>
             <Route index element={<DashboardPage />} />
             <Route path="study" element={<StudyPage />} />
-            <Route path="subjects" element={<SubjectsPage />} />
-            <Route path="timetable" element={<TimetablePage />} />
-            <Route path="practice" element={<PracticePage />} />
-            <Route path="tasks" element={<TasksPage />} />
+            <Route path="plan" element={<PlanPage />} />
             <Route path="notes" element={<NotesPage />} />
-            <Route path="problems" element={<PracticePage defaultTab="problems" />} />
-            <Route path="accountability" element={<AccountabilityPage />} />
-            <Route path="streaks" element={<StreaksPage />} />
-            <Route path="revisions" element={<RevisionsPage />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
+            <Route path="progress" element={<ProgressPage />} />
             <Route path="settings" element={<SettingsPage />} />
+
+            {/* Legacy route redirects to preserve all bookmarks and links */}
+            <Route path="timetable" element={<Navigate to="/plan?tab=week" replace />} />
+            <Route path="subjects" element={<Navigate to="/plan?tab=subjects" replace />} />
+            <Route path="tasks" element={<Navigate to="/plan?tab=tasks" replace />} />
+            <Route path="streaks" element={<Navigate to="/progress" replace />} />
+            <Route path="analytics" element={<Navigate to="/progress?tab=stats" replace />} />
+            <Route path="practice" element={<Navigate to="/progress?tab=practice" replace />} />
+            <Route path="problems" element={<Navigate to="/progress?tab=practice" replace />} />
+            <Route path="revisions" element={<Navigate to="/?review=1" replace />} />
+            <Route path="accountability" element={<Navigate to="/?journal=morning" replace />} />
           </Route>
         </Route>
       </Route>
