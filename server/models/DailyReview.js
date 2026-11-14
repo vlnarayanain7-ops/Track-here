@@ -27,6 +27,9 @@ const dailyReviewSchema = new mongoose.Schema(
     difficulties: String,
     incompleteGoals: [String],
     tomorrowPlan: String,
+    mood: String,
+    reflection: String,
+    tomorrowFirst: String,
   },
   {
     timestamps: true,

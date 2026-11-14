@@ -22,6 +22,9 @@ export const createDailyReviewSchema = z.object({
   difficulties: z.string().optional().nullable(),
   incompleteGoals: z.array(z.string()).optional(),
   tomorrowPlan: z.string().optional().nullable(),
+  mood: z.string().optional().nullable(),
+  reflection: z.string().optional().nullable(),
+  tomorrowFirst: z.string().optional().nullable(),
 }).strict();
 
 export const updateDailyReviewSchema = createDailyReviewSchema.partial().strict();

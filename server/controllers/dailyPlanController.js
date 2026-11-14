@@ -17,6 +17,8 @@ export const createDailyPlanSchema = z.object({
   }).optional(),
   targetHours: z.number().min(0).max(24).optional(),
   priorityTasks: z.array(z.string()).optional(),
+  priorities: z.array(z.string()).optional(),
+  notes: z.string().optional().nullable(),
   intentions: z.string().optional().nullable(),
   yesterdayIncomplete: z.array(z.string()).optional(),
 }).strict();

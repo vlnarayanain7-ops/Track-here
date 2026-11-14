@@ -6,10 +6,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useTasks, useCreateTask, useUpdateTaskStatus } from '@/hooks/useTasks';
 import { useRevisions } from '@/hooks/useRevisions';
-import { useDailyPlan } from '@/hooks/useDailyPlans';
-import SideSheet from '@/components/ui/SideSheet';
-import MorningCheckIn from '@/components/accountability/MorningCheckIn';
-import EveningReview from '@/components/accountability/EveningReview';
+import { useDailyPlan, useCreateDailyPlan } from '@/hooks/useDailyPlans';
+import { useCreateDailyReview } from '@/hooks/useDailyReviews';
+import { SideSheet } from '@/components/SideSheet';
+import { MorningPlan } from '@/components/journal/MorningPlan';
+import { EveningReview } from '@/components/journal/EveningReview';
 import RevisionsPage from '@/components/revisions/RevisionsPage';
 import { journalPrompt } from '@/lib/journalPrompt';
 import { plural } from '@/lib/plural';
@@ -21,8 +22,9 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Side sheet states, reading from query params (?journal=morning|evening, ?review=1)
-  const [journalSheet, setJournalSheet] = useState(null); // 'morning' | 'evening' | null
+  // Side sheet states, reading from query params (?journal=morning|evening|journal, ?review=1)
+  const [journalSheet, setJournalSheet] = useState(null); // 'morning' | 'evening' | 'journal' | null
+  const [activeJournalTab, setActiveJournalTab] = useState('morning');
   const [reviewSheetOpen, setReviewSheetOpen] = useState(false);
   const [inlineTaskInput, setInlineTaskInput] = useState('');
   const [showInlineAdd, setShowInlineAdd] = useState(false);
@@ -30,8 +32,11 @@ export default function DashboardPage() {
   // Sync state with URL search params
   useEffect(() => {
     const journalParam = searchParams.get('journal');
-    if (journalParam === 'morning' || journalParam === 'evening') {
+    if (journalParam === 'morning' || journalParam === 'evening' || journalParam === 'journal') {
       setJournalSheet(journalParam);
+      if (journalParam === 'morning' || journalParam === 'evening') {
+        setActiveJournalTab(journalParam);
+      }
     } else {
       setJournalSheet(null);
     }
@@ -80,6 +85,8 @@ export default function DashboardPage() {
 
   const createTaskMutation = useCreateTask();
   const updateTaskStatus = useUpdateTaskStatus();
+  const createDailyPlanMutation = useCreateDailyPlan();
+  const createDailyReviewMutation = useCreateDailyReview();
 
   // Time-based Greeting
   const greeting = useMemo(() => {
@@ -199,8 +206,19 @@ export default function DashboardPage() {
         <div>
           <button
             type="button"
-            onClick={() => openJournal(promptKind === 'evening' ? 'evening' : 'morning')}
-            className="btn h-9 px-3.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--text)] text-xs font-medium transition-colors cursor-pointer"
+            onClick={() => {
+              if (promptKind === 'morning') {
+                setActiveJournalTab('morning');
+                openJournal('morning');
+              } else if (promptKind === 'evening') {
+                setActiveJournalTab('evening');
+                openJournal('evening');
+              } else {
+                setActiveJournalTab('morning');
+                openJournal('journal');
+              }
+            }}
+            className="btn btn-ghost"
           >
             {promptKind === 'morning' ? 'Morning plan' : promptKind === 'evening' ? 'Evening review' : 'Journal'}
           </button>
@@ -352,25 +370,64 @@ export default function DashboardPage() {
       </div>
 
       {/* Side Sheets */}
-      {/* 1. Morning Plan Side Sheet */}
+      {/* 1. Morning Plan / Evening Review Side Sheet */}
       <SideSheet
-        open={journalSheet === 'morning'}
+        open={Boolean(journalSheet)}
         onClose={closeJournalSheet}
-        title="Morning Plan"
+        title={
+          journalSheet === 'morning'
+            ? 'Morning plan'
+            : journalSheet === 'evening'
+            ? 'Evening review'
+            : activeJournalTab === 'morning'
+            ? 'Morning plan'
+            : 'Evening review'
+        }
       >
-        <MorningCheckIn onComplete={closeJournalSheet} />
+        {journalSheet === 'journal' && (
+          <div className="seg" role="group" aria-label="Journal mode">
+            <button
+              type="button"
+              aria-pressed={activeJournalTab === 'morning'}
+              onClick={() => setActiveJournalTab('morning')}
+            >
+              Morning
+            </button>
+            <button
+              type="button"
+              aria-pressed={activeJournalTab === 'evening'}
+              onClick={() => setActiveJournalTab('evening')}
+            >
+              Evening
+            </button>
+          </div>
+        )}
+
+        {(journalSheet === 'morning' || (journalSheet === 'journal' && activeJournalTab === 'morning')) && (
+          <MorningPlan
+            defaultHours={Math.round((user?.dailyStudyGoal || 240) / 60)}
+            openTasks={openTasks}
+            onSave={async (data) => await createDailyPlanMutation.mutateAsync(data)}
+            saving={createDailyPlanMutation.isPending}
+            error={createDailyPlanMutation.error?.response?.data?.message}
+            onDone={closeJournalSheet}
+          />
+        )}
+
+        {(journalSheet === 'evening' || (journalSheet === 'journal' && activeJournalTab === 'evening')) && (
+          <EveningReview
+            focusMinutes={todayMinutes}
+            tasksDone={completedTasks.length}
+            onSave={async (data) => await createDailyReviewMutation.mutateAsync(data)}
+            onCreateTask={async (tData) => await createTaskMutation.mutateAsync(tData)}
+            saving={createDailyReviewMutation.isPending}
+            error={createDailyReviewMutation.error?.response?.data?.message}
+            onDone={closeJournalSheet}
+          />
+        )}
       </SideSheet>
 
-      {/* 2. Evening Review Side Sheet */}
-      <SideSheet
-        open={journalSheet === 'evening'}
-        onClose={closeJournalSheet}
-        title="Evening Review"
-      >
-        <EveningReview onComplete={closeJournalSheet} />
-      </SideSheet>
-
-      {/* 3. Revision Queue Side Sheet */}
+      {/* 2. Revision Queue Side Sheet */}
       <SideSheet
         open={reviewSheetOpen}
         onClose={closeReviewSheet}

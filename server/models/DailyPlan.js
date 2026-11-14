@@ -23,6 +23,8 @@ const dailyPlanSchema = new mongoose.Schema(
         ref: 'Task',
       },
     ],
+    priorities: [String],
+    notes: String,
     intentions: String,
     yesterdayIncomplete: [String],
   },

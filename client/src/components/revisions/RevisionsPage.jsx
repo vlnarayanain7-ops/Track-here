@@ -13,7 +13,10 @@ export default function RevisionsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [revisionToDelete, setRevisionToDelete] = useState(null);
 
-  const { data: revisions = [], isLoading } = useRevisions();
+  const { data: rawRevisions, isLoading } = useRevisions();
+  const revisions = Array.isArray(rawRevisions)
+    ? rawRevisions
+    : rawRevisions?.revisions || rawRevisions?.data || [];
   const deleteMutation = useDeleteRevision();
 
   const handleConfirmDelete = async () => {
