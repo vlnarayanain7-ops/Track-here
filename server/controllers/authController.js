@@ -86,7 +86,7 @@ export const register = asyncHandler(async (req, res) => {
   res.status(201).json({
     success: true,
     message: 'Account created successfully',
-    data: { user, csrfToken, accessToken },
+    data: { user, csrfToken },
   });
 });
 
@@ -137,7 +137,7 @@ export const login = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     message: 'Logged in successfully',
-    data: { user, csrfToken, accessToken },
+    data: { user, csrfToken },
   });
 });
 
@@ -414,6 +414,6 @@ export const googleAuth = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Signed in with Google successfully',
-    data: { user, csrfToken, accessToken },
+    data: { user, csrfToken },
   });
 });
