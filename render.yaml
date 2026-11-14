@@ -23,3 +23,5 @@ services:
         sync: false
       - key: MAIL_FROM_EMAIL
         sync: false
+      - key: GOOGLE_CLIENT_ID
+        value: 971371287072-ajlh3snp83fl8e5311coh3t3n38aa9ud.apps.googleusercontent.com
