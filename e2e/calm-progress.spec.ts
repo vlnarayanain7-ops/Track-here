@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Step 11.6 Progress Verification', () => {
+test.describe('Steps 12.4 & 12.5 Progress Stats & LeetCode Heatmap Verification', () => {
   test.beforeEach(async ({ page }) => {
     // Inject mock auth token to authenticate test user
     await page.addInitScript(() => {
@@ -15,6 +15,10 @@ test.describe('Step 11.6 Progress Verification', () => {
           onboardingCompleted: true,
           streakGraceDays: 1,
           timezone: 'Asia/Kolkata',
+          subjects: [
+            { name: 'Algorithms', color: 'blue' },
+            { name: 'Operating Systems', color: 'rose' },
+          ],
         })
       );
     });
@@ -50,6 +54,10 @@ test.describe('Step 11.6 Progress Verification', () => {
                 onboardingCompleted: true,
                 streakGraceDays: 1,
                 timezone: 'Asia/Kolkata',
+                subjects: [
+                  { name: 'Algorithms', color: 'blue' },
+                  { name: 'Operating Systems', color: 'rose' },
+                ],
               },
             },
           }),
@@ -57,17 +65,15 @@ test.describe('Step 11.6 Progress Verification', () => {
       }
 
       if (url.includes('/api/analytics/streaks')) {
-        // Return single unified history list of 53 weeks (371 days)
         const history = [];
-        const today = new Date('2026-11-13T12:00:00Z');
+        const today = new Date();
         const start = new Date(today);
-        start.setDate(today.getDate() - ((today.getDay() + 6) % 7) - 52 * 7);
+        start.setDate(today.getDate() - 371);
 
-        for (let i = 0; i < 371; i++) {
+        for (let i = 0; i < 372; i++) {
           const d = new Date(start);
           d.setDate(start.getDate() + i);
           const dateStr = d.toISOString().slice(0, 10);
-          // Light up specific days (e.g. today has 45 mins, recent days have 30-120 mins)
           const daysFromToday = Math.round((today.getTime() - d.getTime()) / 86400000);
           let minutes = 0;
           if (daysFromToday >= 0 && daysFromToday <= 12) {
@@ -108,10 +114,11 @@ test.describe('Step 11.6 Progress Verification', () => {
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
-            summary: {
-              totalSessions: 41,
-              averageSessionMinutes: 71,
-            },
+            bySubject: [
+              { id: 'Algorithms', name: 'Algorithms', minutes: 320, color: 'blue' },
+              { id: 'Operating Systems', name: 'Operating Systems', minutes: 180, color: 'rose' },
+            ],
+            today: { studyMinutes: 45 },
           }),
         });
       }
@@ -133,9 +140,7 @@ test.describe('Step 11.6 Progress Verification', () => {
         return route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({
-            mockTests: [],
-          }),
+          body: JSON.stringify({ mockTests: [] }),
         });
       }
 
@@ -147,96 +152,118 @@ test.describe('Step 11.6 Progress Verification', () => {
     });
   });
 
-  test('desktop 1440x900 light and dark - Progress verification', async ({ page }) => {
+  test('desktop 1440x900 light and dark - Streak and Stats verification', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('http://localhost:5173/progress');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/progress');
 
     // 1. Heading
     await expect(page.getByRole('heading', { name: 'Progress', level: 1 })).toBeVisible();
 
-    // 2. Tabs: Streak | Stats | Practice
+    // 2. Tabs
     const streakTab = page.getByRole('tab', { name: 'Streak' });
     const statsTab = page.getByRole('tab', { name: 'Stats' });
-    const practiceTab = page.getByRole('tab', { name: 'Practice' });
     await expect(streakTab).toBeVisible();
     await expect(statsTab).toBeVisible();
-    await expect(practiceTab).toBeVisible();
 
-    // 3. Tab 1 Streak Content: 3 numbers, this week row, milestone, heatmap, rule note
+    // 3. Tab 1 Streak Content: 3 numbers, this week row, LeetCode MonthHeatmap
     await expect(page.getByText('day streak')).toBeVisible();
     await expect(page.getByText('longest streak')).toBeVisible();
     await expect(page.getByText('active days this year')).toBeVisible();
-    await expect(page.getByText(/Next milestone: 14 days/i)).toBeVisible();
     await expect(page.getByText('This week')).toBeVisible();
 
-    // Heatmap labels & rules
-    await expect(page.locator('.heat')).toBeVisible();
-    await expect(page.locator('.heat').getByText('Mon')).toBeVisible();
-    await expect(page.locator('.heat').getByText('Wed')).toBeVisible();
-    await expect(page.locator('.heat').getByText('Fri')).toBeVisible();
-    await expect(page.getByText('Less')).toBeVisible();
-    await expect(page.getByText('More')).toBeVisible();
+    // MonthHeatmap elements
+    await expect(page.locator('.mh')).toBeVisible();
+    await expect(page.locator('.mh-days')).toBeVisible();
+    await expect(page.locator('.mh-scroll')).toBeVisible();
+    await expect(page.locator('.leg')).toBeVisible();
     await expect(page.getByText('25+ focused minutes in a day counts toward your streak.')).toBeVisible();
 
-    // Take Desktop Light Screenshot (Streak tab)
+    // Screenshots for Step 12.5 Streak
     await page.evaluate(() => {
       document.documentElement.setAttribute('data-theme', 'light');
       localStorage.setItem('th-theme', 'light');
     });
-    await page.waitForTimeout(300);
-    await page.screenshot({ path: 'screenshots/11.6-progress-1440x900-light.png', fullPage: false });
+    await page.waitForTimeout(200);
+    await page.screenshot({ path: 'screenshots/12.5-streak-1440x900-light.png', fullPage: false });
 
-    // Switch to Dark Theme & take Desktop Dark Screenshot (Streak tab)
     await page.evaluate(() => {
       document.documentElement.setAttribute('data-theme', 'dark');
       localStorage.setItem('th-theme', 'dark');
     });
-    await page.waitForTimeout(300);
-    await page.screenshot({ path: 'screenshots/11.6-progress-1440x900-dark.png', fullPage: false });
+    await page.waitForTimeout(200);
+    await page.screenshot({ path: 'screenshots/12.5-streak-1440x900-dark.png', fullPage: false });
 
-    // 4. Test Tab 2: Stats
+    // 4. Tab 2 Stats Content: STUDIED total, range switch (week|month|year), single bar chart, by-subject
     await statsTab.click();
-    await expect(page.getByText('this week')).toBeVisible();
-    await expect(page.getByText('sessions in 30 days')).toBeVisible();
-    await expect(page.getByText('average session')).toBeVisible();
-    await expect(page.getByText('LAST 7 DAYS')).toBeVisible();
+    await expect(page.getByText('STUDIED')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Week' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Month' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Year' })).toBeVisible();
 
-    // 5. Test Tab 3: Practice
-    await practiceTab.click();
-    await expect(page.getByText('Mock tests and problems you log')).toBeVisible();
-    await expect(page.getByRole('button', { name: /Log practice/i })).toBeVisible();
-    await expect(page.getByText('Shortest path in a weighted graph')).toBeVisible();
-    await expect(page.getByText("Banker's algorithm safety check")).toBeVisible();
-    await expect(page.getByText('Solved')).toBeVisible();
-    await expect(page.getByText('Review')).toBeVisible();
+    // Bar chart visible
+    await expect(page.locator('.bars')).toBeVisible();
+
+    // By subject bars
+    await expect(page.getByRole('heading', { level: 2, name: 'By subject' })).toBeVisible();
+    await expect(page.getByText('Algorithms')).toBeVisible();
+    await expect(page.getByText('Operating Systems')).toBeVisible();
+
+    // Screenshots for Step 12.4 Stats
+    await page.evaluate(() => {
+      document.documentElement.setAttribute('data-theme', 'light');
+      localStorage.setItem('th-theme', 'light');
+    });
+    await page.waitForTimeout(200);
+    await page.screenshot({ path: 'screenshots/12.4-stats-1440x900-light.png', fullPage: false });
+
+    await page.evaluate(() => {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem('th-theme', 'dark');
+    });
+    await page.waitForTimeout(200);
+    await page.screenshot({ path: 'screenshots/12.4-stats-1440x900-dark.png', fullPage: false });
   });
 
   test('mobile 390x844 light and dark - Progress verification', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('http://localhost:5173/progress');
-    await page.waitForLoadState('networkidle');
-
-    // Heading
-    await expect(page.getByRole('heading', { name: 'Progress', level: 1 })).toBeVisible();
+    await page.goto('/progress');
 
     // Numbers visible on mobile
     await expect(page.getByText('day streak')).toBeVisible();
+    await expect(page.locator('.mh')).toBeVisible();
 
-    // Take Mobile Light Screenshot
+    // Mobile light & dark for 12.5 Streak
     await page.evaluate(() => {
       document.documentElement.setAttribute('data-theme', 'light');
       localStorage.setItem('th-theme', 'light');
     });
-    await page.waitForTimeout(300);
-    await page.screenshot({ path: 'screenshots/11.6-progress-390x844-light.png', fullPage: false });
+    await page.waitForTimeout(200);
+    await page.screenshot({ path: 'screenshots/12.5-streak-390x844-light.png', fullPage: false });
 
-    // Switch to Dark Theme & take Mobile Dark Screenshot
     await page.evaluate(() => {
       document.documentElement.setAttribute('data-theme', 'dark');
       localStorage.setItem('th-theme', 'dark');
     });
-    await page.waitForTimeout(300);
-    await page.screenshot({ path: 'screenshots/11.6-progress-390x844-dark.png', fullPage: false });
+    await page.waitForTimeout(200);
+    await page.screenshot({ path: 'screenshots/12.5-streak-390x844-dark.png', fullPage: false });
+
+    // Switch to Stats tab on mobile
+    await page.getByRole('tab', { name: 'Stats' }).click();
+    await expect(page.getByText('STUDIED')).toBeVisible();
+
+    // Mobile light & dark for 12.4 Stats
+    await page.evaluate(() => {
+      document.documentElement.setAttribute('data-theme', 'light');
+      localStorage.setItem('th-theme', 'light');
+    });
+    await page.waitForTimeout(200);
+    await page.screenshot({ path: 'screenshots/12.4-stats-390x844-light.png', fullPage: false });
+
+    await page.evaluate(() => {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem('th-theme', 'dark');
+    });
+    await page.waitForTimeout(200);
+    await page.screenshot({ path: 'screenshots/12.4-stats-390x844-dark.png', fullPage: false });
   });
 });

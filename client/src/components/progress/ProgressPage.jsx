@@ -4,7 +4,9 @@ import { Plus, Check, Clock, FileText, AlertCircle, Sparkles } from 'lucide-reac
 import { useStreakData, useAnalytics } from '@/hooks/useAnalytics';
 import { useProblems, useCreateProblem } from '@/hooks/useProblems';
 import { useMockTests, useCreateMockTest } from '@/hooks/useMockTests';
-import SideSheet from '@/components/ui/SideSheet';
+import { StatsPanel } from '@/components/StatsPanel';
+import { MonthHeatmap } from '@/components/MonthHeatmap';
+import SideSheet from '@/components/SideSheet';
 import { plural } from '@/lib/plural';
 import { toast } from 'react-hot-toast';
 
@@ -43,8 +45,9 @@ export default function ProgressPage() {
   };
 
   // Queries
+  const [statsRange, setStatsRange] = useState('week');
   const { data: streakData, isLoading: streakLoading } = useStreakData();
-  const { data: analyticsData } = useAnalytics();
+  const { data: analyticsData } = useAnalytics({ range: statsRange });
   const { data: problemsData } = useProblems();
   const { data: mockTestsData } = useMockTests();
 
@@ -80,117 +83,18 @@ export default function ProgressPage() {
   const history = streakData?.history || [];
   const last7Days = streakData?.last7Days || [];
 
-  // Heatmap rendering logic (GitHub / LeetCode style calendar, 53 weeks)
-  const heatmapData = useMemo(() => {
-    const W = 53;
-    const C = 12;
-    const lv = (m) => (m <= 0 ? 0 : m < 25 ? 1 : m < 60 ? 2 : m < 120 ? 3 : m < 240 ? 4 : 5);
-
-    const today = new Date();
-    today.setHours(12, 0, 0, 0);
-
-    // Monday of 52 weeks ago
-    const dayOfWeek = (today.getDay() + 6) % 7; // Monday = 0, Sunday = 6
-    const startDate = new Date(today);
-    startDate.setDate(today.getDate() - dayOfWeek - 52 * 7);
-
-    // Index history by YYYY-MM-DD
-    const minutesByDate = {};
+  // Shared single source of truth for minutes per local day (covers at least 371 days)
+  const minutesByDay = useMemo(() => {
+    const map = new Map();
     if (Array.isArray(history)) {
       history.forEach((h) => {
-        if (h?.date) minutesByDate[h.date] = h.minutes || 0;
+        if (h?.date) map.set(h.date, h.minutes || 0);
       });
+    } else if (streakData?.byDay) {
+      Object.entries(streakData.byDay).forEach(([k, v]) => map.set(k, v || 0));
     }
-
-    const monthSpans = [];
-    const cells = [];
-    let prevMonth = -1;
-
-    for (let w = 0; w < W; w++) {
-      const weekStartDate = new Date(startDate);
-      weekStartDate.setDate(startDate.getDate() + w * 7);
-      const mo = weekStartDate.getMonth();
-
-      if (mo !== prevMonth) {
-        const shortMonth = weekStartDate.toLocaleDateString('en-US', { month: 'short' });
-        monthSpans.push(
-          <span
-            key={`m-${w}`}
-            style={{ gridColumn: w + 2, gridRow: 1 }}
-            className="font-medium text-[var(--mu)] text-xs select-none"
-          >
-            {shortMonth}
-          </span>
-        );
-        prevMonth = mo;
-      }
-
-      for (let r = 0; r < 7; r++) {
-        const cellDate = new Date(startDate);
-        cellDate.setDate(startDate.getDate() + w * 7 + r);
-        const y = cellDate.getFullYear();
-        const m = String(cellDate.getMonth() + 1).padStart(2, '0');
-        const d = String(cellDate.getDate()).padStart(2, '0');
-        const dateStr = `${y}-${m}-${d}`;
-
-        const isFuture = cellDate > today;
-        const minutes = isFuture ? 0 : (minutesByDate[dateStr] || 0);
-        const level = isFuture ? 0 : lv(minutes);
-        const tooltip = isFuture
-          ? cellDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })
-          : formatCellTooltip(dateStr, minutes);
-
-        cells.push(
-          <i
-            key={`cell-${w}-${r}`}
-            title={tooltip}
-            data-date={dateStr}
-            data-minutes={minutes}
-            style={{
-              gridColumn: w + 2,
-              gridRow: r + 2,
-              width: `${C}px`,
-              height: `${C}px`,
-              borderRadius: '3px',
-              backgroundColor: isFuture ? 'transparent' : `var(--h${level})`,
-              border: isFuture ? '1px dashed var(--ln)' : undefined,
-              opacity: isFuture ? 0.35 : 1,
-            }}
-          />
-        );
-      }
-    }
-
-    const dayLabels = ['Mon', 'Wed', 'Fri'].map((x, i) => (
-      <span
-        key={x}
-        style={{
-          gridColumn: 1,
-          gridRow: i * 2 + 2,
-          lineHeight: `${C}px`,
-        }}
-        className="text-[var(--mu)] text-xs select-none"
-      >
-        {x}
-      </span>
-    ));
-
-    return {
-      monthSpans,
-      dayLabels,
-      cells,
-      W,
-      C,
-    };
-  }, [history]);
-
-  // Stats tab calculations
-  const totalMinutesThisWeek = useMemo(() => {
-    return last7Days.reduce((acc, d) => acc + (d.minutes || 0), 0);
-  }, [last7Days]);
-
-  const sessionsIn30Days = analyticsData?.summary?.totalSessions ?? 0;
-  const averageSessionMinutes = analyticsData?.summary?.averageSessionMinutes ?? 0;
+    return map;
+  }, [history, streakData]);
 
   // Practice items
   const practiceItems = useMemo(() => {
@@ -259,7 +163,7 @@ export default function ProgressPage() {
   };
 
   return (
-    <div className="w-full max-w-[1040px] mx-auto space-y-4">
+    <div className="w-full max-w-[960px] mx-auto space-y-4">
       <h1 className="text-[26px] font-bold font-heading tracking-tight text-[var(--tx)]">Progress</h1>
 
       {/* Tabs: Streak | Stats | Practice */}
@@ -293,7 +197,7 @@ export default function ProgressPage() {
         </button>
       </div>
 
-      {/* TAB 1: STREAK */}
+      {/* TAB 1: STREAK (LeetCode style month heatmap) */}
       {tab === 'streak' && (
         <div className="space-y-5 animate-fade-in">
           {/* Three plain numbers */}
@@ -312,9 +216,6 @@ export default function ProgressPage() {
             </div>
           </div>
 
-          {/* Small milestone line */}
-          <p className="note -mt-2">Next milestone: {plural(nextMilestone, 'day')}</p>
-
           {/* This week row of 7 dots */}
           <div className="week">
             <span>This week</span>
@@ -329,29 +230,9 @@ export default function ProgressPage() {
             })}
           </div>
 
-          {/* Heatmap Card */}
+          {/* LeetCode Month Heatmap */}
           <div className="card">
-            <div className="overflow-x-auto pb-2">
-              <div
-                className="heat"
-                style={{
-                  gridTemplateColumns: `30px repeat(${heatmapData.W}, ${heatmapData.C}px)`,
-                }}
-              >
-                {heatmapData.monthSpans}
-                {heatmapData.dayLabels}
-                {heatmapData.cells}
-              </div>
-            </div>
-
-            {/* Legend */}
-            <div className="leg">
-              <span>Less</span>
-              {[0, 1, 2, 3, 4, 5].map((lvl) => (
-                <i key={lvl} style={{ backgroundColor: `var(--h${lvl})` }} />
-              ))}
-              <span>More</span>
-            </div>
+            <MonthHeatmap minutesByDay={minutesByDay} />
           </div>
 
           {/* Streak rule note */}
@@ -363,50 +244,12 @@ export default function ProgressPage() {
 
       {/* TAB 2: STATS */}
       {tab === 'stats' && (
-        <div className="space-y-5 animate-fade-in">
-          {/* Three numbers */}
-          <div className="nums">
-            <div>
-              <b>{formatDuration(totalMinutesThisWeek)}</b>
-              <span>this week</span>
-            </div>
-            <div>
-              <b>{sessionsIn30Days}</b>
-              <span>sessions in 30 days</span>
-            </div>
-            <div>
-              <b>{formatDuration(averageSessionMinutes)}</b>
-              <span>average session</span>
-            </div>
-          </div>
-
-          {/* 7-day Bar Chart */}
-          <div className="card">
-            <div className="lab">LAST 7 DAYS</div>
-            <div className="bars">
-              {(last7Days.length === 7
-                ? last7Days
-                : ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d) => ({ day: d, hours: 0 }))
-              ).map((v, i) => (
-                <div key={i}>
-                  <span>{v.hours > 0 ? `${v.hours}h` : ''}</span>
-                  <i
-                    style={{
-                      height: `${Math.max(v.hours * 28, 4)}px`,
-                      opacity: v.hours > 0 ? 1 : 0.25,
-                    }}
-                  />
-                  <span>{v.day}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {totalMinutesThisWeek === 0 && sessionsIn30Days === 0 && (
-            <p className="note text-center py-2 text-xs">
-              No study sessions recorded yet. Complete focus sessions to see your weekly study breakdown and habits appear here.
-            </p>
-          )}
+        <div className="animate-fade-in">
+          <StatsPanel
+            minutesByDay={minutesByDay}
+            bySubject={analyticsData?.bySubject || []}
+            onRangeChange={(r) => setStatsRange(r)}
+          />
         </div>
       )}
 

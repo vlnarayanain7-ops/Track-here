@@ -165,6 +165,7 @@ export async function getStreakInfo(userId) {
     isActiveToday,
     nextMilestone,
     history,
+    byDay: map,
     last7Days,
   };
 }

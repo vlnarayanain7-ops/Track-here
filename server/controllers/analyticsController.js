@@ -2,6 +2,8 @@ import User from '../models/User.js';
 import StudySession from '../models/StudySession.js';
 import mongoose from 'mongoose';
 import asyncHandler from '../utils/asyncHandler.js';
+import { subDays } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
 import {
   getDashboardStats,
   getStudyTimeStats,
@@ -12,15 +14,66 @@ import {
 import { getStreakInfo } from '../services/streakService.js';
 
 /**
+ * Helper to compute by-subject breakdown for a given range (week | month | year)
+ */
+async function computeBySubject(userId, timezone, range = 'week', userSubjects = []) {
+  const now = toZonedTime(new Date(), timezone);
+  let startDate = new Date(now);
+
+  if (range === 'month') {
+    startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+  } else if (range === 'year') {
+    startDate = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
+  } else {
+    // week (Monday-based)
+    const dayOfWeek = (now.getDay() + 6) % 7;
+    startDate = subDays(now, dayOfWeek);
+    startDate.setHours(0, 0, 0, 0);
+  }
+
+  const subjectAgg = await StudySession.aggregate([
+    {
+      $match: {
+        user: new mongoose.Types.ObjectId(userId),
+        date: { $gte: startDate },
+      },
+    },
+    {
+      $group: {
+        _id: '$category',
+        minutes: { $sum: '$focusDuration' },
+      },
+    },
+    { $sort: { minutes: -1 } },
+  ]);
+
+  const subjectMap = new Map((userSubjects || []).map((s) => [s.name, s.color]));
+  return subjectAgg
+    .filter((s) => s._id)
+    .map((s) => ({
+      id: s._id,
+      name: s._id,
+      minutes: s.minutes,
+      color: subjectMap.get(s._id) || 'slate',
+    }));
+}
+
+/**
  * GET /api/analytics/dashboard or /api/analytics
  */
 export const getDashboard = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user.id).select('timezone dailyStudyGoal');
+  const user = await User.findById(req.user.id).select('timezone dailyStudyGoal subjects');
   const timezone = user?.timezone || 'Asia/Kolkata';
+  const range = (req.query.range || 'week').toLowerCase();
 
-  const stats = await getDashboardStats(req.user.id, timezone);
+  const [stats, bySubject] = await Promise.all([
+    getDashboardStats(req.user.id, timezone),
+    computeBySubject(req.user.id, timezone, range, user?.subjects || []),
+  ]);
+
   res.json({
     ...stats,
+    bySubject,
     dailyStudyGoal: user?.dailyStudyGoal || 240,
   });
 });
