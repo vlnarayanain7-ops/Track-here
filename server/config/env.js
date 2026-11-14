@@ -32,6 +32,7 @@ const env = {
   BREVO_API_KEY: process.env.BREVO_API_KEY || undefined,
   MAIL_FROM_EMAIL: process.env.MAIL_FROM_EMAIL || undefined,
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '66278150520-opea4khlpt7udornbleesgu5si21oi2d.apps.googleusercontent.com',
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
   DISABLE_RATE_LIMIT: process.env.DISABLE_RATE_LIMIT === 'true',
   VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY || '',
   VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY || '',
