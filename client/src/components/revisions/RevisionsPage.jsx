@@ -16,7 +16,13 @@ export default function RevisionsPage() {
   const { data: rawRevisions, isLoading } = useRevisions();
   const revisions = Array.isArray(rawRevisions)
     ? rawRevisions
-    : rawRevisions?.revisions || rawRevisions?.data || [];
+    : Array.isArray(rawRevisions?.revisions)
+    ? rawRevisions.revisions
+    : Array.isArray(rawRevisions?.data)
+    ? rawRevisions.data
+    : Array.isArray(rawRevisions?.data?.revisions)
+    ? rawRevisions.data.revisions
+    : [];
   const deleteMutation = useDeleteRevision();
 
   const handleConfirmDelete = async () => {

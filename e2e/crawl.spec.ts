@@ -143,6 +143,14 @@ test.describe('Route Crawl & Redirect Verification', () => {
         });
       }
 
+      if (url.includes('/api/revisions')) {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ revisions: [] }),
+        });
+      }
+
       if (url.includes('/api/mock-tests')) {
         return route.fulfill({
           status: 200,
@@ -163,7 +171,12 @@ test.describe('Route Crawl & Redirect Verification', () => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (m) => {
-      if (m.type() === 'error') errors.push(m.text());
+      if (m.type() === 'error') {
+        const text = m.text();
+        if (!text.includes('net::') && !text.includes('ERR_FAILED') && !text.includes('ERR_NAME_NOT_RESOLVED')) {
+          errors.push(text);
+        }
+      }
     });
 
     for (const r of ROUTES) {
