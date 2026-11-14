@@ -12,9 +12,12 @@ export const allowedOrigins = [
 export const isOriginAllowed = (origin) => {
   if (!origin) return true;
   if (allowedOrigins.includes(origin)) return true;
-  // Strictly permit only Track Here official domains and Vercel/Render preview deployments for this project
+  // Strictly permit Track Here official domains, Vercel, Render, and Cloudflare deployments
   if (/^https:\/\/track-here(-[a-z0-9-]+)?\.vercel\.app$/.test(origin)) return true;
   if (/^https:\/\/track-here(-[a-z0-9-]+)?\.onrender\.com$/.test(origin)) return true;
+  if (/^https:\/\/track-here\.[a-z0-9-]+\.workers\.dev$/.test(origin)) return true;
+  if (/^https:\/\/[a-z0-9-]+\.workers\.dev$/.test(origin)) return true;
+  if (/^https:\/\/track-here(-[a-z0-9-]+)?\.pages\.dev$/.test(origin)) return true;
   return false;
 };
 

@@ -30,8 +30,8 @@ if (!token) {
         ageBand: '18_plus',
       }),
     });
-    const regData = await regRes.json();
-    token = regData?.data?.accessToken;
+    const regSetCookie = regRes.headers.get('set-cookie') || '';
+    token = regSetCookie.match(/accessToken=([^;]+)/)?.[1];
   } catch (err) {
     console.error('Failed to auto-fetch test token:', err.message);
   }
