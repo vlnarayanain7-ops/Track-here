@@ -1,9 +1,14 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Step 11.2 Today Page Verification', () => {
+test.describe('Step 11.2 Today Page Verification with Calendar & Reminders', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/api/**', async (route) => {
       const url = route.request().url();
+
+      // Only intercept backend API calls, NOT frontend /src/api/*.js files!
+      if (url.includes('/src/api/')) {
+        return route.continue();
+      }
 
       if (url.includes('/api/auth/csrf')) {
         return route.fulfill({
@@ -28,12 +33,27 @@ test.describe('Step 11.2 Today Page Verification', () => {
                 onboardingCompleted: true,
                 dailyStudyGoal: 240,
                 timezone: 'Asia/Kolkata',
+                examName: 'JEE Advanced',
+                examDate: '2027-05-24',
                 subjects: [
                   { name: 'Algorithms', color: '#2563EB' },
                   { name: 'Operating Systems', color: '#BE185D' },
                   { name: 'Maths', color: '#A15207' },
                 ],
               },
+            },
+          }),
+        });
+      }
+
+      if (url.includes('/api/daily-plans')) {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            plan: {
+              intentions: 'Solve 5 graph problems & complete daily review',
             },
           }),
         });
@@ -105,7 +125,7 @@ test.describe('Step 11.2 Today Page Verification', () => {
             success: true,
             data: {
               slots: [
-                { _id: 's1', subject: 'Maths', startTime: '14:00', endTime: '16:00' },
+                { _id: 's1', dayOfWeek: new Date().getDay(), subject: 'Maths', startTime: '14:00', endTime: '16:00' },
               ],
             },
           }),
@@ -120,7 +140,7 @@ test.describe('Step 11.2 Today Page Verification', () => {
     });
   });
 
-  test('desktop 1440x900 light and dark', async ({ page }) => {
+  test('desktop 1440x900 light and dark with calendar & reminders', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
 
@@ -129,26 +149,31 @@ test.describe('Step 11.2 Today Page Verification', () => {
     await expect(page.getByRole('button', { name: 'Morning plan' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Evening review' })).toBeVisible();
 
-    // 2. Up next card with ONE Start focus button
+    // 2. Important Details & Reminders: Target Exam & Today's Focus
+    await expect(page.getByText('Target Exam')).toBeVisible();
+    await expect(page.getByText('JEE Advanced')).toBeVisible();
+    await expect(page.getByText("Today's Focus & Alerts")).toBeVisible();
+    await expect(page.getByText(/Solve 5 graph problems/i).first()).toBeVisible();
+
+    // 3. Week Calendar Strip
+    await expect(page.getByText(/Full week/i)).toBeVisible();
+
+    // 4. Up next card with ONE Start focus button
     await expect(page.getByText('UP NEXT')).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: 'Solve 5 graph problems' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Start focus' })).toBeVisible();
 
-    // 3. Thin progress line
+    // 5. Thin progress line
     await expect(page.getByText(/Today 25m of 4h/i)).toBeVisible();
 
-    // 4. Today merged list
+    // 6. Today merged list
     await expect(page.getByRole('heading', { level: 2, name: 'Today' })).toBeVisible();
     await expect(page.getByText('Revise scheduling algorithms')).toBeVisible();
     await expect(page.getByText('Maths').first()).toBeVisible();
 
-    // 5. Quiet review line (2 reviews due)
+    // 7. Quiet review line (2 reviews due)
     await expect(page.getByText(/2 reviews due/i)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Start review' })).toBeVisible();
-
-    // 6. Verify removed elements (no 4-cell stat strip, no mini calendar)
-    await expect(page.getByText('Efficiency Score')).toHaveCount(0);
-    await expect(page.getByText('Study Rhythm')).toHaveCount(0);
 
     // Take Desktop Light Screenshot
     await page.evaluate(() => {
@@ -167,11 +192,12 @@ test.describe('Step 11.2 Today Page Verification', () => {
     await page.screenshot({ path: 'screenshots/11.2-today-1440x900-dark.png', fullPage: false });
   });
 
-  test('mobile 390x844 light and dark', async ({ page }) => {
+  test('mobile 390x844 light and dark with calendar & reminders', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
 
     await expect(page.getByRole('heading', { level: 1, name: /Good (morning|afternoon|evening)/i })).toBeVisible();
+    await expect(page.getByText('Target Exam')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Start focus' })).toBeVisible();
 
     // Take Mobile Light Screenshot
