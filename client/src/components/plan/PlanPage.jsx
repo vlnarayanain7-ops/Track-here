@@ -536,7 +536,7 @@ function WeekTab() {
                         top: `${top}px`,
                         height: `${height}px`,
                         backgroundColor: colorVar,
-                        color: 'var(--on, #fff)',
+                        color: 'var(--on-primary)',
                         borderRadius: '6px',
                         padding: '2px 6px',
                       }}

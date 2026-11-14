@@ -155,7 +155,7 @@ export default function FocusTimer({ onSessionSaved }) {
                   r="125"
                   fill="none"
                   stroke="var(--line)"
-                  strokeWidth="9"
+                  strokeWidth="6"
                 />
                 <circle
                   cx="150"
@@ -163,7 +163,7 @@ export default function FocusTimer({ onSessionSaved }) {
                   r="125"
                   fill="none"
                   stroke="var(--primary)"
-                  strokeWidth="9"
+                  strokeWidth="6"
                   strokeLinecap="round"
                   strokeDasharray={785.4}
                   strokeDashoffset={785.4 * (1 - Math.min(elapsedTime / 1500, 1))}

@@ -33,14 +33,14 @@ export class ErrorBoundary extends React.Component {
       }
 
       return (
-        <div className="min-h-[350px] w-full flex flex-col items-center justify-center p-8 text-center bg-white rounded-3xl border border-[#E5E8E1] shadow-xs my-6">
-          <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 mb-4 shadow-2xs">
+        <div className="min-h-[350px] w-full flex flex-col items-center justify-center p-8 text-center bg-[var(--surface)] rounded-3xl border border-[var(--line)] shadow-xs my-6">
+          <div className="w-12 h-12 rounded-2xl bg-[var(--danger-soft)] border border-[var(--danger)]/30 flex items-center justify-center text-[var(--danger)] mb-4 shadow-2xs">
             <AlertCircle className="w-6 h-6 stroke-[2]" />
           </div>
-          <h2 className="text-xl font-heading font-bold text-[#141815] mb-2 tracking-tight">
+          <h2 className="text-xl font-heading font-bold text-[var(--text)] mb-2 tracking-tight">
             Something went wrong in this section
           </h2>
-          <p className="text-xs text-[#5F6862] max-w-md mb-6 leading-relaxed">
+          <p className="text-xs text-[var(--muted)] max-w-md mb-6 leading-relaxed">
             {this.state.error?.message || 'An unexpected rendering error occurred. Your study data is safely saved in your account.'}
           </p>
           <div className="flex items-center gap-3">
@@ -57,7 +57,7 @@ export class ErrorBoundary extends React.Component {
               onClick={this.handleNavigateHome}
               size="sm"
               icon={Home}
-              className="text-xs bg-[#216E39] hover:bg-[#17522A] text-white"
+              className="text-xs bg-[var(--primary)] hover:opacity-90 text-[var(--on-primary)]"
             >
               Go to Dashboard
             </Button>

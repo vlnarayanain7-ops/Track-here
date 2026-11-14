@@ -24,6 +24,11 @@ const api = axios.create({
 
 let csrfToken = null;
 let activeSlowRequestsCount = 0;
+let wakingHandler = null;
+
+export const setWakingHandler = (fn) => {
+  wakingHandler = fn;
+};
 
 const getCookie = (name) => document.cookie
   .split('; ')
@@ -40,10 +45,9 @@ api.interceptors.request.use((config) => {
   config._coldStartTimer = setTimeout(() => {
     activeSlowRequestsCount++;
     if (activeSlowRequestsCount === 1) {
-      toast.loading('Waking up the server, this can take about a minute on free hosting...', {
-        id: 'cold-start-banner',
-        duration: 45000,
-      });
+      if (typeof wakingHandler === 'function') {
+        wakingHandler(true);
+      }
     }
   }, 4000);
 
@@ -57,7 +61,9 @@ function handleRequestDone(config) {
   if (activeSlowRequestsCount > 0) {
     activeSlowRequestsCount--;
     if (activeSlowRequestsCount === 0) {
-      toast.dismiss('cold-start-banner');
+      if (typeof wakingHandler === 'function') {
+        wakingHandler(false);
+      }
     }
   }
 }

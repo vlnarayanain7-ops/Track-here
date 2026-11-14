@@ -90,8 +90,8 @@
   }
 
   ::selection {
-    background: #EAF3EC;
-    color: #16532B;
+    background: var(--primary-soft);
+    color: var(--primary);
   }
 }
 
@@ -107,7 +107,7 @@
   }
 
   .bento-card:hover {
-    border-color: #D3D8CC;
+    border-color: var(--line);
   }
 
   /* 44px minimum tap target button */
@@ -129,7 +129,7 @@
 
   .action-btn:hover {
     background-color: var(--sf2);
-    border-color: #D3D8CC;
+    border-color: var(--line);
   }
 
   .action-btn:active {
@@ -138,22 +138,37 @@
 
   /* Soft pastel badges */
   .badge-sage {
-    @apply bg-[#EAF3EC] text-[#216E39] border border-[#C2DEC9] font-medium;
+    background: var(--primary-soft);
+    color: var(--primary);
+    border: 1px solid var(--line);
+    font-weight: 500;
   }
 
   .badge-amber {
-    @apply bg-[#FEF0CD] text-[#92400E] border border-[#FDE6A8] font-medium;
+    background: var(--warn-soft);
+    color: var(--warn);
+    border: 1px solid var(--line);
+    font-weight: 500;
   }
 
   .badge-rose {
-    @apply bg-[#FCE3EF] text-[#BE185D] border border-[#F9C5DE] font-medium;
+    background: var(--danger-soft);
+    color: var(--danger);
+    border: 1px solid var(--line);
+    font-weight: 500;
   }
 
   .badge-indigo {
-    @apply bg-[#EFF6FF] text-[#1D4ED8] border border-[#BFDBFE] font-medium;
+    background: var(--primary-soft);
+    color: var(--primary);
+    border: 1px solid var(--line);
+    font-weight: 500;
   }
 
   .badge-slate {
-    @apply bg-[#F2F4EE] text-[#5F6862] border border-[#E5E8E1] font-medium;
+    background: var(--surface-2);
+    color: var(--muted);
+    border: 1px solid var(--line);
+    font-weight: 500;
   }
 }

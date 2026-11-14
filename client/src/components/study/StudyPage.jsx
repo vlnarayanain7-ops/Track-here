@@ -234,7 +234,7 @@ export default function StudyPage() {
               cy="120"
               r="108"
               fill="none"
-              stroke="var(--ln)"
+              stroke="var(--line)"
               strokeWidth="6"
             />
             {/* Progress indicator: primary color */}
@@ -243,7 +243,7 @@ export default function StudyPage() {
               cy="120"
               r="108"
               fill="none"
-              stroke="var(--pr)"
+              stroke="var(--primary)"
               strokeWidth="6"
               strokeLinecap="round"
               strokeDasharray="679"

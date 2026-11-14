@@ -25,14 +25,14 @@ export const SUBJECT_COLOR_KEYS = [
 ];
 
 export const SUBJECT_COLORS = [
-  '#1D4ED8', // blue
-  '#15803D', // green
-  '#A15207', // amber
-  '#BE185D', // rose
-  '#6D28D9', // violet
-  '#0E7490', // cyan
-  '#C2410C', // orange
-  '#475569', // slate
+  'var(--c-blue)',
+  'var(--c-green)',
+  'var(--c-amber)',
+  'var(--c-rose)',
+  'var(--c-violet)',
+  'var(--c-cyan)',
+  'var(--c-orange)',
+  'var(--c-slate)',
 ];
 
 export const SUBJECT_ICONS = [

@@ -203,7 +203,7 @@ export default function ProfileSettings() {
               type="submit"
               loading={passwordLoading}
               size="sm"
-              className="text-xs bg-[#216E39] hover:bg-[#17522A] text-white"
+              className="text-xs bg-[var(--primary)] hover:opacity-90 text-[var(--on-primary)]"
             >
               Update Password
             </Button>

@@ -65,16 +65,16 @@ export default function MorningCheckIn() {
   return (
     <div className="bento-card p-6 sm:p-8 space-y-6">
       {/* Note Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E5E8E1]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--line)]">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#FEF0CD] text-[#D97706] border border-[#FDE6A8] flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] border border-[var(--line)] flex items-center justify-center shrink-0">
             <Sun className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-heading font-bold text-[#141815] tracking-tight">
+            <h2 className="text-lg font-heading font-bold text-[var(--text)] tracking-tight">
               Morning Focus Plan
             </h2>
-            <p className="text-xs text-[#5F6862]">
+            <p className="text-xs text-[var(--muted)]">
               Set your target and write your daily study plan freely
             </p>
           </div>
@@ -82,11 +82,11 @@ export default function MorningCheckIn() {
 
         {/* Target Study Hours Selector Pills */}
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-[#5F6862] flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5 text-[#D97706]" />
+          <span className="text-xs font-semibold text-[var(--muted)] flex items-center gap-1">
+            <Clock className="w-3.5 h-3.5 text-[var(--primary)]" />
             <span>Target:</span>
           </span>
-          <div className="flex items-center gap-1 bg-[#F8F9F5] p-1 rounded-xl border border-[#E5E8E1]">
+          <div className="flex items-center gap-1 bg-[var(--surface-2)] p-1 rounded-xl border border-[var(--line)]">
             {hourOptions.map((h) => (
               <button
                 key={h}
@@ -94,8 +94,8 @@ export default function MorningCheckIn() {
                 onClick={() => setTargetHours(h)}
                 className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all ${
                   targetHours === h
-                    ? 'bg-[#216E39] text-white shadow-2xs font-bold'
-                    : 'text-[#5F6862] hover:text-[#141815] hover:bg-[#E5E8E1]'
+                    ? 'bg-[var(--primary)] text-[var(--on-primary)] shadow-2xs font-bold'
+                    : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--line)]'
                 }`}
               >
                 {h}h
@@ -107,12 +107,12 @@ export default function MorningCheckIn() {
 
       {/* Top 3 Priorities for Today */}
       <div className="space-y-2.5">
-        <label className="text-xs font-bold text-[#141815] uppercase tracking-wider block font-heading">
+        <label className="text-xs font-bold text-[var(--text)] uppercase tracking-wider block font-heading">
           Today’s Top 3 Priorities
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="relative">
-            <span className="absolute left-3 top-2.5 text-xs font-bold text-[#D97706] font-mono">
+            <span className="absolute left-3 top-2.5 text-xs font-bold text-[var(--muted)] font-mono">
               1.
             </span>
             <input
@@ -120,12 +120,12 @@ export default function MorningCheckIn() {
               value={priority1}
               onChange={(e) => setPriority1(e.target.value)}
               placeholder="Primary topic / task..."
-              className="w-full h-10 pl-8 pr-3 rounded-xl border border-[#E5E8E1] bg-[#F8F9F5] text-xs text-[#141815] placeholder:text-[#88928B] focus:outline-none focus:border-[#216E39] focus:bg-white transition-all"
+              className="w-full h-10 pl-8 pr-3 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] text-xs text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--primary)] focus:bg-[var(--surface)] transition-all"
             />
           </div>
 
           <div className="relative">
-            <span className="absolute left-3 top-2.5 text-xs font-bold text-[#2563EB] font-mono">
+            <span className="absolute left-3 top-2.5 text-xs font-bold text-[var(--muted)] font-mono">
               2.
             </span>
             <input
@@ -133,12 +133,12 @@ export default function MorningCheckIn() {
               value={priority2}
               onChange={(e) => setPriority2(e.target.value)}
               placeholder="Second focus area..."
-              className="w-full h-10 pl-8 pr-3 rounded-xl border border-[#E5E8E1] bg-[#F8F9F5] text-xs text-[#141815] placeholder:text-[#88928B] focus:outline-none focus:border-[#216E39] focus:bg-white transition-all"
+              className="w-full h-10 pl-8 pr-3 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] text-xs text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--primary)] focus:bg-[var(--surface)] transition-all"
             />
           </div>
 
           <div className="relative">
-            <span className="absolute left-3 top-2.5 text-xs font-bold text-[#7C3AED] font-mono">
+            <span className="absolute left-3 top-2.5 text-xs font-bold text-[var(--muted)] font-mono">
               3.
             </span>
             <input
@@ -146,7 +146,7 @@ export default function MorningCheckIn() {
               value={priority3}
               onChange={(e) => setPriority3(e.target.value)}
               placeholder="Third task / revision..."
-              className="w-full h-10 pl-8 pr-3 rounded-xl border border-[#E5E8E1] bg-[#F8F9F5] text-xs text-[#141815] placeholder:text-[#88928B] focus:outline-none focus:border-[#216E39] focus:bg-white transition-all"
+              className="w-full h-10 pl-8 pr-3 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] text-xs text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--primary)] focus:bg-[var(--surface)] transition-all"
             />
           </div>
         </div>
@@ -155,10 +155,10 @@ export default function MorningCheckIn() {
       {/* Main Journal / Daily Study Note */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-bold text-[#141815] uppercase tracking-wider block font-heading">
+          <label className="text-xs font-bold text-[var(--text)] uppercase tracking-wider block font-heading">
             Daily Study Notes &amp; Plan
           </label>
-          <span className="text-[11px] text-[#88928B]">
+          <span className="text-[11px] text-[var(--muted)]">
             Plain notes &amp; thoughts
           </span>
         </div>
@@ -168,13 +168,13 @@ export default function MorningCheckIn() {
           onChange={(e) => setNoteContent(e.target.value)}
           rows={9}
           placeholder={`Write your daily study plan freely here...\n\n• What chapters or problem sets will you work on?\n• What are you aiming to finish before evening?\n• Key ideas, mindset or formulas to keep in mind today...`}
-          className="w-full p-4 rounded-xl border border-[#E5E8E1] bg-[#F8F9F5] text-xs sm:text-sm text-[#141815] placeholder:text-[#88928B] focus:outline-none focus:border-[#216E39] focus:bg-white transition-all leading-relaxed font-sans resize-y"
+          className="w-full p-4 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] text-xs sm:text-sm text-[var(--text)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--primary)] focus:bg-[var(--surface)] transition-all leading-relaxed font-sans resize-y"
         />
       </div>
 
       {/* Footer & Save Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-[#E5E8E1]">
-        <div className="text-[11px] text-[#88928B]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-[var(--line)]">
+        <div className="text-[11px] text-[var(--muted)]">
           {lastSavedTime ? (
             <span>Saved today at {lastSavedTime}</span>
           ) : (
@@ -185,7 +185,7 @@ export default function MorningCheckIn() {
         <button
           onClick={handleSave}
           disabled={createPlanMutation.isPending}
-          className="h-11 px-6 rounded-xl bg-[#216E39] hover:bg-[#17522A] text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98] disabled:opacity-50"
+          className="h-11 px-6 rounded-xl bg-[var(--primary)] hover:opacity-90 text-[var(--on-primary)] text-xs font-semibold flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98] disabled:opacity-50"
         >
           <Check className="w-4 h-4" />
           <span>{createPlanMutation.isPending ? 'Saving...' : 'Save Morning Plan'}</span>
