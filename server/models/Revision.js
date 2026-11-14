@@ -57,6 +57,7 @@ const revisionSchema = new mongoose.Schema(
 );
 
 revisionSchema.index({ user: 1, dueDate: 1, status: 1 });
+revisionSchema.index({ user: 1, status: 1, dueDate: 1 });
 
 const Revision = mongoose.model('Revision', revisionSchema);
 

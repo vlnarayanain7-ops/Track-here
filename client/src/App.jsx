@@ -1,29 +1,45 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
-// Layouts
+// Layouts (eager for instant shell render)
 import AppLayout from '@/components/layout/AppLayout';
 
-// Public & Onboarding Pages
-import LandingPage from '@/components/landing/LandingPage';
-import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
-
-// Auth Pages & Guards
-import { SignIn } from './auth/SignIn';
-import { SignUp } from './auth/SignUp';
-import { ForgotPassword, ResetPassword } from './auth/ForgotReset';
+// Auth Guards (eager lightweight checks)
 import { RequireAuth, RequireProfile, CompleteProfile } from './auth/RequireProfile';
 
-// Legal Pages
-import { TermsPage, PrivacyPage } from '@/components/legal/LegalPages';
+// Lazy-Loaded Application Modules
+const DashboardPage = lazy(() => import('@/components/dashboard/DashboardPage'));
+const StudyPage = lazy(() => import('@/components/study/StudyPage'));
+const PlanPage = lazy(() => import('@/components/plan/PlanPage'));
+const NotesPage = lazy(() => import('@/components/notes/NotesPage'));
+const ProgressPage = lazy(() => import('@/components/progress/ProgressPage'));
+const SettingsPage = lazy(() => import('@/components/settings/SettingsPage'));
 
-// Main Application Modules
-import DashboardPage from '@/components/dashboard/DashboardPage';
-import StudyPage from '@/components/study/StudyPage';
-import PlanPage from '@/components/plan/PlanPage';
-import NotesPage from '@/components/notes/NotesPage';
-import ProgressPage from '@/components/progress/ProgressPage';
-import SettingsPage from '@/components/settings/SettingsPage';
+// Lazy-Loaded Public & Auth Pages
+const LandingPage = lazy(() => import('@/components/landing/LandingPage'));
+const OnboardingFlow = lazy(() => import('@/components/onboarding/OnboardingFlow'));
+const SignIn = lazy(() => import('./auth/SignIn').then((m) => ({ default: m.SignIn })));
+const SignUp = lazy(() => import('./auth/SignUp').then((m) => ({ default: m.SignUp })));
+const ForgotPassword = lazy(() => import('./auth/ForgotReset').then((m) => ({ default: m.ForgotPassword })));
+const ResetPassword = lazy(() => import('./auth/ForgotReset').then((m) => ({ default: m.ResetPassword })));
+
+// Lazy-Loaded Legal Pages
+const TermsPage = lazy(() => import('@/components/legal/LegalPages').then((m) => ({ default: m.TermsPage })));
+const PrivacyPage = lazy(() => import('@/components/legal/LegalPages').then((m) => ({ default: m.PrivacyPage })));
+
+// Calm Fallback Loader
+function PageFallback() {
+  return (
+    <div
+      role="status"
+      aria-label="Loading page"
+      className="min-h-[50vh] w-full flex items-center justify-center text-[var(--muted)]"
+    >
+      <div className="w-7 h-7 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
 
 // Guest Guard (redirect already logged-in users to home)
 function GuestRoute({ children }) {
@@ -46,7 +62,8 @@ function GuestRoute({ children }) {
 
 export default function App() {
   return (
-    <Routes>
+    <Suspense fallback={<PageFallback />}>
+      <Routes>
       {/* Public Legal Pages */}
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
@@ -141,5 +158,6 @@ export default function App() {
       {/* Catch-all Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+  </Suspense>
   );
 }

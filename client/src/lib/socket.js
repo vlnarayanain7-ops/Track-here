@@ -1,6 +1,9 @@
 import { io } from 'socket.io-client';
+import api from './api';
 
 let socket = null;
+let isRefreshingSocket = false;
+let lastRefreshAttempt = 0;
 
 const apiBase = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : '';
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || apiBase || (
@@ -10,7 +13,7 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || apiBase || (
 );
 
 /**
- * Get or create a singleton Socket instance
+ * Get or create a singleton Socket instance with auto-refresh healing
  */
 export function getSocket() {
   if (!socket) {
@@ -22,6 +25,37 @@ export function getSocket() {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       transports: ['websocket', 'polling'],
+    });
+
+    // Auto-heal on 15-minute access token expiration:
+    // If the socket handshake or reconnect fails with 'unauthorized',
+    // call /api/auth/refresh to rotate the cookie and reconnect seamlessly.
+    socket.on('connect_error', async (err) => {
+      const msg = String(err?.message || '').toLowerCase();
+      if (msg.includes('unauthorized') || msg.includes('origin_not_allowed')) {
+        const now = Date.now();
+        // Cooldown: limit refresh attempts to at most once every 10 seconds
+        if (isRefreshingSocket || (now - lastRefreshAttempt < 10000)) {
+          return;
+        }
+        isRefreshingSocket = true;
+        lastRefreshAttempt = now;
+
+        try {
+          await api.post('/auth/refresh');
+          // If refresh succeeded, reconnect the socket immediately
+          if (socket && !socket.connected) {
+            socket.connect();
+          }
+        } catch (refreshErr) {
+          // If the refresh token itself is expired or revoked, disconnect cleanly
+          if (socket) {
+            socket.disconnect();
+          }
+        } finally {
+          isRefreshingSocket = false;
+        }
+      }
     });
   }
   return socket;

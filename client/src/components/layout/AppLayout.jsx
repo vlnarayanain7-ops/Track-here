@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -6,6 +6,18 @@ import MobileTabBar from './MobileTabBar';
 import CommandPalette from '@/components/search/CommandPalette';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import { cn } from '@/lib/utils';
+
+function ContentFallback() {
+  return (
+    <div
+      role="status"
+      aria-label="Loading view"
+      className="min-h-[40vh] w-full flex items-center justify-center text-[var(--muted)]"
+    >
+      <div className="w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
 
 export default function AppLayout() {
   const navigate = useNavigate();
@@ -68,7 +80,9 @@ export default function AppLayout() {
           )}
         >
           <ErrorBoundary>
-            <Outlet />
+            <Suspense fallback={<ContentFallback />}>
+              <Outlet />
+            </Suspense>
           </ErrorBoundary>
         </main>
       </div>

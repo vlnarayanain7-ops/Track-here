@@ -43,6 +43,9 @@ const problemAttemptSchema = new mongoose.Schema(
   }
 );
 
+problemAttemptSchema.index({ problem: 1, user: 1, attemptNumber: 1 });
+problemAttemptSchema.index({ user: 1, attemptedAt: -1 });
+
 const ProblemAttempt = mongoose.model('ProblemAttempt', problemAttemptSchema);
 
 export default ProblemAttempt;

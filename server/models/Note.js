@@ -34,6 +34,8 @@ const noteSchema = new mongoose.Schema(
 
 noteSchema.index({ user: 1, folder: 1 });
 noteSchema.index({ user: 1, isPinned: -1 });
+noteSchema.index({ user: 1, isPinned: -1, updatedAt: -1 });
+noteSchema.index({ user: 1, folder: 1, updatedAt: -1 });
 
 const Note = mongoose.model('Note', noteSchema);
 

@@ -1,6 +1,6 @@
-// Service Worker for Track Here: Offline Caching + Push Notifications
+// Service Worker for Track Here: Zero-Cost Offline Resilience + Push Notifications
 
-const CACHE_NAME = 'track-here-shell-v1';
+const CACHE_NAME = 'track-here-shell-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -25,36 +25,64 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Cache-first / Network fallback for navigation and static assets
+// Cache strategy:
+// 1. Never intercept API calls, socket.io polling/ws, or non-http protocols.
+// 2. Navigation: Network-first with instant offline App Shell fallback.
+// 3. Static assets: Stale-While-Revalidate for blazing speed with freshness.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
-  // Do not intercept API calls or non-http protocols
-  if (url.pathname.startsWith('/api') || !url.protocol.startsWith('http')) {
+
+  // Strict API and real-time socket bypass
+  if (
+    url.pathname.startsWith('/api') ||
+    url.pathname.startsWith('/socket.io') ||
+    !url.protocol.startsWith('http')
+  ) {
     return;
   }
 
-  // HTML navigation requests: network first with offline fallback
+  // HTML navigation requests: Network first, fallback to cached index.html
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match('/index.html') || caches.match('/'))
-    );
-    return;
-  }
-
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request)
+      fetch(event.request)
         .then((response) => {
-          if (response && response.status === 200 && response.type === 'basic') {
+          if (response && response.status === 200) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           }
           return response;
         })
+        .catch(async () => {
+          return (
+            (await caches.match(event.request)) ||
+            (await caches.match('/index.html')) ||
+            (await caches.match('/'))
+          );
+        })
+    );
+    return;
+  }
+
+  // Static Assets (scripts, styles, icons, fonts): Stale-While-Revalidate
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      const fetchPromise = fetch(event.request)
+        .then((networkResponse) => {
+          if (
+            networkResponse &&
+            networkResponse.status === 200 &&
+            networkResponse.type === 'basic'
+          ) {
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return networkResponse;
+        })
         .catch(() => cached);
+
+      return cached || fetchPromise;
     })
   );
 });

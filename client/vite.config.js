@@ -23,4 +23,30 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          const normalized = id.replace(/\\/g, '/');
+          if (normalized.includes('/node_modules/')) {
+            if (normalized.includes('/@tiptap/') || normalized.includes('/prosemirror')) {
+              return 'vendor-editor';
+            }
+            if (normalized.includes('/recharts/') || normalized.includes('/d3-') || normalized.includes('/victory-vendor/')) {
+              return 'vendor-charts';
+            }
+            if (normalized.includes('/lucide-react/')) {
+              return 'vendor-icons';
+            }
+            if (normalized.includes('/@tanstack/') || normalized.includes('/axios/')) {
+              return 'vendor-query';
+            }
+            if (normalized.includes('/react/') || normalized.includes('/react-dom/') || normalized.includes('/react-router/')) {
+              return 'vendor-react';
+            }
+          }
+        },
+      },
+    },
+  },
 });
