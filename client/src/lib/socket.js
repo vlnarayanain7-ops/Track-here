@@ -5,12 +5,20 @@ let socket = null;
 let isRefreshingSocket = false;
 let lastRefreshAttempt = 0;
 
-const apiBase = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : '';
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || apiBase || (
-  typeof window !== 'undefined' && window.location.port === '5173'
-    ? 'http://localhost:5000'
-    : undefined
-);
+const getSocketUrl = () => {
+  if (import.meta.env.VITE_SOCKET_URL) return import.meta.env.VITE_SOCKET_URL;
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '');
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return window.location.port === '5173' ? 'http://localhost:5000' : undefined;
+    }
+    return 'https://trackhere-api.onrender.com';
+  }
+  return undefined;
+};
+
+const SOCKET_URL = getSocketUrl();
 
 /**
  * Get or create a singleton Socket instance with auto-refresh healing
