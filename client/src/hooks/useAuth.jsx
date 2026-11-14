@@ -27,7 +27,15 @@ export function AuthProvider({ children }) {
       const res = await authApi.getMe();
       setUser(res?.data?.user || res?.user || res);
     } catch {
-      setUser(null);
+      // Auto-healing: If access token expired while asleep/screen-off,
+      // attempt silent session rotation using 30-day refresh token:
+      try {
+        await authApi.refreshToken();
+        const refreshedRes = await authApi.getMe();
+        setUser(refreshedRes?.data?.user || refreshedRes?.user || refreshedRes);
+      } catch {
+        setUser(null);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -44,6 +52,17 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     initializeCsrf().finally(checkAuth);
   }, [checkAuth, initializeCsrf]);
+
+  // Wakeup recovery: When phone screen turns on or user returns to tab, restore session seamlessly
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkAuth();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [checkAuth]);
 
   const login = async (credentials) => {
     await initializeCsrf();

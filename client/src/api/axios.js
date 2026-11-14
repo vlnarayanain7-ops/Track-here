@@ -87,9 +87,8 @@ api.interceptors.response.use(
     handleRequestDone(error.config);
     const originalRequest = error.config;
 
-    // Do NOT attempt refresh on auth endpoints (login, register, me, refresh)
+    // Do NOT attempt refresh on public auth endpoints (login, register, refresh)
     const isAuthEndpoint =
-      originalRequest?.url?.includes('/auth/me') ||
       originalRequest?.url?.includes('/auth/login') ||
       originalRequest?.url?.includes('/auth/register') ||
       originalRequest?.url?.includes('/auth/google') ||

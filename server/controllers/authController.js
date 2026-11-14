@@ -75,7 +75,7 @@ export const register = asyncHandler(async (req, res) => {
     familyId: crypto.randomUUID(),
     userAgent: req.headers['user-agent'] || '',
     ip: req.ip,
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
   });
 
   // Set cookies
@@ -123,7 +123,7 @@ export const login = asyncHandler(async (req, res) => {
     familyId: crypto.randomUUID(),
     userAgent: req.headers['user-agent'] || '',
     ip: req.ip,
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
   });
 
   // Set cookies
@@ -199,7 +199,7 @@ export const refresh = asyncHandler(async (req, res) => {
     familyId: session.familyId,
     userAgent: req.headers['user-agent'] || '',
     ip: req.ip,
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
   });
 
   // Set new cookies
@@ -404,7 +404,7 @@ export const googleAuth = asyncHandler(async (req, res) => {
     familyId: crypto.randomUUID(),
     userAgent: req.headers['user-agent'] || '',
     ip: req.ip,
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
   });
 
   setAuthCookies(res, accessToken, refreshToken);

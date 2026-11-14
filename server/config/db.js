@@ -53,6 +53,12 @@ const connectDB = async () => {
       serverSelectionTimeoutMS: 4000,
     });
     console.log(`✅ MongoDB connected successfully: ${conn.connection.host}`);
+    try {
+      const StudySession = (await import('../models/StudySession.js')).default;
+      await StudySession.syncIndexes();
+    } catch (indexErr) {
+      console.warn('Index sync notice:', indexErr.message);
+    }
     if (env.NODE_ENV === 'development') {
       await seedDefaultUser();
     }

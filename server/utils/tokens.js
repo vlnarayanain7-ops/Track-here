@@ -8,7 +8,7 @@ import env from '../config/env.js';
  * @returns {string} JWT
  */
 export const generateAccessToken = (userId) => {
-  return jwt.sign({ userId }, env.JWT_ACCESS_SECRET, { expiresIn: '15m' });
+  return jwt.sign({ userId }, env.JWT_ACCESS_SECRET, { expiresIn: '7d' });
 };
 
 /**
@@ -38,8 +38,8 @@ import { cookieOptions } from '../config/cookies.js';
  * Set auth cookies on the response.
  */
 export const setAuthCookies = (res, accessToken, refreshToken) => {
-  res.cookie('accessToken', accessToken, cookieOptions(15 * 60 * 1000));
-  res.cookie('refreshToken', refreshToken, cookieOptions(7 * 24 * 60 * 60 * 1000));
+  res.cookie('accessToken', accessToken, cookieOptions(7 * 24 * 60 * 60 * 1000));
+  res.cookie('refreshToken', refreshToken, cookieOptions(30 * 24 * 60 * 60 * 1000));
 };
 
 /**
@@ -53,7 +53,7 @@ export const clearAuthCookies = (res) => {
 };
 
 export const setCsrfCookie = (res, csrfToken) => {
-  const opts = cookieOptions(7 * 24 * 60 * 60 * 1000);
+  const opts = cookieOptions(30 * 24 * 60 * 60 * 1000);
   res.cookie('csrfToken', csrfToken, {
     ...opts,
     httpOnly: false, // Double submit CSRF cookie
