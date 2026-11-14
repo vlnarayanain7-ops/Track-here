@@ -21,9 +21,9 @@ export const createDailyPlanSchema = z.object({
   notes: z.string().optional().nullable(),
   intentions: z.string().optional().nullable(),
   yesterdayIncomplete: z.array(z.string()).optional(),
-}).strict();
+}).passthrough();
 
-export const updateDailyPlanSchema = createDailyPlanSchema.partial().strict();
+export const updateDailyPlanSchema = createDailyPlanSchema.partial().passthrough();
 
 // ─── Helper ───────────────────────────────────────────────────
 

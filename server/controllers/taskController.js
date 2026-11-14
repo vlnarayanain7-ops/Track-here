@@ -14,6 +14,7 @@ export const createTaskSchema = z.object({
   dueDate: z.string().or(z.date()).optional().nullable(),
   dueOn: z.string().or(z.date()).optional().nullable(),
   category: z.string().trim().max(100).optional().nullable(),
+  subject: z.string().trim().max(100).optional().nullable(),
   subjectId: z.string().optional().nullable(),
   tags: z.array(z.string()).optional(),
   estimatedDuration: z.number().min(0).optional().nullable(),
@@ -25,7 +26,7 @@ export const createTaskSchema = z.object({
     endDate: z.string().or(z.date()).optional().nullable(),
   }).optional().nullable(),
   linkedStudySession: z.string().optional().nullable(),
-}).strict();
+}).passthrough();
 
 export const updateTaskSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').optional(),
@@ -35,6 +36,7 @@ export const updateTaskSchema = z.object({
   dueDate: z.string().or(z.date()).optional().nullable(),
   dueOn: z.string().or(z.date()).optional().nullable(),
   category: z.string().trim().max(100).optional().nullable(),
+  subject: z.string().trim().max(100).optional().nullable(),
   subjectId: z.string().optional().nullable(),
   tags: z.array(z.string()).optional(),
   estimatedDuration: z.number().min(0).optional().nullable(),
@@ -47,7 +49,7 @@ export const updateTaskSchema = z.object({
   }).optional().nullable(),
   linkedStudySession: z.string().optional().nullable(),
   completedAt: z.string().or(z.date()).optional().nullable(),
-}).strict();
+}).passthrough();
 
 export const updateStatusSchema = z.object({
   status: z.enum(['Todo', 'In Progress', 'Completed', 'Cancelled']),
@@ -122,6 +124,9 @@ export const createTask = asyncHandler(async (req, res) => {
     user: req.user.id,
   };
 
+  if (taskData.subject && !taskData.category) {
+    taskData.category = taskData.subject;
+  }
   if (taskData.dueOn && !taskData.dueDate) {
     taskData.dueDate = new Date(taskData.dueOn);
   }

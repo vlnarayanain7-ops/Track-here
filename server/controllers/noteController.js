@@ -16,7 +16,11 @@ export const createNoteSchema = z.object({
   folder: z.string().optional(),
   tags: z.array(z.string()).optional(),
   isPinned: z.boolean().optional(),
-}).strict();
+  pinned: z.boolean().optional(),
+  subject: z.string().optional().nullable(),
+  category: z.string().optional().nullable(),
+  lastEditedAt: z.string().or(z.date()).optional().nullable(),
+});
 
 export const updateNoteSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').optional(),
@@ -26,8 +30,11 @@ export const updateNoteSchema = z.object({
   folder: z.string().optional(),
   tags: z.array(z.string()).optional(),
   isPinned: z.boolean().optional(),
+  pinned: z.boolean().optional(),
+  subject: z.string().optional().nullable(),
+  category: z.string().optional().nullable(),
   lastEditedAt: z.string().or(z.date()).optional().nullable(),
-}).strict();
+});
 
 // ─── Controllers ──────────────────────────────────────────────
 
@@ -91,6 +98,9 @@ export const createNote = asyncHandler(async (req, res) => {
     user: req.user.id,
     lastEditedAt: new Date(),
   };
+  if (req.body.pinned !== undefined && noteData.isPinned === undefined) {
+    noteData.isPinned = Boolean(req.body.pinned);
+  }
 
   const note = await Note.create(noteData);
   emitToUser(req.user.id, 'note:created', note);
@@ -127,6 +137,9 @@ export const updateNote = asyncHandler(async (req, res) => {
     ...req.body,
     lastEditedAt: new Date(),
   };
+  if (req.body.pinned !== undefined && updateData.isPinned === undefined) {
+    updateData.isPinned = Boolean(req.body.pinned);
+  }
 
   const note = await Note.findOneAndUpdate(
     { _id: req.params.id, user: req.user.id },

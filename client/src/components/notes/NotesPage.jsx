@@ -22,8 +22,10 @@ export default function NotesPage() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [isSaved, setIsSaved] = useState(true);
+  const [saveError, setSaveError] = useState(null);
   const saveTimeoutRef = useRef(null);
   const textareaRef = useRef(null);
+  const titleInputRef = useRef(null);
 
   const { data: notesData, refetch } = useNotes({
     folder: selectedSubject || undefined,
@@ -51,6 +53,7 @@ export default function NotesPage() {
       setTitle(activeNote.title || '');
       setBody(activeNote.contentMarkdown || activeNote.contentHtml || '');
       setIsSaved(true);
+      setSaveError(null);
     } else {
       setTitle('');
       setBody('');
@@ -58,12 +61,13 @@ export default function NotesPage() {
   }, [activeNote?._id]);
 
   // Autosave with 800ms debounce
-  const triggerAutosave = (newTitle, newBody) => {
+  const triggerAutosave = (newTitle, newBody, immediate = false) => {
     setIsSaved(false);
+    setSaveError(null);
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
-    saveTimeoutRef.current = setTimeout(async () => {
+    const doSave = async () => {
       try {
         if (activeNote?._id) {
           await updateNoteMutation.mutateAsync({
@@ -88,10 +92,19 @@ export default function NotesPage() {
           refetch();
         }
         setIsSaved(true);
+        setSaveError(null);
       } catch (err) {
+        setIsSaved(false);
+        setSaveError(err.response?.data?.message || err.message || 'Failed to save note');
         toast.error('Failed to save note');
       }
-    }, 800);
+    };
+
+    if (immediate) {
+      doSave();
+    } else {
+      saveTimeoutRef.current = setTimeout(doSave, 800);
+    }
   };
 
   const handleTitleChange = (e) => {
@@ -137,13 +150,28 @@ export default function NotesPage() {
       const created = res?.data?.note || res?.note || res;
       if (created?._id) {
         setActiveNoteId(created._id);
+        setTitle(created.title || 'Untitled note');
+        setBody('');
         setMobileEditing(true);
       }
-      refetch();
+      await refetch();
+      setTimeout(() => {
+        titleInputRef.current?.focus();
+        titleInputRef.current?.select();
+      }, 50);
     } catch (err) {
       toast.error('Failed to create note');
     }
   };
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'new') {
+      handleCreateNote();
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('action');
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams]);
 
   const handleDeleteActiveNote = async () => {
     if (!activeNote?._id) return;
@@ -184,18 +212,13 @@ export default function NotesPage() {
   };
 
   return (
-    <div className="max-w-[880px] mx-auto px-4 sm:px-8 py-6">
+    <div className="max-w-[960px] mx-auto px-4 sm:px-8 py-6">
       {/* Page Header */}
       <div className="sec mt-0 mb-4">
         <h1 className="text-[26px] font-bold font-heading tracking-tight text-[var(--tx)]">Notes</h1>
         <button
           type="button"
-          onClick={() => {
-            setActiveNoteId(null);
-            setTitle('');
-            setBody('');
-            setMobileEditing(true);
-          }}
+          onClick={handleCreateNote}
           className="btn flex items-center gap-1.5 cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" />
@@ -270,6 +293,7 @@ export default function NotesPage() {
           {/* Top controls: Pin, Delete, Saved Indicator */}
           <div className="flex items-center justify-between gap-2">
             <input
+              ref={titleInputRef}
               type="text"
               value={title}
               onChange={handleTitleChange}
@@ -305,6 +329,23 @@ export default function NotesPage() {
               )}
             </div>
           </div>
+
+          {/* Visible error alert on failed save with Retry button */}
+          {saveError && (
+            <div
+              role="alert"
+              className="flex items-center justify-between text-xs p-2 rounded-lg bg-[var(--danger-soft)] text-[var(--danger)]"
+            >
+              <span>Could not save note: {saveError}</span>
+              <button
+                type="button"
+                onClick={() => triggerAutosave(title, body, true)}
+                className="underline font-semibold cursor-pointer bg-transparent border-0 p-0 text-[var(--danger)]"
+              >
+                Retry
+              </button>
+            </div>
+          )}
 
           {/* Formatting Toolbar: Appears ONLY while editor is focused */}
           <div className="tools">

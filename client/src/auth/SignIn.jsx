@@ -59,18 +59,20 @@ export function SignIn() {
 
         <div className="relative">
           <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-semibold text-[var(--text)] font-heading">Password</label>
+            <label htmlFor="signin-password" className="text-xs font-semibold text-[var(--text)] font-heading">Password</label>
             <Link to="/forgot-password" className="text-[11px] text-[var(--primary)] hover:underline">
               Forgot password?
             </Link>
           </div>
           <div className="relative">
             <input
+              id="signin-password"
               type={show ? 'text' : 'password'}
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
+              aria-label="Password"
               required
               className="w-full h-10 px-3 pr-16 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] text-xs text-[var(--text)] focus:outline-none focus:border-[var(--primary)] transition-colors"
             />

@@ -25,9 +25,9 @@ export const createDailyReviewSchema = z.object({
   mood: z.string().optional().nullable(),
   reflection: z.string().optional().nullable(),
   tomorrowFirst: z.string().optional().nullable(),
-}).strict();
+}).passthrough();
 
-export const updateDailyReviewSchema = createDailyReviewSchema.partial().strict();
+export const updateDailyReviewSchema = createDailyReviewSchema.partial().passthrough();
 
 // ─── Helper ───────────────────────────────────────────────────
 
