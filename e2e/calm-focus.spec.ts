@@ -161,6 +161,7 @@ test.describe('Step 11.3 Focus Verification', () => {
     });
     await page.waitForTimeout(300);
     await page.screenshot({ path: 'screenshots/11.3-focus-1440x900-light.png', fullPage: false });
+    await page.screenshot({ path: 'screenshots/12.2-focus-1440x900-light.png', fullPage: false });
 
     // Switch to Dark Theme & take Desktop Dark Screenshot
     await page.evaluate(() => {
@@ -169,6 +170,7 @@ test.describe('Step 11.3 Focus Verification', () => {
     });
     await page.waitForTimeout(300);
     await page.screenshot({ path: 'screenshots/11.3-focus-1440x900-dark.png', fullPage: false });
+    await page.screenshot({ path: 'screenshots/12.2-focus-1440x900-dark.png', fullPage: false });
   });
 
   test('mobile 390x844 light and dark', async ({ page }) => {
@@ -187,6 +189,7 @@ test.describe('Step 11.3 Focus Verification', () => {
     });
     await page.waitForTimeout(300);
     await page.screenshot({ path: 'screenshots/11.3-focus-390x844-light.png', fullPage: false });
+    await page.screenshot({ path: 'screenshots/12.2-focus-390x844-light.png', fullPage: false });
 
     // Switch to Dark Theme & take Mobile Dark Screenshot
     await page.evaluate(() => {
@@ -195,5 +198,27 @@ test.describe('Step 11.3 Focus Verification', () => {
     });
     await page.waitForTimeout(300);
     await page.screenshot({ path: 'screenshots/11.3-focus-390x844-dark.png', fullPage: false });
+    await page.screenshot({ path: 'screenshots/12.2-focus-390x844-dark.png', fullPage: false });
+  });
+
+  test('step 12.2: timer start without topic and auto save on finish', async ({ page }) => {
+    await page.goto('/study');
+
+    // Timer can start without topic
+    const startBtn = page.getByRole('button', { name: 'Start', exact: true });
+    await expect(startBtn).toBeVisible();
+    await startBtn.click();
+
+    // Should switch to running state with Pause and Finish buttons
+    await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
+    const finishBtn = page.getByRole('button', { name: 'Finish' });
+    await expect(finishBtn).toBeVisible();
+
+    // Click finish -> immediate save -> shows SessionSavedPanel
+    await finishBtn.click();
+    await expect(page.getByText(/Session saved/i)).toBeVisible();
+    await expect(page.getByText(/Named automatically/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Skip' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Save' })).toBeVisible();
   });
 });

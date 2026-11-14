@@ -3,6 +3,9 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useTimer } from '@/hooks/useTimer';
 import { useStudySessions } from '@/hooks/useStudySessions';
+import { updateStudySession } from '@/api/studySessions';
+import { defaultSessionName } from '@/lib/sessionNames';
+import SessionSavedPanel from '@/components/SessionSavedPanel';
 import { ACTIVITY_TYPES } from '@/lib/constants';
 import SideSheet from '@/components/ui/SideSheet';
 import SessionList from './SessionList';
@@ -51,6 +54,7 @@ export default function StudyPage() {
   const [topic, setTopic] = useState('');
   const [activityType, setActivityType] = useState('Problem Solving');
   const [notes, setNotes] = useState('');
+  const [savedSession, setSavedSession] = useState(null);
 
   // History sheet state
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -128,9 +132,10 @@ export default function StudyPage() {
       await startTimer({
         category: selectedSubject || 'Focus',
         activityType,
-        topic: topic.trim() || selectedSubject || 'Focus session',
+        topic: topic.trim() || undefined,
         subtopic: notes.trim() || undefined,
       });
+      setSavedSession(null);
       toast.success('Focus timer started');
     } catch (err) {
       toast.error(err.message || 'Failed to start timer');
@@ -159,21 +164,19 @@ export default function StudyPage() {
   };
 
   const handleFinish = async () => {
-    if (elapsedTime < 60) {
-      if (window.confirm('Session is under 1 minute. Do you want to finish and save it anyway?')) {
-        await saveAndFinish();
-      }
-      return;
-    }
-    await saveAndFinish();
-  };
-
-  const saveAndFinish = async () => {
     try {
-      await finishTimer({
+      const autoName = defaultSessionName(new Date(), selectedSubject);
+      const res = await finishTimer({
+        topic: topic.trim() || autoName,
         keyLearnings: notes.trim() || undefined,
       });
-      toast.success('Focus session saved!');
+      const resultSession = res?.data?.session || res?.session || {
+        _id: res?.data?.session?._id,
+        topic: topic.trim() || autoName,
+        category: selectedSubject || 'Focus',
+        durationSec: elapsedTime,
+      };
+      setSavedSession(resultSession);
       setTopic('');
       setNotes('');
       setShowDetails(false);
@@ -181,6 +184,22 @@ export default function StudyPage() {
     } catch (err) {
       toast.error(err.message || 'Failed to finish session');
     }
+  };
+
+  const handleUpdateSavedSession = async ({ topic: newTopic, category: newCategory }) => {
+    if (savedSession?._id) {
+      try {
+        await updateStudySession(savedSession._id, {
+          topic: newTopic,
+          category: newCategory,
+        });
+        toast.success('Session renamed');
+      } catch {
+        toast.error('Failed to update session');
+      }
+    }
+    setSavedSession(null);
+    refetch();
   };
 
   // Ring calculation: 25 minutes = 1500 seconds, radius 108 -> circumference 679
@@ -195,7 +214,7 @@ export default function StudyPage() {
   };
 
   return (
-    <div className="max-w-[880px] mx-auto px-4 sm:px-8 py-6">
+    <div className="max-w-[960px] mx-auto px-4 sm:px-8 py-6">
       {/* Centered Focus Hero */}
       <div className="center">
         {/* Subject Chips */}
@@ -329,6 +348,18 @@ export default function StudyPage() {
             {showDetails ? 'Hide details' : 'Add details'}
           </button>
         </p>
+
+        {/* Small "Session saved" panel under timer: Skip keeps automatic name, Save renames it */}
+        {savedSession && (
+          <div className="w-full flex justify-center mt-2">
+            <SessionSavedPanel
+              session={savedSession}
+              subjects={user?.subjects || []}
+              onSkip={() => setSavedSession(null)}
+              onSave={handleUpdateSavedSession}
+            />
+          </div>
+        )}
 
         {/* Inline details (topic, activity type, notes) hidden until clicked */}
         {showDetails && (

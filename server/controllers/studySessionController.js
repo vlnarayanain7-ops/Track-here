@@ -3,17 +3,16 @@ import StudySession from '../models/StudySession.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { emitToUser } from '../services/socketService.js';
+import { defaultSessionName } from '../utils/sessionName.js';
 
 // ─── Validation Schemas ───────────────────────────────────────
 
-const categorySchema = z.string().trim().min(1, 'Subject is required').max(100, 'Subject must be at most 100 characters');
+const categorySchema = z.string().trim().max(100, 'Subject must be at most 100 characters').optional();
 
 export const createSessionSchema = z.object({
-  // Categories are user-configured subjects (for example Physics, Botany, or DSA),
-  // not a fixed programming-only taxonomy.
-  category: categorySchema,
-  activityType: z.enum(['Video/Tutorial', 'Reading', 'Coding', 'Problem Solving', 'Revision', 'Practice']),
-  topic: z.string().trim().min(1, 'Topic is required'),
+  category: categorySchema.default('Focus'),
+  activityType: z.enum(['Video/Tutorial', 'Reading', 'Coding', 'Problem Solving', 'Revision', 'Practice']).optional().default('Problem Solving'),
+  topic: z.string().trim().max(80).optional(),
   subtopic: z.string().trim().optional(),
   date: z.string().or(z.date()).optional().default(() => new Date().toISOString()),
   startTime: z.string().or(z.date()).optional().nullable(),
@@ -33,8 +32,8 @@ export const updateSessionSchema = createSessionSchema.partial().strict();
 
 export const startTimerSchema = z.object({
   category: categorySchema,
-  activityType: z.enum(['Video/Tutorial', 'Reading', 'Coding', 'Problem Solving', 'Revision', 'Practice']),
-  topic: z.string().trim().min(1, 'Topic is required'),
+  activityType: z.enum(['Video/Tutorial', 'Reading', 'Coding', 'Problem Solving', 'Revision', 'Practice']).optional(),
+  topic: z.string().trim().max(80).optional(),
   subtopic: z.string().trim().optional(),
 }).strict();
 
@@ -92,10 +91,16 @@ export const getSessions = asyncHandler(async (req, res) => {
  * POST /api/study-sessions
  */
 export const createSession = asyncHandler(async (req, res) => {
+  const sessionDate = req.body.date ? new Date(req.body.date) : new Date();
+  const tz = req.user?.timezone || 'Asia/Kolkata';
+  const subName = req.body.category && req.body.category !== 'Focus' ? req.body.category : null;
+  const topic = req.body.topic?.trim() || defaultSessionName(sessionDate, tz, subName);
+
   const sessionData = {
     ...req.body,
+    topic,
     user: req.user.id,
-    date: new Date(req.body.date),
+    date: sessionDate,
   };
 
   if (req.body.startTime) sessionData.startTime = new Date(req.body.startTime);
@@ -189,11 +194,16 @@ export const startTimer = asyncHandler(async (req, res) => {
     }
   );
 
+  const category = req.body.category || 'Focus';
+  const tz = req.user?.timezone || 'Asia/Kolkata';
+  const subName = category !== 'Focus' ? category : null;
+  const topic = req.body.topic?.trim() || defaultSessionName(now, tz, subName);
+
   const session = await StudySession.create({
     user: req.user.id,
-    category: req.body.category || 'Focus',
+    category,
     activityType: req.body.activityType || 'Problem Solving',
-    topic: req.body.topic || 'Focus session',
+    topic,
     subtopic: req.body.subtopic,
     date: now,
     startTime: now,
@@ -309,8 +319,15 @@ export const finishTimer = asyncHandler(async (req, res) => {
   const totalPausedDuration = (current.timerState.totalPausedDuration || 0) + currentPause;
   const accumulatedDuration = Math.max(0, Math.floor((now - current.timerState.startedAt) / 1000) - totalPausedDuration);
   const extra = {};
-  for (const field of ['problemsAttempted', 'problemsSolved', 'problemsSolvedIndependently', 'mistakes', 'keyLearnings', 'nextAction', 'videoDuration']) {
+  for (const field of ['problemsAttempted', 'problemsSolved', 'problemsSolvedIndependently', 'mistakes', 'keyLearnings', 'nextAction', 'videoDuration', 'category', 'topic']) {
     if (req.body?.[field] != null) extra[field] = req.body[field];
+  }
+
+  // Ensure topic has an automatic unique name if not provided
+  if (!extra.topic && (!current.topic || current.topic === 'Focus session' || current.topic === 'Focus')) {
+    const tz = req.user?.timezone || 'Asia/Kolkata';
+    const subName = (extra.category || current.category) !== 'Focus' ? (extra.category || current.category) : null;
+    extra.topic = defaultSessionName(current.startTime || current.timerState?.startedAt || now, tz, subName);
   }
   const session = await StudySession.findOneAndUpdate(query, {
     $set: {

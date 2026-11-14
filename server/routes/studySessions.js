@@ -43,6 +43,7 @@ router.get('/', getSessions);
 router.post('/', validate(createSessionSchema), createSession);
 router.get('/:id', getSession);
 router.put('/:id', validate(updateSessionSchema), updateSession);
+router.patch('/:id', validate(updateSessionSchema), updateSession);
 router.delete('/:id', deleteSession);
 
 export default router;
