@@ -10,7 +10,7 @@ export function GoogleAuthButton({ buttonText = 'Continue with Google' }) {
   const [loading, setLoading] = useState(false);
   const [showConfigModal, setShowConfigModal] = useState(false);
 
-  const GOOGLE_CLIENT_ID = '66278150520-opea4khlpt7udornbleesgu5si21oi2d.apps.googleusercontent.com';
+  const GOOGLE_CLIENT_ID = '971371287072-ajlh3snp83fl8e5311coh3t3n38aa9ud.apps.googleusercontent.com';
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID;
 
   const [gsiReady, setGsiReady] = useState(false);

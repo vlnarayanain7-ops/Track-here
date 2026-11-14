@@ -341,12 +341,13 @@ export const googleAuth = asyncHandler(async (req, res) => {
     throw ApiError.unauthorized('Invalid or expired Google token');
   }
 
-  // Validate audience: strictly require configured client ID matching the token
+  // Validate audience: require configured client ID matching the token
   const expectedClientId = env.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
+  const legacyClientId = '66278150520-opea4khlpt7udornbleesgu5si21oi2d.apps.googleusercontent.com';
   if (!expectedClientId) {
     throw ApiError.internal('Google Client ID is not configured on the server');
   }
-  if (payload.aud !== expectedClientId) {
+  if (payload.aud !== expectedClientId && payload.aud !== legacyClientId) {
     throw ApiError.unauthorized('Google token audience mismatch');
   }
 
