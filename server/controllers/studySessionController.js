@@ -184,7 +184,11 @@ export const startTimer = asyncHandler(async (req, res) => {
 
   // Clear any existing active timer sessions for this user so they are never blocked by 409
   await StudySession.updateMany(
-    { user: req.user.id, activeTimerKey: 'active' },
+    {
+      user: req.user.id,
+      isTimerSession: true,
+      'timerState.status': { $in: ['running', 'paused'] },
+    },
     {
       $set: {
         activeTimerKey: null,
@@ -233,7 +237,8 @@ export const startTimer = asyncHandler(async (req, res) => {
 export const cancelTimer = asyncHandler(async (req, res) => {
   await StudySession.deleteMany({
     user: req.user.id,
-    activeTimerKey: 'active',
+    isTimerSession: true,
+    'timerState.status': { $in: ['running', 'paused'] },
   });
   emitToUser(req.user.id, 'timer:cancelled', {});
   res.json({
@@ -361,7 +366,7 @@ export const getActiveTimer = asyncHandler(async (req, res) => {
     user: req.user.id,
     isTimerSession: true,
     'timerState.status': { $in: ['running', 'paused'] },
-  });
+  }).sort({ createdAt: -1 });
 
   res.json({
     success: true,

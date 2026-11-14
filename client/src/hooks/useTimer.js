@@ -13,17 +13,12 @@ export function useTimer() {
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [session, setSession] = useState(null);
-  const intervalRef = useRef(null);
-  const startTimeRef = useRef(null);
-  const accumulatedRef = useRef(0);
 
-  const getElapsedSeconds = useCallback((timerSession, now = new Date()) => {
-    const timerState = timerSession?.timerState;
-    if (!timerState?.startedAt) return 0;
-    if (timerState.status === 'paused') return timerState.accumulatedDuration || 0;
-    const elapsed = Math.floor((now - new Date(timerState.startedAt)) / 1000);
-    return Math.max(0, elapsed - (timerState.totalPausedDuration || 0));
-  }, []);
+  const intervalRef = useRef(null);
+  const localStartRef = useRef(null);
+  const accumulatedRef = useRef(0);
+  const sessionRef = useRef(null);
+  const hasRecoveredRef = useRef(false);
 
   const activeTimerQuery = useActiveTimer();
   const startMutation = useStartTimer();
@@ -32,34 +27,45 @@ export function useTimer() {
   const finishMutation = useFinishTimer();
   const cancelMutation = useCancelTimer();
 
-  // Recover active timer on mount
+  // Recover active timer on initial mount (e.g. page reload while timer is active)
   useEffect(() => {
-    if (activeTimerQuery.data?.session) {
+    if (activeTimerQuery.data?.session && !hasRecoveredRef.current && !isRunning && !isPaused) {
+      hasRecoveredRef.current = true;
       const s = activeTimerQuery.data.session;
       setSession(s);
-
-      const accumulated = getElapsedSeconds(s);
-      accumulatedRef.current = accumulated;
+      sessionRef.current = s;
 
       if (s.timerState?.status === 'running') {
-        const startedAt = new Date(s.timerState?.startedAt || s.startTime);
-        startTimeRef.current = startedAt;
-        setIsRunning(true);
-        setIsPaused(false);
+        const serverStarted = s.timerState?.startedAt ? new Date(s.timerState.startedAt).getTime() : Date.now();
+        const pausedSecs = s.timerState?.totalPausedDuration || 0;
+        const initial = Math.max(0, Math.floor((Date.now() - serverStarted) / 1000) - pausedSecs);
+
+        // If the recovered session is older than 24h, treat as stale
+        if (initial < 24 * 3600) {
+          accumulatedRef.current = initial;
+          localStartRef.current = Date.now();
+          setElapsedTime(initial);
+          setIsRunning(true);
+          setIsPaused(false);
+        }
       } else if (s.timerState?.status === 'paused') {
+        const pausedSecs = s.timerState?.accumulatedDuration || 0;
+        accumulatedRef.current = pausedSecs;
+        localStartRef.current = null;
+        setElapsedTime(pausedSecs);
         setIsRunning(false);
         setIsPaused(true);
-        setElapsedTime(accumulated);
       }
     }
-  }, [activeTimerQuery.data, getElapsedSeconds]);
+  }, [activeTimerQuery.data, isRunning, isPaused]);
 
-  // Tick interval
+  // Tick interval: strictly uses monotonic local time so clock skew never causes jumps
   useEffect(() => {
     if (isRunning && !isPaused) {
       intervalRef.current = setInterval(() => {
-        if (startTimeRef.current) {
-          setElapsedTime(getElapsedSeconds(session));
+        if (localStartRef.current) {
+          const delta = Math.floor((Date.now() - localStartRef.current) / 1000);
+          setElapsedTime(accumulatedRef.current + Math.max(0, delta));
         }
       }, 1000);
     } else {
@@ -74,18 +80,21 @@ export function useTimer() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isRunning, isPaused, session, getElapsedSeconds]);
+  }, [isRunning, isPaused]);
 
   const startTimerFn = useCallback(async (data) => {
+    // 1. Immediately reset to 0 and begin local tick
+    accumulatedRef.current = 0;
+    localStartRef.current = Date.now();
+    setElapsedTime(0);
+    setIsRunning(true);
+    setIsPaused(false);
+
     try {
       const result = await startMutation.mutateAsync(data);
       const s = result?.data?.session || result?.session || result;
       setSession(s);
-      startTimeRef.current = new Date(s.timerState?.startedAt || s.startTime);
-      accumulatedRef.current = 0;
-      setElapsedTime(0);
-      setIsRunning(true);
-      setIsPaused(false);
+      sessionRef.current = s;
       return result;
     } catch (err) {
       // If 409 conflict, auto-cancel previous orphan and retry cleanly
@@ -94,63 +103,97 @@ export function useTimer() {
         const result = await startMutation.mutateAsync(data);
         const s = result?.data?.session || result?.session || result;
         setSession(s);
-        startTimeRef.current = new Date(s.timerState?.startedAt || s.startTime);
-        accumulatedRef.current = 0;
-        setElapsedTime(0);
-        setIsRunning(true);
-        setIsPaused(false);
+        sessionRef.current = s;
         return result;
       }
+      // Revert if start genuinely failed
+      setIsRunning(false);
+      setElapsedTime(0);
       throw err;
     }
   }, [startMutation, cancelMutation]);
 
   const pauseTimerFn = useCallback(async () => {
-    if (!session?._id) return;
-    const result = await pauseMutation.mutateAsync(session._id);
-    const updatedSession = result?.data?.session || result?.session || result;
-    setSession(updatedSession);
-    accumulatedRef.current = getElapsedSeconds(updatedSession);
-    setElapsedTime(accumulatedRef.current);
+    const current = localStartRef.current
+      ? accumulatedRef.current + Math.max(0, Math.floor((Date.now() - localStartRef.current) / 1000))
+      : elapsedTime;
+
+    accumulatedRef.current = current;
+    localStartRef.current = null;
+    setElapsedTime(current);
     setIsRunning(false);
     setIsPaused(true);
-    return result;
-  }, [session, pauseMutation, getElapsedSeconds]);
+
+    const sId = sessionRef.current?._id || session?._id;
+    if (sId) {
+      const result = await pauseMutation.mutateAsync(sId);
+      const updated = result?.data?.session || result?.session || result;
+      setSession(updated);
+      sessionRef.current = updated;
+      return result;
+    }
+  }, [session, pauseMutation, elapsedTime]);
 
   const resumeTimerFn = useCallback(async () => {
-    if (!session?._id) return;
-    const result = await resumeMutation.mutateAsync(session._id);
-    const updatedSession = result?.data?.session || result?.session || result;
-    setSession(updatedSession);
-    accumulatedRef.current = getElapsedSeconds(updatedSession);
-    startTimeRef.current = new Date(updatedSession.timerState?.startedAt || session.timerState?.startedAt);
+    localStartRef.current = Date.now();
     setIsRunning(true);
     setIsPaused(false);
-    return result;
-  }, [session, resumeMutation, getElapsedSeconds]);
+
+    const sId = sessionRef.current?._id || session?._id;
+    if (sId) {
+      const result = await resumeMutation.mutateAsync(sId);
+      const updated = result?.data?.session || result?.session || result;
+      setSession(updated);
+      sessionRef.current = updated;
+      return result;
+    }
+  }, [session, resumeMutation]);
 
   const finishTimerFn = useCallback(async (data = {}) => {
-    if (!session?._id) return;
-    const result = await finishMutation.mutateAsync({ id: session._id, data });
-    setIsRunning(false);
-    setIsPaused(false);
-    setElapsedTime(0);
-    setSession(null);
-    accumulatedRef.current = 0;
-    startTimeRef.current = null;
-    return result;
-  }, [session, finishMutation]);
+    const current = localStartRef.current
+      ? accumulatedRef.current + Math.max(0, Math.floor((Date.now() - localStartRef.current) / 1000))
+      : elapsedTime;
 
-  const resetTimer = useCallback(async () => {
+    const sId = sessionRef.current?._id || session?._id;
+
+    accumulatedRef.current = 0;
+    localStartRef.current = null;
+    setElapsedTime(0);
     setIsRunning(false);
     setIsPaused(false);
-    setElapsedTime(0);
     setSession(null);
-    accumulatedRef.current = 0;
-    startTimeRef.current = null;
+    sessionRef.current = null;
+
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
+
+    if (sId) {
+      return await finishMutation.mutateAsync({
+        id: sId,
+        data: {
+          ...data,
+          focusDuration: Math.max(1, Math.round(current / 60)),
+        },
+      });
+    }
+  }, [session, finishMutation, elapsedTime]);
+
+  const resetTimer = useCallback(async () => {
+    accumulatedRef.current = 0;
+    localStartRef.current = null;
+    setElapsedTime(0);
+    setIsRunning(false);
+    setIsPaused(false);
+    setSession(null);
+    sessionRef.current = null;
+
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
     // Cancel any active timer session on the server
     await cancelMutation.mutateAsync().catch(() => {});
   }, [cancelMutation]);
