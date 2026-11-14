@@ -172,7 +172,7 @@
     font-weight: 500;
   }
 
-  /* Streak Gold / Orange Chip with 0.3s Pop Glow */
+  /* Streak Gold / Orange Chip: clean pill, NO background glow, flame shines with subtle fire glow */
   .chipst {
     display: inline-flex;
     align-items: center;
@@ -188,33 +188,87 @@
     text-decoration: none;
     cursor: pointer;
     user-select: none;
-    box-shadow: 0 0 6px 0 var(--streak-glow);
-    animation: streakPopGlow 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    box-shadow: none; /* strictly no background glow */
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease, border-color 0.2s ease;
   }
 
   .chipst:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 14px 3px var(--streak-glow);
-    filter: brightness(1.08);
+    transform: scale(1.04);
+  }
+
+  .chipst:hover .chipst-flame {
+    transform: scale(1.18) rotate(-3deg);
+    filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.95)) drop-shadow(0 0 10px rgba(234, 88, 12, 0.6));
   }
 
   .chipst:active {
     transform: scale(0.96);
   }
 
-  @keyframes streakPopGlow {
+  /* Flame icon: normal fiery shine and gentle ember glow */
+  .chipst-flame {
+    color: var(--streak-flame, var(--streak-fg));
+    filter: drop-shadow(0 0 2.5px rgba(245, 158, 11, 0.75)) drop-shadow(0 0 5px rgba(234, 88, 12, 0.45));
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.25s ease;
+  }
+
+  /* Joyful Pop Animation when streak updates (0 to 1, 1 to 2, etc.) */
+  .chipst.is-popping {
+    animation: streakPopJoy 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  .chipst.is-popping .chipst-flame {
+    animation: flamePopBurst 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  .chipst.is-popping .chipst-num {
+    animation: numPop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  @keyframes streakPopJoy {
     0% {
-      transform: scale(0.85);
-      box-shadow: 0 0 0 0 var(--streak-glow);
+      transform: scale(1);
     }
-    50% {
-      transform: scale(1.12);
-      box-shadow: 0 0 16px 4px var(--streak-glow);
+    30% {
+      transform: scale(1.22);
+    }
+    60% {
+      transform: scale(0.95);
     }
     100% {
       transform: scale(1);
-      box-shadow: 0 0 6px 1px var(--streak-glow);
+    }
+  }
+
+  @keyframes flamePopBurst {
+    0% {
+      transform: scale(1) rotate(0deg);
+      filter: drop-shadow(0 0 2.5px rgba(245, 158, 11, 0.75));
+    }
+    35% {
+      transform: scale(1.45) rotate(-8deg);
+      filter: drop-shadow(0 0 8px rgba(245, 158, 11, 1)) drop-shadow(0 0 16px rgba(234, 88, 12, 0.85));
+    }
+    70% {
+      transform: scale(1.1) rotate(4deg);
+      filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.85));
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+      filter: drop-shadow(0 0 2.5px rgba(245, 158, 11, 0.75));
+    }
+  }
+
+  @keyframes numPop {
+    0% {
+      transform: scale(1);
+    }
+    35% {
+      transform: scale(1.28);
+      font-weight: 700;
+    }
+    100% {
+      transform: scale(1);
     }
   }
 }

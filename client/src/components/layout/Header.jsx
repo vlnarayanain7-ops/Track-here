@@ -42,6 +42,19 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
   const { data: analyticsData } = useAnalytics();
   const currentStreak = streakData?.currentStreak ?? analyticsData?.streaks?.currentStreak ?? 0;
 
+  // Pop animation whenever streak updates (0 to 1, 1 to 2, or x to y)
+  const [isPopping, setIsPopping] = useState(false);
+  const prevStreakRef = useRef(null);
+
+  useEffect(() => {
+    if (prevStreakRef.current !== null && currentStreak !== prevStreakRef.current) {
+      setIsPopping(true);
+      const timer = setTimeout(() => setIsPopping(false), 600);
+      return () => clearTimeout(timer);
+    }
+    prevStreakRef.current = currentStreak;
+  }, [currentStreak]);
+
   // Handle outside click & escape key
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -162,14 +175,13 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
 
         {/* Streak chip (flame + number) */}
         <Link
-          key={currentStreak}
           to="/progress"
-          className="chipst"
+          className={cn('chipst', isPopping && 'is-popping')}
           title={`${currentStreak}-day streak`}
           aria-label={`${currentStreak}-day streak`}
         >
-          <Flame className="w-3.5 h-3.5 fill-current" />
-          <span>{currentStreak}</span>
+          <Flame className="chipst-flame w-3.5 h-3.5 fill-current shrink-0" />
+          <span className="chipst-num">{currentStreak}</span>
         </Link>
 
         {/* Add menu */}

@@ -20,6 +20,7 @@
   --streak-fg: #D97706;
   --streak-bg: #FEF3C7;
   --streak-border: #FCD34D;
+  --streak-flame: #F59E0B;
   --streak-glow: rgba(245, 158, 11, 0.45);
 
   /* Brand logos */
@@ -99,6 +100,7 @@
   --streak-fg: #FBBF24;
   --streak-bg: rgba(245, 158, 11, 0.16);
   --streak-border: rgba(245, 158, 11, 0.35);
+  --streak-flame: #FBBF24;
   --streak-glow: rgba(245, 158, 11, 0.55);
 
   /* Subject colors dark */
