@@ -16,6 +16,12 @@
   --warn-soft: #FEF0CD;
   --ring: #216E39;
 
+  /* Streak gold/orange tokens */
+  --streak-fg: #D97706;
+  --streak-bg: #FEF3C7;
+  --streak-border: #FCD34D;
+  --streak-glow: rgba(245, 158, 11, 0.45);
+
   /* Brand logos */
   --google-blue: #4285F4;
   --google-green: #34A853;
@@ -88,6 +94,12 @@
   --warn: #F2B45B;
   --warn-soft: #3A2A10;
   --ring: #4ADE80;
+
+  /* Streak gold/orange tokens dark */
+  --streak-fg: #FBBF24;
+  --streak-bg: rgba(245, 158, 11, 0.16);
+  --streak-border: rgba(245, 158, 11, 0.35);
+  --streak-glow: rgba(245, 158, 11, 0.55);
 
   /* Subject colors dark */
   --c-blue: #8DB0FF;

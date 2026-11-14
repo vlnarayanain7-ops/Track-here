@@ -15,6 +15,7 @@ export default {
       backendUrl.port = '';
 
       const headers = new Headers(request.headers);
+      headers.set('Host', 'trackhere-api.onrender.com');
       headers.set('X-Forwarded-Host', url.host);
       headers.set('X-Forwarded-Proto', url.protocol.replace(':', ''));
 
@@ -22,7 +23,7 @@ export default {
         method: request.method,
         headers,
         body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body,
-        redirect: 'manual',
+        redirect: 'follow',
       });
 
       return fetch(backendRequest);

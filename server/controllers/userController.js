@@ -24,7 +24,7 @@ import { emitToUser } from '../services/socketService.js';
 export const updateProfileSchema = z.object({
   name: z.string().trim().min(2).max(50).optional(),
   avatar: z.string().optional().nullable(),
-  ageBand: z.enum(['13_17', '18_plus']).optional(),
+  ageBand: z.enum(['under13', '13_17', '18_plus']).optional(),
   dailyStudyGoal: z.number().min(1).max(1440).optional(),
   timezone: z.string().optional(),
   preparationType: z.enum(['JEE', 'NEET', 'UPSC', 'GATE', 'University', 'Competitive Programming', 'Placement', 'Custom']).optional().nullable(),
@@ -33,16 +33,29 @@ export const updateProfileSchema = z.object({
     color: z.string().optional(),
     icon: z.string().optional(),
     chapters: z.array(z.any()).optional(),
-  })).optional(),
+  }).passthrough()).optional(),
   examDate: z.string().or(z.date()).optional().nullable(),
   examName: z.string().trim().max(100).optional().nullable(),
   onboardingCompleted: z.boolean().optional(),
-});
+}).passthrough();
 
 export const updateSettingsSchema = z.object({
   weekStartsOn: z.number().min(0).max(6).optional(),
   morningReminderTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   eveningReminderTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  notificationsEnabled: z.boolean().optional(),
+  activeNotifications: z.object({
+    morning: z.boolean().optional(),
+    evening: z.boolean().optional(),
+    streaks: z.boolean().optional(),
+    revisions: z.boolean().optional(),
+  }).passthrough().optional(),
+  examDate: z.string().or(z.date()).optional().nullable(),
+  examName: z.string().trim().max(100).optional().nullable(),
+  targetExam: z.string().trim().max(100).optional().nullable(),
+  dailyGoalMinutes: z.number().min(1).max(1440).optional(),
+  dailyStudyGoal: z.number().min(1).max(1440).optional(),
+}).passthrough();
   notificationsEnabled: z.boolean().optional(),
   activeNotifications: z.object({
     morning: z.boolean().optional(),

@@ -171,4 +171,50 @@
     border: 1px solid var(--line);
     font-weight: 500;
   }
+
+  /* Streak Gold / Orange Chip with 0.3s Pop Glow */
+  .chipst {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 9999px;
+    background: var(--streak-bg);
+    color: var(--streak-fg);
+    border: 1px solid var(--streak-border);
+    font-weight: 600;
+    font-size: 13px;
+    text-decoration: none;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 0 0 6px 0 var(--streak-glow);
+    animation: streakPopGlow 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  }
+
+  .chipst:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 14px 3px var(--streak-glow);
+    filter: brightness(1.08);
+  }
+
+  .chipst:active {
+    transform: scale(0.96);
+  }
+
+  @keyframes streakPopGlow {
+    0% {
+      transform: scale(0.85);
+      box-shadow: 0 0 0 0 var(--streak-glow);
+    }
+    50% {
+      transform: scale(1.12);
+      box-shadow: 0 0 16px 4px var(--streak-glow);
+    }
+    100% {
+      transform: scale(1);
+      box-shadow: 0 0 6px 1px var(--streak-glow);
+    }
+  }
 }

@@ -162,8 +162,9 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
 
         {/* Streak chip (flame + number) */}
         <Link
+          key={currentStreak}
           to="/progress"
-          className="chipst flex items-center gap-1.5 h-9 px-3 rounded-full bg-[var(--primary-soft)] text-[var(--primary)] font-semibold text-xs transition-opacity hover:opacity-90"
+          className="chipst"
           title={`${currentStreak}-day streak`}
           aria-label={`${currentStreak}-day streak`}
         >

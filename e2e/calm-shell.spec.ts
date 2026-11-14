@@ -7,6 +7,10 @@ test.describe('Step 11.1 Shell Verification', () => {
     await page.route('**/api/**', async (route) => {
       const url = route.request().url();
 
+      if (url.includes('/src/api/') || url.includes('/node_modules/') || url.endsWith('.js') || url.includes('.js?')) {
+        return route.continue();
+      }
+
       if (url.includes('/api/auth/csrf')) {
         return route.fulfill({
           status: 200,

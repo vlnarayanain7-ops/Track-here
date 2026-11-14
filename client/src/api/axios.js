@@ -5,7 +5,7 @@ const getBaseUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
-    if (host === 'localhost' || host === '127.0.0.1') {
+    if (host === 'localhost' || host === '127.0.0.1' || host.includes('workers.dev') || host.includes('pages.dev')) {
       return '/api';
     }
     // Production cloud deployment fallback: connect directly to live Render backend
