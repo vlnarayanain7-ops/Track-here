@@ -41,6 +41,13 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
   const { data: streakData } = useStreakData();
   const { data: analyticsData } = useAnalytics();
   const currentStreak = streakData?.currentStreak ?? analyticsData?.streaks?.currentStreak ?? 0;
+  const todayMinutes =
+    streakData?.byDay?.[new Date().toISOString().slice(0, 10)] ??
+    analyticsData?.today?.studyMinutes ??
+    analyticsData?.data?.today?.studyMinutes ??
+    0;
+  const isActiveToday = Boolean(streakData?.isActiveToday || todayMinutes >= 25);
+  const streakState = currentStreak === 0 ? 'idle' : isActiveToday ? 'lit' : 'risk';
 
   // Pop animation whenever streak updates (0 to 1, 1 to 2, or x to y)
   const [isPopping, setIsPopping] = useState(false);
@@ -94,8 +101,7 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
     { kind: 'task', label: 'Task' },
     { kind: 'session', label: 'Focus session' },
     { kind: 'note', label: 'Note' },
-    { kind: 'goal', label: 'Subject / Goal' },
-    { kind: 'mock', label: 'Mock test' },
+    { kind: 'goal', label: 'Subject' },
     { kind: 'problem', label: 'Problem' },
   ];
 
@@ -173,29 +179,33 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
           <Search className="w-4 h-4" />
         </button>
 
-        {/* Streak chip (flame + number) */}
+        {/* Streak chip (3 states: idle, risk, lit) */}
         <Link
           to="/progress"
-          className={cn('chipst', isPopping && 'is-popping')}
-          title={`${currentStreak}-day streak`}
+          className={cn('chipst', streakState, isPopping && 'is-popping')}
+          title={
+            currentStreak === 0
+              ? 'Start your streak today (25+ min)'
+              : isActiveToday
+              ? `${currentStreak}-day streak (kept today)`
+              : `${currentStreak}-day streak (study 25 min to keep it)`
+          }
           aria-label={`${currentStreak}-day streak`}
         >
           <svg
             className="chipst-flame w-4 h-4 shrink-0"
             viewBox="0 0 24 24"
-            fill="none"
-            stroke="none"
+            aria-hidden="true"
           >
             <defs>
-              <linearGradient id="flameGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#FFD000" />
-                <stop offset="45%" stopColor="#FF8A00" />
-                <stop offset="100%" stopColor="#FF3D00" />
+              <linearGradient id="streakFlameGrad" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0%" stopColor="#F97316" />
+                <stop offset="100%" stopColor="#FBBF24" />
               </linearGradient>
             </defs>
             <path
-              fill="url(#flameGrad)"
-              d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"
+              d="M12 2c1 4 6 5.5 6 11a6 6 0 0 1-12 0c0-2.2 1-3.6 2.3-4.8.2 1.8 1 2.8 2.2 3-.6-3.4.3-6 1.5-9.2z"
+              fill={streakState === 'idle' ? 'var(--mu)' : 'url(#streakFlameGrad)'}
             />
           </svg>
           <span className="chipst-num font-heading font-bold">{currentStreak}</span>

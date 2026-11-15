@@ -172,24 +172,47 @@
     font-weight: 500;
   }
 
-  /* Streak Gold / Orange Chip: clean pill, NO background glow, flame shines with subtle fire glow */
+  /* Streak Flame Chip: 3 states (idle, at risk, lit) + warm flame look */
   .chipst {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     height: 36px;
     padding: 0 12px;
-    border-radius: 9999px;
-    background: var(--streak-bg);
-    color: var(--streak-fg);
-    border: 1px solid var(--streak-border);
+    border-radius: 18px;
     font-weight: 600;
     font-size: 13px;
     text-decoration: none;
     cursor: pointer;
     user-select: none;
-    box-shadow: none; /* strictly no background glow */
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease, border-color 0.2s ease;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  /* State 1: Idle (0 days) */
+  .chipst.idle {
+    background: transparent;
+    color: var(--mu);
+    border: 1px solid var(--ln);
+    box-shadow: none;
+  }
+  .chipst.idle .chipst-flame path {
+    fill: var(--mu) !important;
+  }
+
+  /* State 2: At risk (streak > 0, today < 25m) */
+  .chipst.risk {
+    background: transparent;
+    color: var(--fl);
+    border: 1.5px solid var(--fl);
+    box-shadow: none;
+  }
+
+  /* State 3: Lit (25+ minutes today) */
+  .chipst.lit {
+    background: var(--flsoft);
+    color: var(--fl);
+    border: 1px solid transparent;
+    box-shadow: 0 0 10px rgba(249, 115, 22, 0.25);
   }
 
   .chipst:hover {
@@ -198,7 +221,6 @@
 
   .chipst:hover .chipst-flame {
     transform: scale(1.18) rotate(-3deg);
-    filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.95)) drop-shadow(0 0 10px rgba(234, 88, 12, 0.6));
   }
 
   .chipst:active {
@@ -207,8 +229,11 @@
 
   /* Flame icon: authentic fire radiance and gentle amber glow */
   .chipst-flame {
-    filter: drop-shadow(0 0 3px rgba(255, 170, 0, 0.85)) drop-shadow(0 0 6px rgba(245, 90, 0, 0.5));
     transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.25s ease;
+  }
+  .chipst.risk .chipst-flame,
+  .chipst.lit .chipst-flame {
+    filter: drop-shadow(0 0 2px rgba(249, 115, 22, 0.5));
   }
 
   /* Joyful Pop Animation when streak updates (0 to 1, 1 to 2, etc.) */

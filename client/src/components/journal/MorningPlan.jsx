@@ -1,22 +1,48 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { localISODate } from '@/lib/format';
 
 const TARGETS = [2, 3, 4, 6];
 
-export function MorningPlan({ defaultHours = 4, openTasks = [], onSave, saving, error, onDone }) {
-  const [hours, setHours] = useState(defaultHours);
-  const [top, setTop] = useState(['', '', '']);
-  const [notes, setNotes] = useState('');
+export function MorningPlan({ defaultHours = 4, openTasks = [], onSave, saving, error, onDone, initialPlan }) {
+  const [hours, setHours] = useState(initialPlan?.targetHours || defaultHours);
+  const [top, setTop] = useState(
+    Array.isArray(initialPlan?.priorities) && initialPlan.priorities.length > 0
+      ? [
+          initialPlan.priorities[0] || '',
+          initialPlan.priorities[1] || '',
+          initialPlan.priorities[2] || '',
+        ]
+      : ['', '', '']
+  );
+  const [notes, setNotes] = useState(initialPlan?.notes || '');
+
+  useEffect(() => {
+    if (initialPlan) {
+      if (initialPlan.targetHours) setHours(initialPlan.targetHours);
+      if (Array.isArray(initialPlan.priorities) && initialPlan.priorities.length > 0) {
+        setTop([
+          initialPlan.priorities[0] || '',
+          initialPlan.priorities[1] || '',
+          initialPlan.priorities[2] || '',
+        ]);
+      }
+      if (initialPlan.notes) setNotes(initialPlan.notes);
+    }
+  }, [initialPlan]);
 
   const submit = async (e) => {
     e.preventDefault();
-    await onSave({
-      date: localISODate(),
-      targetHours: hours,
-      priorities: top.map((s) => s.trim()).filter(Boolean),
-      notes: notes.trim(),
-    });
-    onDone?.();
+    try {
+      await onSave({
+        date: localISODate(),
+        targetHours: hours,
+        priorities: top.map((s) => s.trim()).filter(Boolean),
+        notes: notes.trim(),
+      });
+      onDone?.();
+    } catch {
+      // handled
+    }
   };
 
   return (

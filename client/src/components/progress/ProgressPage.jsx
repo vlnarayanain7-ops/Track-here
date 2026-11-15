@@ -4,6 +4,7 @@ import { Plus, Check, Clock, FileText, AlertCircle, Sparkles } from 'lucide-reac
 import { useStreakData, useAnalytics } from '@/hooks/useAnalytics';
 import { useProblems, useCreateProblem } from '@/hooks/useProblems';
 import { useMockTests, useCreateMockTest } from '@/hooks/useMockTests';
+import { useCreateRevision } from '@/hooks/useRevisions';
 import { StatsPanel } from '@/components/StatsPanel';
 import { MonthHeatmap } from '@/components/MonthHeatmap';
 import SideSheet from '@/components/SideSheet';
@@ -53,6 +54,7 @@ export default function ProgressPage() {
 
   const createProblemMutation = useCreateProblem();
   const createMockTestMutation = useCreateMockTest();
+  const createRevisionMutation = useCreateRevision();
 
   // Dialog / SideSheet state for Log Practice
   const [logPracticeOpen, setLogPracticeOpen] = useState(false);
@@ -203,7 +205,7 @@ export default function ProgressPage() {
           {/* Three plain numbers */}
           <div className="nums">
             <div>
-              <b>{currentStreak}</b>
+              <b style={{ color: 'var(--fl)' }}>{currentStreak}</b>
               <span>day streak</span>
             </div>
             <div>
@@ -231,7 +233,7 @@ export default function ProgressPage() {
           </div>
 
           {/* LeetCode Month Heatmap */}
-          <div className="card">
+          <div className="card overflow-hidden min-w-0">
             <MonthHeatmap minutesByDay={minutesByDay} />
           </div>
 
@@ -274,18 +276,35 @@ export default function ProgressPage() {
           ) : (
             <div className="space-y-2">
               {practiceItems.map((item) => (
-                <div key={item.id} className="row">
-                  <span className="g">{item.title}</span>
-                  <span
-                    className="pill"
-                    style={
-                      item.status === 'Solved'
-                        ? { background: 'var(--soft)', color: 'var(--pr)' }
-                        : { background: 'var(--sf2)', color: 'var(--mu)' }
-                    }
-                  >
-                    {item.status}
-                  </span>
+                <div key={item.id} className="row flex items-center justify-between gap-3">
+                  <span className="g truncate">{item.title}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        createRevisionMutation.mutate({
+                          title: item.title,
+                          type: 'problem',
+                          dueDate: new Date().toISOString(),
+                          intervalDays: 1,
+                        });
+                      }}
+                      className="btn g text-xs h-7 px-2.5 border border-[var(--ln)] hover:border-[var(--pr)] cursor-pointer"
+                      title="Add to spaced repetition review queue"
+                    >
+                      Review later
+                    </button>
+                    <span
+                      className="pill"
+                      style={
+                        item.status === 'Solved'
+                          ? { background: 'var(--soft)', color: 'var(--pr)' }
+                          : { background: 'var(--sf2)', color: 'var(--mu)' }
+                      }
+                    >
+                      {item.status}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>

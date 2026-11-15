@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotes, useCreateNote, useUpdateNote, useDeleteNote } from '@/hooks/useNotes';
-import { Plus, Pin, Trash2, ArrowLeft, Check } from 'lucide-react';
+import { useCreateRevision } from '@/hooks/useRevisions';
+import { Plus, Pin, Trash2, ArrowLeft, Check, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function NotesPage() {
@@ -34,6 +35,22 @@ export default function NotesPage() {
   const createNoteMutation = useCreateNote();
   const updateNoteMutation = useUpdateNote();
   const deleteNoteMutation = useDeleteNote();
+  const createRevisionMutation = useCreateRevision();
+
+  const handleAddToReview = async () => {
+    if (!activeNote?._id) return;
+    try {
+      await createRevisionMutation.mutateAsync({
+        title: activeNote.title || 'Untitled note',
+        type: 'note',
+        linkedNote: activeNote._id,
+        dueDate: new Date().toISOString(),
+        intervalDays: 1,
+      });
+    } catch {
+      // toast is already handled in useCreateRevision
+    }
+  };
 
   const notes = useMemo(() => {
     return notesData?.data?.notes || notesData?.notes || [];
@@ -307,6 +324,14 @@ export default function NotesPage() {
               </span>
               {activeNote && (
                 <>
+                  <button
+                    type="button"
+                    onClick={handleAddToReview}
+                    className="btn g text-xs h-7 px-2 border border-[var(--ln)] hover:border-[var(--pr)] cursor-pointer"
+                    title="Add to review queue"
+                  >
+                    Add to review
+                  </button>
                   <button
                     type="button"
                     onClick={handleTogglePin}

@@ -63,8 +63,8 @@ export function MonthHeatmap({ minutesByDay, weekStartsOn = 1 }) {
   const dayLabels = ['Mon', '', 'Wed', '', 'Fri', '', '']; // rotate this list if weekStartsOn is not Monday
 
   return (
-    <div>
-      <div className="mh heat" role="img" aria-label="Study activity for the last 12 months">
+    <div className="w-full min-w-0">
+      <div className="mh" role="img" aria-label="Study activity for the last 12 months">
         {/* Month labels for calendar coverage */}
         {months.map((m) => (
           <span key={`m-${m.id}`} className="sr-only">{m.label}</span>

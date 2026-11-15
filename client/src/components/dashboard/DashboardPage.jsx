@@ -1,17 +1,17 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Play, Plus, Check, Sun, Moon, RotateCcw, Target, Layers } from 'lucide-react';
+import { Play, Plus, Check, Sun, Moon, RotateCcw } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useTasks, useCreateTask, useUpdateTaskStatus } from '@/hooks/useTasks';
 import { useRevisions } from '@/hooks/useRevisions';
 import { useDailyPlan, useCreateDailyPlan } from '@/hooks/useDailyPlans';
-import { useCreateDailyReview } from '@/hooks/useDailyReviews';
+import { useDailyReview, useCreateDailyReview } from '@/hooks/useDailyReviews';
 import { SideSheet } from '@/components/SideSheet';
 import { MorningPlan } from '@/components/journal/MorningPlan';
 import { EveningReview } from '@/components/journal/EveningReview';
-import RevisionsPage from '@/components/revisions/RevisionsPage';
+import ReviewSheet from '@/components/revisions/ReviewSheet';
 import { journalPrompt } from '@/lib/journalPrompt';
 import { plural } from '@/lib/plural';
 import { cn } from '@/lib/utils';
@@ -29,22 +29,28 @@ export default function DashboardPage() {
   const [inlineTaskInput, setInlineTaskInput] = useState('');
   const [showInlineAdd, setShowInlineAdd] = useState(false);
 
-  // Sync state with URL search params
+  // Sync state with URL search params (supporting ?sheet=morning|evening|review and legacy ?journal=, ?review=1)
   useEffect(() => {
+    const sheetParam = searchParams.get('sheet');
     const journalParam = searchParams.get('journal');
-    if (journalParam === 'morning' || journalParam === 'evening' || journalParam === 'journal') {
-      setJournalSheet(journalParam);
-      if (journalParam === 'morning' || journalParam === 'evening') {
-        setActiveJournalTab(journalParam);
-      }
+    const reviewParam = searchParams.get('review');
+
+    if (sheetParam === 'morning' || journalParam === 'morning') {
+      setJournalSheet('morning');
+      setActiveJournalTab('morning');
+      setReviewSheetOpen(false);
+    } else if (sheetParam === 'evening' || journalParam === 'evening') {
+      setJournalSheet('evening');
+      setActiveJournalTab('evening');
+      setReviewSheetOpen(false);
+    } else if (sheetParam === 'review' || reviewParam === '1' || reviewParam === 'true') {
+      setReviewSheetOpen(true);
+      setJournalSheet(null);
+    } else if (journalParam === 'journal') {
+      setJournalSheet('journal');
+      setReviewSheetOpen(false);
     } else {
       setJournalSheet(null);
-    }
-
-    const reviewParam = searchParams.get('review');
-    if (reviewParam === '1' || reviewParam === 'true') {
-      setReviewSheetOpen(true);
-    } else {
       setReviewSheetOpen(false);
     }
   }, [searchParams]);
@@ -53,6 +59,7 @@ export default function DashboardPage() {
     setJournalSheet(null);
     const newParams = new URLSearchParams(searchParams);
     newParams.delete('journal');
+    newParams.delete('sheet');
     setSearchParams(newParams, { replace: true });
   };
 
@@ -60,20 +67,22 @@ export default function DashboardPage() {
     setReviewSheetOpen(false);
     const newParams = new URLSearchParams(searchParams);
     newParams.delete('review');
+    newParams.delete('sheet');
     setSearchParams(newParams, { replace: true });
   };
 
   const openJournal = (kind) => {
     setJournalSheet(kind);
+    setActiveJournalTab(kind);
     const newParams = new URLSearchParams(searchParams);
-    newParams.set('journal', kind);
+    newParams.set('sheet', kind);
     setSearchParams(newParams);
   };
 
   const openReview = () => {
     setReviewSheetOpen(true);
     const newParams = new URLSearchParams(searchParams);
-    newParams.set('review', '1');
+    newParams.set('sheet', 'review');
     setSearchParams(newParams);
   };
 
@@ -82,6 +91,7 @@ export default function DashboardPage() {
   const { data: tasksData } = useTasks({ limit: 60 });
   const { data: revisionsData } = useRevisions();
   const { data: dailyPlanData } = useDailyPlan('today');
+  const { data: dailyReviewData } = useDailyReview('today');
 
   const createTaskMutation = useCreateTask();
   const updateTaskStatus = useUpdateTaskStatus();
@@ -149,15 +159,54 @@ export default function DashboardPage() {
   const revisionsList = revisionsData?.data?.revisions || revisionsData?.revisions || [];
   const dueRevisions = revisionsList.filter((r) => r.status === 'pending' || !r.completed);
 
-  // Journal button prompt (only the button that fits the time of day)
-  const todayPlan = dailyPlanData?.plan || dailyPlanData?.data?.plan || dailyPlanData;
-  const promptKind = useMemo(() => {
-    return journalPrompt({
-      now: new Date(),
-      hasPlan: Boolean(todayPlan && (todayPlan.intentions || todayPlan.topPriorities?.length)),
-      hasReview: Boolean(analyticsData?.data?.todayReviewDone || analyticsData?.todayReviewDone),
-    });
-  }, [todayPlan, analyticsData]);
+  // Goal & days left subtitle calculation
+  const goal = user?.preparationType || user?.examName;
+  const targetDateObj = user?.targetExamDate ? new Date(user.targetExamDate) : null;
+  const daysLeft = targetDateObj && !isNaN(targetDateObj.getTime())
+    ? Math.max(0, Math.ceil((targetDateObj - new Date()) / (1000 * 60 * 60 * 24)))
+    : null;
+
+  const headerSubtitle = useMemo(() => {
+    const dateStr = format(new Date(), 'EEEE, d MMMM');
+    if (!goal || goal === 'Self Study' || goal === 'Custom') {
+      return dateStr;
+    }
+    let goalPart = `Goal: ${goal}`;
+    if (daysLeft !== null) {
+      goalPart += ` · ${daysLeft === 0 ? 'Today' : `${daysLeft} days left`}`;
+    }
+    return `${dateStr} · ${goalPart}`;
+  }, [goal, daysLeft]);
+
+  // Check-ins status
+  const rawPlan = dailyPlanData?.data || dailyPlanData;
+  const todayPlan = rawPlan && rawPlan.plan !== undefined ? rawPlan.plan : rawPlan;
+  const hasMorningPlan = Boolean(
+    todayPlan && (
+      todayPlan._id ||
+      (Array.isArray(todayPlan.priorities) && todayPlan.priorities.length > 0) ||
+      (Array.isArray(todayPlan.topPriorities) && todayPlan.topPriorities.length > 0) ||
+      todayPlan.notes ||
+      todayPlan.intentions
+    )
+  );
+
+  const rawReview = dailyReviewData?.data || dailyReviewData;
+  const todayReview = rawReview && rawReview.review !== undefined ? rawReview.review : rawReview;
+  const hasEveningReview = Boolean(
+    todayReview && (
+      todayReview._id ||
+      todayReview.reflection ||
+      todayReview.mood ||
+      todayReview.tomorrowFirst
+    )
+  );
+  const timePeriod = useMemo(() => {
+    const h = new Date().getHours();
+    if (h < 12) return 'morning';
+    if (h >= 17) return 'evening';
+    return 'review';
+  }, []);
 
   // Inline Task Creation
   const handleInlineAdd = async (e) => {
@@ -192,163 +241,79 @@ export default function DashboardPage() {
 
   return (
     <div className="w-full space-y-6">
-      {/* 1. Page Header: Greeting + Morning/Evening Review access */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+      {/* 1. Page Header: Greeting + Goal / Days Left subtitle */}
+      <div className="hd">
         <div>
-          <h1 className="text-[26px] font-bold font-heading tracking-tight text-[var(--text)] m-0">
+          <h1 className="text-[26px] font-bold font-heading tracking-tight text-[var(--tx)] m-0">
             {greeting}
           </h1>
-          <p className="text-[13px] text-[var(--muted)] m-0 mt-0.5">
-            {format(new Date(), 'EEEE, d MMMM')}
+          <p className="sub text-[13px] text-[var(--mu)] m-0 mt-0.5">
+            {headerSubtitle}
           </p>
         </div>
-
-        {/* Quick Review & Journal shortcuts visible on main dashboard */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Link
-            to="/?journal=morning"
-            className="btn btn-ghost h-9 px-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-2)] text-xs font-semibold flex items-center gap-1.5 transition-colors"
-            title="Set today's priorities & focus"
-          >
-            <Sun className="w-3.5 h-3.5 text-amber-500" />
-            <span>Morning plan</span>
-          </Link>
-          <Link
-            to="/?journal=evening"
-            className="btn btn-ghost h-9 px-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-2)] text-xs font-semibold flex items-center gap-1.5 transition-colors"
-            title="Reflect on today's focus and score your progress"
-          >
-            <Moon className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Evening review</span>
-          </Link>
-          <button
-            type="button"
-            onClick={() => {
-              if (promptKind === 'morning') {
-                setActiveJournalTab('morning');
-                openJournal('morning');
-              } else if (promptKind === 'evening') {
-                setActiveJournalTab('evening');
-                openJournal('evening');
-              } else {
-                setActiveJournalTab('morning');
-                openJournal('journal');
-              }
-            }}
-            className="btn btn-ghost"
-          >
-            {promptKind === 'morning' ? 'Morning plan' : promptKind === 'evening' ? 'Evening review' : 'Journal'}
-          </button>
-        </div>
       </div>
 
-      {/* Target Goal & Aligned Subjects (visible upon login so user immediately aligns studies) */}
-      <div className="card bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-5 space-y-3.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Target className="w-4 h-4 text-[var(--primary)]" />
-            <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] font-heading">
-              Daily Target Goal
-            </span>
-          </div>
-          <span className="text-xs font-medium text-[var(--muted)]">
-            {user?.examName ? user.examName : 'Daily Focus'} &middot; {formattedToday} of {formattedGoal} ({progressPct}%)
-          </span>
-        </div>
-
-        {/* Progress bar */}
-        <div className="h-1.5 rounded-full bg-[var(--line)] overflow-hidden">
-          <div
-            className="h-full bg-[var(--primary)] rounded-full transition-all duration-300"
-            style={{ width: `${progressPct}%` }}
-          />
-        </div>
-
-        {/* Aligned Subjects */}
-        <div className="pt-2 border-t border-[var(--line)]/60">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-              Your Subjects
-            </span>
-            <Link
-              to="/plan?tab=subjects"
-              className="text-[11px] font-medium text-[var(--primary)] hover:underline"
-            >
-              Manage subjects &rarr;
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            {user?.subjects && user.subjects.length > 0 ? (
-              user.subjects.map((s) => {
-                const col = s.color || 'var(--primary)';
-                const colorVar = col.startsWith('--') ? `var(${col})` : col;
-                return (
-                  <Link
-                    key={s.name}
-                    to={`/study?subject=${encodeURIComponent(s.name)}`}
-                    className="h-8 px-3 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] hover:border-[var(--primary)]/50 text-xs font-medium text-[var(--text)] flex items-center gap-2 transition-colors cursor-pointer"
-                    title={`Start focus session for ${s.name}`}
-                  >
-                    <span
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{ background: colorVar }}
-                    />
-                    <span>{s.name}</span>
-                    {s.chapters?.length > 0 && (
-                      <span className="text-[10px] text-[var(--muted)]">
-                        {s.chapters.length} ch
-                      </span>
-                    )}
-                  </Link>
-                );
-              })
-            ) : (
-              <Link
-                to="/plan?tab=subjects"
-                className="text-xs text-[var(--muted)] hover:text-[var(--primary)] py-1"
-              >
-                + Add your subjects to align your daily plan
-              </Link>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* 2. "UP NEXT" Card with ONE primary button */}
-      <div className="card bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* 2. UP NEXT Card */}
+      <div className="card now flex items-center justify-between gap-4">
         <div className="min-w-0">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)] font-heading block">
-            UP NEXT
-          </span>
-          <h2 className="text-[22px] font-bold font-heading tracking-tight text-[var(--text)] mt-1 mb-0.5 truncate">
-            {nextUp.title}
-          </h2>
-          <p className="text-[13px] text-[var(--muted)] m-0 truncate">
-            {nextUp.sub}
-          </p>
+          <div className="lab">UP NEXT</div>
+          <div className="big truncate">{nextUp.title}</div>
+          <div className="sub truncate">{nextUp.sub}</div>
         </div>
-
-        {/* The single primary button on this screen */}
         <button
           type="button"
           onClick={() => navigate(nextUp.actionUrl)}
-          className="btn btn-primary h-11 px-5 rounded-xl bg-[var(--primary)] text-[var(--on-primary)] font-semibold text-sm flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.98] transition-all shrink-0 cursor-pointer shadow-sm"
+          className="btn p lg shrink-0 flex items-center gap-2 cursor-pointer"
         >
-          <Play className="w-4 h-4 fill-current" />
+          <Play className="w-3.5 h-3.5 fill-current" />
           <span>Start focus</span>
         </button>
       </div>
 
-      {/* 3. One Thin Progress Line */}
-      <div className="flex items-center gap-3 text-[13px] text-[var(--muted)] my-6">
+      {/* 3. Focus progress bar */}
+      <div className="bar">
         <span>Today {formattedToday} of {formattedGoal}</span>
-        <div className="flex-1 h-1 rounded-full bg-[var(--line)] overflow-hidden">
-          <div
-            className="h-full bg-[var(--primary)] rounded-full transition-all duration-300"
-            style={{ width: `${progressPct}%` }}
-          />
-        </div>
+        <div><i style={{ width: `${progressPct}%` }} /></div>
+      </div>
+
+      {/* 4. Three Daily Check-ins */}
+      <div className="checks" role="group" aria-label="Daily check-ins">
+        <button
+          type="button"
+          onClick={() => openJournal('morning')}
+          className={cn(
+            'ck3',
+            hasMorningPlan && 'done',
+            timePeriod === 'morning' && 'now'
+          )}
+        >
+          <span>Morning plan</span>
+          <small>{hasMorningPlan ? 'Done' : 'Set your plan'}</small>
+        </button>
+        <button
+          type="button"
+          onClick={() => openJournal('evening')}
+          className={cn(
+            'ck3',
+            hasEveningReview && 'done',
+            timePeriod === 'evening' && 'now'
+          )}
+        >
+          <span>Evening review</span>
+          <small>{hasEveningReview ? 'Done' : 'Reflect on today'}</small>
+        </button>
+        <button
+          type="button"
+          onClick={openReview}
+          className={cn(
+            'ck3',
+            dueRevisions.length === 0 && 'done',
+            timePeriod === 'review' && 'now'
+          )}
+        >
+          <span>Review</span>
+          <small>{dueRevisions.length > 0 ? `${dueRevisions.length} due` : 'All caught up'}</small>
+        </button>
       </div>
 
       {/* 4. Today List with inline add */}
@@ -512,7 +477,11 @@ export default function DashboardPage() {
           <MorningPlan
             defaultHours={Math.round((user?.dailyStudyGoal || 240) / 60)}
             openTasks={openTasks}
-            onSave={async (data) => await createDailyPlanMutation.mutateAsync(data)}
+            initialPlan={todayPlan}
+            onSave={async (data) => {
+              await createDailyPlanMutation.mutateAsync(data);
+              toast.success('Morning plan saved!');
+            }}
             saving={createDailyPlanMutation.isPending}
             error={createDailyPlanMutation.error?.response?.data?.message}
             onDone={closeJournalSheet}
@@ -523,7 +492,11 @@ export default function DashboardPage() {
           <EveningReview
             focusMinutes={todayMinutes}
             tasksDone={completedTasks.length}
-            onSave={async (data) => await createDailyReviewMutation.mutateAsync(data)}
+            initialReview={todayReview}
+            onSave={async (data) => {
+              await createDailyReviewMutation.mutateAsync(data);
+              toast.success('Evening review saved!');
+            }}
             onCreateTask={async (tData) => await createTaskMutation.mutateAsync(tData)}
             saving={createDailyReviewMutation.isPending}
             error={createDailyReviewMutation.error?.response?.data?.message}
@@ -532,14 +505,11 @@ export default function DashboardPage() {
         )}
       </SideSheet>
 
-      {/* 2. Revision Queue Side Sheet */}
-      <SideSheet
-        open={reviewSheetOpen}
+      {/* 2. Review (Revision Queue) Side Sheet */}
+      <ReviewSheet
+        isOpen={reviewSheetOpen}
         onClose={closeReviewSheet}
-        title="Revision Queue"
-      >
-        <RevisionsPage isSideSheet onComplete={closeReviewSheet} />
-      </SideSheet>
+      />
     </div>
   );
 }

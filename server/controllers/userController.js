@@ -27,7 +27,7 @@ export const updateProfileSchema = z.object({
   ageBand: z.enum(['under13', '13_17', '18_plus']).optional(),
   dailyStudyGoal: z.number().min(1).max(1440).optional(),
   timezone: z.string().optional(),
-  preparationType: z.enum(['JEE', 'NEET', 'UPSC', 'GATE', 'University', 'Competitive Programming', 'Placement', 'Custom']).optional().nullable(),
+  preparationType: z.string().trim().max(100).optional().nullable(),
   subjects: z.array(z.object({
     name: z.string().trim().min(1).max(100),
     color: z.string().optional(),
@@ -35,9 +35,16 @@ export const updateProfileSchema = z.object({
     chapters: z.array(z.any()).optional(),
   }).passthrough()).optional(),
   examDate: z.string().or(z.date()).optional().nullable(),
+  targetExamDate: z.string().or(z.date()).optional().nullable(),
   examName: z.string().trim().max(100).optional().nullable(),
   onboardingCompleted: z.boolean().optional(),
 }).passthrough();
+
+export const renameSubjectSchema = z.object({
+  oldName: z.string().trim().min(1),
+  newName: z.string().trim().min(1).max(100),
+  color: z.string().optional(),
+});
 
 export const updateSettingsSchema = z.object({
   weekStartsOn: z.number().min(0).max(6).optional(),
@@ -108,6 +115,55 @@ export const updateProfile = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     message: 'Profile updated',
+    data: { user },
+  });
+});
+
+/**
+ * POST /api/users/subjects/rename
+ * Cascading subject rename across Tasks, StudySessions, TimetableSlots, Notes, and Problems
+ */
+export const renameSubject = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const { oldName, newName, color } = req.body;
+
+  const user = await User.findById(userId);
+  if (!user) throw ApiError.notFound('User not found');
+
+  const subjects = user.subjects || [];
+  const existingIdx = subjects.findIndex((s) => s.name === oldName);
+  if (existingIdx === -1) {
+    throw ApiError.notFound(`Subject "${oldName}" not found`);
+  }
+
+  // Duplicate check
+  if (oldName.toLowerCase() !== newName.toLowerCase()) {
+    if (subjects.some((s) => s.name.toLowerCase() === newName.toLowerCase())) {
+      throw ApiError.badRequest(`Subject "${newName}" already exists`);
+    }
+  }
+
+  // Update subject in User document
+  subjects[existingIdx].name = newName;
+  if (color) subjects[existingIdx].color = color;
+  user.subjects = subjects;
+  user.markModified('subjects');
+  await user.save();
+
+  // Cascade updates across all collections storing subject name:
+  await Promise.all([
+    Task.updateMany({ user: userId, category: oldName }, { $set: { category: newName } }),
+    StudySession.updateMany({ user: userId, category: oldName }, { $set: { category: newName } }),
+    TimetableSlot.updateMany({ user: userId, subject: oldName }, { $set: { subject: newName } }),
+    Note.updateMany({ user: userId, folder: oldName }, { $set: { folder: newName } }),
+    Problem.updateMany({ user: userId, topic: oldName }, { $set: { topic: newName } }),
+  ]);
+
+  emitToUser(userId, 'user:updated', user);
+
+  res.json({
+    success: true,
+    message: `Subject renamed from "${oldName}" to "${newName}"`,
     data: { user },
   });
 });

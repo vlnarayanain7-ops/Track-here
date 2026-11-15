@@ -20,7 +20,7 @@ export default function SessionForm({ isOpen, onClose, sessionToEdit = null }) {
     new Set([
       ...rawSubjects,
       sessionToEdit?.category,
-      'General Study',
+      'No subject',
     ].filter(Boolean))
   );
 
@@ -29,7 +29,7 @@ export default function SessionForm({ isOpen, onClose, sessionToEdit = null }) {
   const { data: tasksData } = useTasks({ status: 'Todo' });
   const tasks = tasksData?.data?.tasks || tasksData?.tasks || [];
 
-  const [category, setCategory] = useState(userSubjects[0] || 'General Study');
+  const [category, setCategory] = useState(userSubjects[0] || 'No subject');
   const [activityType, setActivityType] = useState('Problem Solving');
   const [topic, setTopic] = useState('');
   const [subtopic, setSubtopic] = useState('');
@@ -46,7 +46,7 @@ export default function SessionForm({ isOpen, onClose, sessionToEdit = null }) {
 
   useEffect(() => {
     if (sessionToEdit) {
-      setCategory(sessionToEdit.category || userSubjects[0] || 'General Study');
+      setCategory(sessionToEdit.category || userSubjects[0] || 'No subject');
       setActivityType(sessionToEdit.activityType || 'Problem Solving');
       setTopic(sessionToEdit.topic || '');
       setSubtopic(sessionToEdit.subtopic || '');
@@ -61,7 +61,7 @@ export default function SessionForm({ isOpen, onClose, sessionToEdit = null }) {
       setNextAction(sessionToEdit.nextAction || '');
       setLinkedTask(sessionToEdit.linkedTask?._id || sessionToEdit.linkedTask || '');
     } else {
-      setCategory(userSubjects[0] || 'General Study');
+      setCategory(userSubjects[0] || 'No subject');
       setActivityType('Problem Solving');
       setTopic('');
       setSubtopic('');

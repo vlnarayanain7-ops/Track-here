@@ -5,11 +5,14 @@ import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
 import { useUpdateNote, useDeleteNote } from '@/hooks/useNotes';
-import { Pin, Trash2, Check, AlertCircle, Loader2, Code, FileText, Save, ArrowLeft } from 'lucide-react';
+import { useCreateRevision } from '@/hooks/useRevisions';
+import { Pin, Trash2, Check, AlertCircle, Loader2, Code, FileText, Save, ArrowLeft, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
+import toast from 'react-hot-toast';
 
 export default function NoteEditor({ note, folders = [], onDelete, onBack }) {
   const updateMutation = useUpdateNote();
+  const createRevisionMutation = useCreateRevision();
 
   const [title, setTitle] = useState(note?.title || '');
   const [folder, setFolder] = useState(note?.folder || 'General');
@@ -196,6 +199,34 @@ export default function NoteEditor({ note, folders = [], onDelete, onBack }) {
               </button>
             )}
           </div>
+
+          {/* Add to Review */}
+          <button
+            type="button"
+            onClick={async () => {
+              const noteTitle = title.trim() || note?.title?.trim();
+              if (!noteTitle) {
+                toast.error('Please enter a note title first');
+                return;
+              }
+              try {
+                await createRevisionMutation.mutateAsync({
+                  title: noteTitle,
+                  type: 'note',
+                  linkedNote: note?._id,
+                  dueDate: new Date().toISOString(),
+                  intervalDays: 1,
+                });
+              } catch {
+                // Toast handled by mutation
+              }
+            }}
+            className="p-1.5 rounded-lg border border-[var(--line)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-all duration-200 flex items-center gap-1.5 text-xs cursor-pointer"
+            title="Add note to spaced repetition review queue"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Add to review</span>
+          </button>
 
           {/* Pin */}
           <button

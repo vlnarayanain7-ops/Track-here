@@ -1,17 +1,18 @@
 import { useEffect, useRef } from 'react';
 
-export function SideSheet({ open, title, onClose, children }) {
+export function SideSheet({ open, isOpen, title, onClose, children }) {
   const ref = useRef(null);
+  const isSheetOpen = Boolean(open ?? isOpen);
 
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
-    if (open && !d.open) {
+    if (isSheetOpen && !d.open) {
       d.showModal();
-    } else if (!open && d.open) {
+    } else if (!isSheetOpen && d.open) {
       d.close();
     }
-  }, [open]);
+  }, [isSheetOpen]);
 
   return (
     <dialog

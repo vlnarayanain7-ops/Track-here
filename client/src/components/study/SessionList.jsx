@@ -28,7 +28,7 @@ export default function SessionList({
   const userSubjects = Array.from(
     new Set([
       ...(user?.subjects && Array.isArray(user.subjects) ? user.subjects.map((s) => s.name || s) : []),
-      'General Study',
+      'No subject',
     ].filter(Boolean))
   );
 

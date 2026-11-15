@@ -2,6 +2,7 @@ import api from './axios';
 
 export const getProfile = () => api.get('/users/profile').then((r) => r.data);
 export const updateProfile = (data) => api.put('/users/profile', data).then((r) => r.data);
+export const renameSubject = (data) => api.post('/users/subjects/rename', data).then((r) => r.data);
 export const updateSettings = (data) => api.put('/users/settings', data).then((r) => r.data);
 export const getSettings = () => api.get('/users/settings').then((r) => r.data);
 export const changePassword = (data) => api.put('/users/password', data).then((r) => r.data);

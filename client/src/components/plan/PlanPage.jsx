@@ -320,9 +320,63 @@ function TasksTab() {
 }
 
 // -----------------------------------------------------------------------------------------
-// TAB 2: Week (Dynamic timetable showing actual studied sessions & blocks, compact & readable)
+// TAB 2: Week (Dynamic timetable: useful 06:00-22:00 range, lane layout for overlaps, 6px actual session bars)
 // -----------------------------------------------------------------------------------------
-const HOUR_HEIGHT = 28;
+
+function assignLanes(items) {
+  if (!items || items.length === 0) return [];
+  const sorted = items
+    .map((item, index) => ({ ...item, _origIdx: index }))
+    .sort((a, b) => a.startHour - b.startHour || a.endHour - b.endHour);
+
+  const clusters = [];
+  let currentCluster = [];
+  let clusterEnd = -Infinity;
+
+  for (const item of sorted) {
+    if (currentCluster.length === 0) {
+      currentCluster.push(item);
+      clusterEnd = item.endHour;
+    } else if (item.startHour < clusterEnd) {
+      currentCluster.push(item);
+      clusterEnd = Math.max(clusterEnd, item.endHour);
+    } else {
+      clusters.push(currentCluster);
+      currentCluster = [item];
+      clusterEnd = item.endHour;
+    }
+  }
+  if (currentCluster.length > 0) {
+    clusters.push(currentCluster);
+  }
+
+  const result = [];
+  for (const cluster of clusters) {
+    const lanes = [];
+    for (const item of cluster) {
+      let assignedLane = -1;
+      for (let l = 0; l < lanes.length; l++) {
+        if (lanes[l] <= item.startHour) {
+          assignedLane = l;
+          lanes[l] = item.endHour;
+          break;
+        }
+      }
+      if (assignedLane === -1) {
+        assignedLane = lanes.length;
+        lanes.push(item.endHour);
+      }
+      item.lane = assignedLane;
+    }
+    const totalLanes = Math.max(1, lanes.length);
+    for (const item of cluster) {
+      item.totalLanes = totalLanes;
+      result.push(item);
+    }
+  }
+
+  return result.sort((a, b) => a._origIdx - b._origIdx);
+}
 
 function WeekTab() {
   const { user } = useAuth();
@@ -331,6 +385,7 @@ function WeekTab() {
   const createSlotMutation = useCreateTimetableSlot();
   const deleteSlotMutation = useDeleteTimetableSlot();
 
+  const [showAllHours, setShowAllHours] = useState(false);
   const [slotModal, setSlotModal] = useState(false);
   const [modalDay, setModalDay] = useState(0);
   const [modalStart, setModalStart] = useState('09:00');
@@ -364,11 +419,18 @@ function WeekTab() {
     return (h || 0) + (m || 0) / 60;
   };
 
+  // Format decimal hour to HH:MM
+  const formatHourDec = (dec) => {
+    const h = Math.floor(dec);
+    const m = Math.round((dec % 1) * 60);
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  };
+
   // Extract actual study sessions for this week (Mon to Sun)
   const weekSessions = useMemo(() => {
     const rawSessions = sessionsData?.data?.sessions || sessionsData?.sessions || [];
     const now = new Date();
-    const dayOfWeek = (now.getDay() + 6) % 7; // Monday = 0
+    const dayOfWeek = (now.getDay() + 6) % 7;
     const monday = new Date(now);
     monday.setDate(now.getDate() - dayOfWeek);
     monday.setHours(0, 0, 0, 0);
@@ -382,16 +444,16 @@ function WeekTab() {
       const d = s.date ? new Date(s.date) : s.startTime ? new Date(s.startTime) : null;
       if (!d || isNaN(d.getTime())) return;
       if (d >= monday && d <= sunday) {
-        const sessionDay = (d.getDay() + 6) % 7; // 0 = Mon, 6 = Sun
+        const sessionDay = (d.getDay() + 6) % 7;
         const startH = d.getHours() + d.getMinutes() / 60;
-        const durHours = Math.max(0.4, (s.focusDuration || 25) / 60);
+        const durHours = Math.max(0.2, (s.focusDuration || 25) / 60);
         list.push({
           id: s._id,
           day: sessionDay,
           startHour: startH,
           endHour: startH + durHours,
           durationMins: s.focusDuration || 25,
-          subject: s.category || s.topic || 'Focus',
+          subject: s.category || s.topic || 'No subject',
           topic: s.topic,
           isStudySession: true,
         });
@@ -400,10 +462,16 @@ function WeekTab() {
     return list;
   }, [sessionsData]);
 
-  // Dynamically bound visible hours to where study sessions or blocks exist, without excessive empty scrolling
+  // Useful range: default 06:00 to 22:00, extended only if real blocks need it
   const { minHour, maxHour, visibleHours } = useMemo(() => {
-    let min = 24;
-    let max = 0;
+    if (showAllHours) {
+      const hours = [];
+      for (let h = 0; h < 24; h++) hours.push(h);
+      return { minHour: 0, maxHour: 24, visibleHours: hours };
+    }
+
+    let min = 6;
+    let max = 22;
 
     weekSessions.forEach((s) => {
       min = Math.min(min, Math.floor(s.startHour));
@@ -417,22 +485,22 @@ function WeekTab() {
       max = Math.max(max, Math.ceil(end));
     });
 
-    // If no activity yet, show a clean, compact window (08:00 - 18:00)
-    if (min >= max) {
-      min = 8;
-      max = 18;
-    } else {
-      // 1 hour padding around studied hours, clamped to avoid 15 rows of midnight emptiness
-      min = Math.max(6, Math.min(min, 8));
-      max = Math.min(24, Math.max(min + 4, max + 1));
-    }
+    min = Math.max(0, min);
+    max = Math.min(24, Math.max(min + 4, max));
 
     const hours = [];
     for (let h = min; h < max; h++) {
       hours.push(h);
     }
     return { minHour: min, maxHour: max, visibleHours: hours };
-  }, [weekSessions, slots]);
+  }, [showAllHours, weekSessions, slots]);
+
+  // Screen adaptive hour height formula (between 26px and 40px)
+  const hourHeight = useMemo(() => {
+    const count = visibleHours.length || 16;
+    const available = typeof window !== 'undefined' ? Math.max(380, window.innerHeight - 260) : 540;
+    return Math.max(26, Math.min(40, Math.floor(available / count)));
+  }, [visibleHours.length]);
 
   const handleCellClick = (dayIdx, hour) => {
     setModalDay(dayIdx);
@@ -440,7 +508,7 @@ function WeekTab() {
     const endStr = `${String(Math.min(hour + 1, 24)).padStart(2, '0')}:00`;
     setModalStart(startStr);
     setModalEnd(endStr);
-    setModalSubject(userSubjects[0]?.name || 'General');
+    setModalSubject(userSubjects[0]?.name || 'No subject');
     setSlotModal(true);
   };
 
@@ -451,7 +519,7 @@ function WeekTab() {
         dayOfWeek: (modalDay + 1) % 7,
         startTime: modalStart,
         endTime: modalEnd,
-        subject: modalSubject,
+        subject: modalSubject || 'No subject',
       });
       toast.success('Block added');
       setSlotModal(false);
@@ -473,16 +541,25 @@ function WeekTab() {
   return (
     <div className="overflow-x-auto pb-4">
       <div className="min-w-[680px]">
-        {/* Info label */}
+        {/* Info header & Show all hours toggle link */}
         <div className="flex items-center justify-between text-xs text-[var(--mu)] mb-2">
           <span>
             {weekSessions.length > 0
-              ? `${plural(weekSessions.length, 'study session')} recorded this week · Showing active study hours`
-              : 'Showing active study hours · Click any cell to schedule a block'}
+              ? `${plural(weekSessions.length, 'study session')} recorded this week`
+              : 'Click any cell to schedule a block'}
           </span>
-          <span className="text-[11px] font-mono">
-            {String(minHour).padStart(2, '0')}:00 – {String(maxHour).padStart(2, '0')}:00
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] font-mono">
+              {String(minHour).padStart(2, '0')}:00 – {String(maxHour).padStart(2, '0')}:00
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowAllHours((prev) => !prev)}
+              className="text-xs text-[var(--mu)] hover:text-[var(--pr)] underline cursor-pointer bg-transparent border-0 p-0"
+            >
+              {showAllHours ? 'Show useful hours' : 'Show all hours'}
+            </button>
+          </div>
         </div>
 
         {/* Timetable Header Row */}
@@ -497,7 +574,9 @@ function WeekTab() {
           {/* Dynamic Hour labels */}
           <div className="hrs">
             {visibleHours.map((h) => (
-              <div key={h}>{String(h).padStart(2, '0')}:00</div>
+              <div key={h} style={{ height: `${hourHeight}px` }}>
+                {String(h).padStart(2, '0')}:00
+              </div>
             ))}
           </div>
 
@@ -505,90 +584,107 @@ function WeekTab() {
           {DAYS.map((d, dayIdx) => {
             const isToday = dayIdx === currentDayOfWeek;
             const targetDayNumber = (dayIdx + 1) % 7;
-            const daySlots = slots.filter((s) => s.dayOfWeek === targetDayNumber);
+            const rawDaySlots = slots.filter((s) => s.dayOfWeek === targetDayNumber);
             const daySessions = weekSessions.filter((s) => s.day === dayIdx);
+
+            // Compute lane layout for planned blocks
+            const processedSlots = rawDaySlots.map((s) => ({
+              ...s,
+              startHour: parseHour(s.startTime),
+              endHour: parseHour(s.endTime),
+            }));
+            const daySlots = assignLanes(processedSlots);
 
             return (
               <div
                 key={d}
                 className={`col ${isToday ? 'td' : ''}`}
-                style={{ height: `${visibleHours.length * HOUR_HEIGHT}px` }}
+                style={{
+                  height: `${visibleHours.length * hourHeight}px`,
+                  backgroundImage: `repeating-linear-gradient(var(--ln) 0 1px, transparent 1px ${hourHeight}px)`,
+                }}
                 onClick={(e) => {
                   const rect = e.currentTarget.getBoundingClientRect();
                   const y = e.clientY - rect.top;
                   const clickedHour = Math.min(
                     maxHour - 1,
-                    Math.max(minHour, Math.floor(y / HOUR_HEIGHT) + minHour)
+                    Math.max(minHour, Math.floor(y / hourHeight) + minHour)
                   );
                   handleCellClick(dayIdx, clickedHour);
                 }}
               >
-                {/* Render Actual Studied Sessions */}
+                {/* (d) Actual focus sessions drawn as thin 6px vertical bars on right edge with tooltip */}
                 {daySessions.map((sess) => {
-                  const top = Math.max(0, (sess.startHour - minHour) * HOUR_HEIGHT);
-                  const height = Math.max(18, (sess.endHour - sess.startHour) * HOUR_HEIGHT - 2);
+                  const top = Math.max(0, (sess.startHour - minHour) * hourHeight);
+                  const height = Math.max(8, (sess.endHour - sess.startHour) * hourHeight);
                   const col = subjectColorMap[sess.subject] || 'var(--pr)';
                   const colorVar = col.startsWith('--') ? `var(${col})` : col;
+                  const timeRangeStr = `${formatHourDec(sess.startHour)} – ${formatHourDec(sess.endHour)}`;
 
                   return (
                     <div
                       key={`sess-${sess.id}`}
-                      className="blk group flex items-start justify-between shadow-xs z-10"
+                      className="absolute z-20 transition-all hover:scale-x-150 cursor-help"
                       style={{
                         top: `${top}px`,
                         height: `${height}px`,
+                        right: '2px',
+                        width: '6px',
+                        borderRadius: '3px',
                         backgroundColor: colorVar,
-                        color: 'var(--on-primary)',
-                        borderRadius: '5px',
-                        padding: '1px 5px',
+                        boxShadow: '0 0 2px rgba(0,0,0,0.25)',
                       }}
-                      title={`${sess.subject} · ${sess.durationMins}m focused`}
+                      title={`Actual focus: ${sess.subject || 'No subject'} · ${sess.durationMins}m (${timeRangeStr})`}
                       onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="truncate text-xs">
-                        <span className="block truncate font-bold text-[11px] leading-tight">
-                          {sess.subject}
-                        </span>
-                        <span className="text-[9px] opacity-90">{sess.durationMins}m</span>
-                      </div>
-                    </div>
+                    />
                   );
                 })}
 
-                {/* Render Planned Timetable Blocks */}
+                {/* (c) Planned Timetable Blocks in side-by-side lanes */}
                 {daySlots.map((slot) => {
-                  const sHour = parseHour(slot.startTime);
-                  const eHour = parseHour(slot.endTime);
-                  const top = Math.max(0, (sHour - minHour) * HOUR_HEIGHT);
-                  const height = Math.max(16, (eHour - sHour) * HOUR_HEIGHT - 2);
+                  const top = Math.max(0, (slot.startHour - minHour) * hourHeight);
+                  const height = Math.max(16, (slot.endHour - slot.startHour) * hourHeight - 2);
 
                   const col = subjectColorMap[slot.subject] || 'var(--pr)';
                   const colorVar = col.startsWith('--') ? `var(${col})` : col;
 
+                  const totalL = slot.totalLanes || 1;
+                  const laneIdx = slot.lane || 0;
+                  const widthPct = 100 / totalL;
+                  const leftPct = laneIdx * widthPct;
+
+                  const subjDisplay = slot.subject || 'No subject';
+
                   return (
                     <div
                       key={slot._id}
-                      className="blk group flex items-start justify-between"
+                      className="blk group flex items-start justify-between cursor-pointer"
                       style={{
                         top: `${top}px`,
                         height: `${height}px`,
+                        left: `calc(${leftPct}% + 2px)`,
+                        width: `calc(${widthPct}% - 4px)`,
                         backgroundColor: `color-mix(in srgb, ${colorVar} 18%, transparent)`,
                         color: colorVar,
                         borderLeft: `3px solid ${colorVar}`,
-                        borderRadius: '5px',
-                        padding: '1px 5px',
+                        borderRadius: '6px',
+                        padding: '2px 5px',
+                        zIndex: 10,
                       }}
+                      title={`${subjDisplay} (${slot.startTime}–${slot.endTime})`}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <div className="truncate">
-                        <span className="block truncate font-semibold text-[11px] leading-tight">{slot.subject}</span>
-                        <span className="text-[9px] opacity-75">{slot.startTime}–{slot.endTime}</span>
+                      <div className="truncate min-w-0 pr-1 flex-1">
+                        <span className="block truncate font-semibold text-[11px] leading-tight">
+                          {subjDisplay}
+                        </span>
                       </div>
                       <button
                         type="button"
                         onClick={(e) => handleDeleteSlot(slot._id, e)}
-                        className="opacity-0 group-hover:opacity-100 p-0.5 text-xs text-red-500 hover:text-red-700 transition-opacity"
-                        aria-label="Delete block"
+                        className="opacity-0 group-hover:opacity-100 p-0.5 text-xs text-red-500 hover:text-red-700 transition-opacity shrink-0"
+                        aria-label={`Delete ${subjDisplay} block`}
+                        title="Delete block"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -621,7 +717,7 @@ function WeekTab() {
                       {s.name}
                     </option>
                   ))}
-                  {userSubjects.length === 0 && <option value="General">General</option>}
+                  {userSubjects.length === 0 && <option value="No subject">No subject</option>}
                 </select>
               </div>
 
@@ -682,6 +778,7 @@ function SubjectsTab() {
   const [showAddSubject, setShowAddSubject] = useState(false);
   const [editingSubjectName, setEditingSubjectName] = useState(null);
   const [editSubjNameInput, setEditSubjNameInput] = useState('');
+  const [colorPickerSubject, setColorPickerSubject] = useState(null);
   const [newChapterName, setNewChapterName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -705,22 +802,27 @@ function SubjectsTab() {
 
   const handleRenameSubject = async (oldName) => {
     const trimmed = editSubjNameInput.trim();
-    if (!trimmed) {
+    if (!trimmed || trimmed === oldName) {
       setEditingSubjectName(null);
       return;
     }
     if (trimmed.toLowerCase() !== oldName.toLowerCase()) {
       if (rawSubjects.some((s) => s.name.toLowerCase() === trimmed.toLowerCase())) {
-        toast.error('Subject already exists');
+        toast.error('A subject with this name already exists');
         return;
       }
     }
-    const updated = rawSubjects.map((s) =>
-      s.name === oldName ? { ...s, name: trimmed } : s
-    );
-    await saveSubjectsToDatabase(updated);
-    setEditingSubjectName(null);
-    toast.success(`Subject renamed to "${trimmed}"`);
+    setIsSaving(true);
+    try {
+      await usersApi.renameSubject({ oldName, newName: trimmed });
+      await checkAuth();
+      toast.success(`Subject renamed to "${trimmed}"`);
+      setEditingSubjectName(null);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to rename subject');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleAddSubject = async (e) => {
@@ -755,11 +857,12 @@ function SubjectsTab() {
   };
 
   const handleRecolorSubject = async (subName, newColor, e) => {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     const updated = rawSubjects.map((s) =>
       s.name === subName ? { ...s, color: newColor } : s
     );
     await saveSubjectsToDatabase(updated);
+    setColorPickerSubject(null);
   };
 
   const handleAddChapter = async (subName) => {
@@ -865,6 +968,7 @@ function SubjectsTab() {
                       type="text"
                       value={editSubjNameInput}
                       onChange={(e) => setEditSubjNameInput(e.target.value)}
+                      onBlur={() => handleRenameSubject(s.name)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') handleRenameSubject(s.name);
                         if (e.key === 'Escape') setEditingSubjectName(null);
@@ -874,30 +978,98 @@ function SubjectsTab() {
                     />
                     <button
                       type="button"
-                      onClick={() => handleRenameSubject(s.name)}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleRenameSubject(s.name);
+                      }}
                       className="btn p text-xs px-3"
                     >
                       Save
                     </button>
                     <button
                       type="button"
-                      onClick={() => setEditingSubjectName(null)}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setEditingSubjectName(null);
+                      }}
                       className="btn g text-xs px-2"
                     >
                       Cancel
                     </button>
                   </div>
                 ) : (
-                  <div
-                    className="cursor-pointer select-none"
-                    onClick={() => setExpandedSubject(isExpanded ? null : s.name)}
-                  >
+                  <div>
                     <div className="flex items-center justify-between">
-                      <span className="sj text-sm font-medium text-[var(--tx)]">
-                        {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-[var(--mu)]" /> : <ChevronRight className="w-3.5 h-3.5 text-[var(--mu)]" />}
-                        <i style={{ background: colorDot.startsWith('--') ? `var(${colorDot})` : colorDot }} />
-                        {s.name}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedSubject(isExpanded ? null : s.name)}
+                          className="text-[var(--mu)] hover:text-[var(--tx)] p-0.5 cursor-pointer bg-transparent border-0"
+                          aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="w-3.5 h-3.5 text-[var(--mu)]" />
+                          ) : (
+                            <ChevronRight className="w-3.5 h-3.5 text-[var(--mu)]" />
+                          )}
+                        </button>
+
+                        {/* Color dot button that opens 8 color choices */}
+                        <div className="relative inline-block">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setColorPickerSubject(colorPickerSubject === s.name ? null : s.name);
+                            }}
+                            className="w-3 h-3 rounded-full border border-black/10 inline-block cursor-pointer hover:scale-125 transition-transform align-middle"
+                            style={{ background: colorDot.startsWith('--') ? `var(${colorDot})` : colorDot }}
+                            title="Change color"
+                            aria-label={`Change color for ${s.name}`}
+                          />
+                          {colorPickerSubject === s.name && (
+                            <div
+                              className="absolute left-0 top-5 z-30 p-2 bg-[var(--sf)] border border-[var(--ln)] rounded-xl shadow-lg flex gap-1.5"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {SUBJECT_COLORS.map((colKey) => (
+                                <button
+                                  key={colKey}
+                                  type="button"
+                                  onClick={(e) => handleRecolorSubject(s.name, `var(${colKey})`, e)}
+                                  className="w-4 h-4 rounded-full border border-black/10 hover:scale-125 transition-transform cursor-pointer"
+                                  style={{ background: `var(${colKey})` }}
+                                  aria-label={`Select color ${colKey}`}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Subject name */}
+                        <span
+                          className="text-sm font-medium text-[var(--tx)] cursor-pointer"
+                          onClick={() => setExpandedSubject(isExpanded ? null : s.name)}
+                        >
+                          {s.name}
+                        </span>
+
+                        {/* Inline Rename pencil button */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingSubjectName(s.name);
+                            setEditSubjNameInput(s.name);
+                          }}
+                          className="btn g h-6 px-1.5 text-[var(--mu)] hover:text-[var(--tx)] cursor-pointer"
+                          aria-label={`Rename ${s.name}`}
+                          title={`Rename ${s.name}`}
+                        >
+                          <Edit2 className="w-3 h-3" />
+                        </button>
+                      </div>
+
                       <div className="flex items-center gap-2">
                         <span className="note">
                           {chapters.length === 0
@@ -906,21 +1078,8 @@ function SubjectsTab() {
                         </span>
                         <button
                           type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingSubjectName(s.name);
-                            setEditSubjNameInput(s.name);
-                          }}
-                          className="text-[var(--mu)] hover:text-[var(--tx)] p-1 transition-colors"
-                          title={`Edit ${s.name} name`}
-                          aria-label={`Edit ${s.name}`}
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
                           onClick={(e) => handleDeleteSubject(s.name, e)}
-                          className="text-[var(--mu)] hover:text-red-500 p-1 transition-colors"
+                          className="text-[var(--mu)] hover:text-red-500 p-1 transition-colors cursor-pointer bg-transparent border-0"
                           aria-label={`Delete ${s.name}`}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -938,23 +1097,6 @@ function SubjectsTab() {
                 {/* Expanded Chapters View */}
                 {isExpanded && (
                   <div className="pl-6 pt-3 mt-2 border-l-2 border-[var(--ln)] space-y-2 animate-fade-in">
-                    {/* Color picker row */}
-                    <div className="flex items-center gap-2 pb-2">
-                      <span className="text-xs text-[var(--mu)]">Color:</span>
-                      <div className="flex gap-1.5">
-                        {SUBJECT_COLORS.map((c) => (
-                          <button
-                            key={c}
-                            type="button"
-                            onClick={(e) => handleRecolorSubject(s.name, `var(${c})`, e)}
-                            className="w-4 h-4 rounded-full border border-white/20 transition-transform hover:scale-110"
-                            style={{ background: `var(${c})` }}
-                            aria-label={`Select color ${c}`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
                     {/* Chapters List */}
                     {chapters.map((chap, idx) => {
                       const chapName = typeof chap === 'string' ? chap : chap.name;
@@ -974,7 +1116,7 @@ function SubjectsTab() {
                           <button
                             type="button"
                             onClick={(e) => handleDeleteChapter(s.name, idx, e)}
-                            className="text-[var(--mu)] hover:text-red-500 text-xs p-1"
+                            className="text-[var(--mu)] hover:text-red-500 text-xs p-1 cursor-pointer bg-transparent border-0"
                             aria-label={`Delete chapter ${chapName}`}
                           >
                             <X className="w-3 h-3" />
@@ -1001,7 +1143,7 @@ function SubjectsTab() {
                       <button
                         type="button"
                         onClick={() => handleAddChapter(s.name)}
-                        className="btn text-xs px-2.5 h-7"
+                        className="btn text-xs px-2.5 h-7 cursor-pointer"
                       >
                         Add
                       </button>

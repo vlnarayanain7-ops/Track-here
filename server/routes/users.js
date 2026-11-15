@@ -2,12 +2,14 @@ import { Router } from 'express';
 import {
   getProfile,
   updateProfile,
+  renameSubject,
   updateSettings,
   changePassword,
   exportData,
   importData,
   deleteAccount,
   updateProfileSchema,
+  renameSubjectSchema,
   updateSettingsSchema,
   changePasswordSchema,
 } from '../controllers/userController.js';
@@ -22,6 +24,7 @@ router.use(csrfProtection);
 
 router.get('/profile', getProfile);
 router.put('/profile', validate(updateProfileSchema), updateProfile);
+router.post('/subjects/rename', validate(renameSubjectSchema), renameSubject);
 router.put('/password', validate(changePasswordSchema), changePassword);
 router.get('/settings', getProfile);
 router.put('/settings', validate(updateSettingsSchema), updateSettings);

@@ -98,7 +98,6 @@ const userSchema = new mongoose.Schema(
     },
     preparationType: {
       type: String,
-      enum: ['JEE', 'NEET', 'UPSC', 'GATE', 'University', 'Competitive Programming', 'Placement', 'Custom'],
       default: 'Custom',
     },
     subjects: [
@@ -110,6 +109,7 @@ const userSchema = new mongoose.Schema(
       },
     ],
     examDate: Date,
+    targetExamDate: Date,
     examName: String,
     onboardingCompleted: {
       type: Boolean,

@@ -16,6 +16,10 @@
   --warn-soft: #FEF0CD;
   --ring: #216E39;
 
+  /* Calm reference streak flame tokens */
+  --fl: #B45309;
+  --flsoft: #FFF1D0;
+
   /* Streak gold/orange tokens */
   --streak-fg: #D97706;
   --streak-bg: rgba(245, 158, 11, 0.09);
@@ -95,6 +99,10 @@
   --warn: #F2B45B;
   --warn-soft: #3A2A10;
   --ring: #4ADE80;
+
+  /* Calm reference streak flame tokens dark */
+  --fl: #FFB347;
+  --flsoft: #3A2410;
 
   /* Streak gold/orange tokens dark */
   --streak-fg: #FBBF24;
@@ -600,8 +608,8 @@ h1, h2, h3 {
   color: var(--mu);
 }
 .week i.on {
-  background: var(--pr);
-  border-color: var(--pr);
+  background: var(--fl);
+  border-color: var(--fl);
   color: var(--on);
 }
 .heat {
@@ -790,6 +798,8 @@ dialog.sheet::backdrop {
   display: flex;
   gap: 8px;
   --cell: 12px;
+  min-width: 0;
+  max-width: 100%;
 }
 .mh-days {
   display: grid;
@@ -797,6 +807,7 @@ dialog.sheet::backdrop {
   gap: 3px;
   font-size: 11px;
   color: var(--muted);
+  flex-shrink: 0;
 }
 .mh-days span {
   line-height: var(--cell);
@@ -804,6 +815,9 @@ dialog.sheet::backdrop {
 .mh-scroll {
   overflow-x: auto;
   flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  scrollbar-width: thin;
 }
 .mh-row {
   display: flex;
@@ -829,5 +843,172 @@ dialog.sheet::backdrop {
   font-size: 12px;
   color: var(--muted);
   margin-top: 6px;
+}
+
+/* Dashboard Focus Bar */
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--mu);
+  font-size: 13px;
+  margin: 16px 0 20px;
+}
+.bar span {
+  white-space: nowrap;
+  font-weight: 500;
+  color: var(--mu);
+}
+.bar div {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--ln);
+  overflow: hidden;
+}
+.bar i {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--pr);
+  transition: width 0.3s ease;
+}
+
+/* Three Daily Check-ins (Boxes) */
+.checks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 0 0 24px;
+}
+.ck3 {
+  text-align: left;
+  padding: 12px 14px;
+  border: 1px solid var(--ln);
+  border-radius: 12px;
+  background: var(--sf);
+  color: var(--tx);
+  font: 500 14px var(--font);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ck3:hover {
+  background: var(--sf2);
+  border-color: var(--line);
+}
+.ck3 span {
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--tx);
+}
+.ck3 small {
+  color: var(--mu);
+  font-size: 12px;
+  font-weight: 400;
+}
+.ck3.now {
+  border-color: var(--pr);
+  box-shadow: 0 0 0 1px var(--pr);
+}
+.ck3.done small {
+  color: var(--pr);
+  font-weight: 500;
+}
+
+.card.now {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  background: var(--sf);
+  border: 1px solid var(--ln);
+  border-radius: 16px;
+  padding: 16px 20px;
+}
+.card.now .big {
+  font: 700 20px var(--display);
+  letter-spacing: -0.01em;
+  color: var(--tx);
+  margin: 4px 0 2px;
+}
+.card.now .lab {
+  font: 600 11px var(--font);
+  letter-spacing: 0.06em;
+  color: var(--mu);
+}
+.card.now .sub {
+  color: var(--mu);
+  font-size: 13px;
+}
+
+@media (max-width: 760px) {
+  .checks {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .card.now {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+}
+
+/* Settings Rows and Switches */
+.sec {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 28px 0 8px;
+}
+.srow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--ln);
+}
+.srow b {
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--tx);
+  display: block;
+}
+.srow small {
+  display: block;
+  color: var(--mu);
+  font-size: 13px;
+  margin-top: 2px;
+}
+.sw {
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+  background: var(--ln);
+  position: relative;
+  border: 0;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.sw::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--sf);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sw[aria-checked="true"] {
+  background: var(--pr);
+}
+.sw[aria-checked="true"]::after {
+  transform: translateX(18px);
 }
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { localISODate, addDays, fmtDuration, plural } from '@/lib/format';
 
 const MOODS = {
@@ -16,10 +16,24 @@ export function EveningReview({
   saving,
   error,
   onDone,
+  initialReview,
 }) {
   const [mood, setMood] = useState(null);
   const [note, setNote] = useState('');
   const [first, setFirst] = useState('');
+
+  useEffect(() => {
+    if (initialReview) {
+      if (initialReview.mood) {
+        const found = Object.keys(MOODS).find(
+          (k) => MOODS[k] === initialReview.mood || k === initialReview.mood
+        );
+        if (found) setMood(found);
+      }
+      if (initialReview.reflection) setNote(initialReview.reflection);
+      if (initialReview.tomorrowFirst) setFirst(initialReview.tomorrowFirst);
+    }
+  }, [initialReview]);
 
   const line = focusMinutes
     ? `You focused ${fmtDuration(focusMinutes)} and finished ${plural(tasksDone, 'task')}.`
@@ -27,20 +41,24 @@ export function EveningReview({
 
   const submit = async (e) => {
     e.preventDefault();
-    await onSave({
-      date: localISODate(),
-      mood: mood ? MOODS[mood] : null,
-      reflection: note.trim(),
-      tomorrowFirst: first.trim(),
-    });
-    if (first.trim() && onCreateTask) {
-      await onCreateTask({
-        title: first.trim(),
-        dueDate: localISODate(addDays(new Date(), 1)),
-        priority: 'High',
+    try {
+      await onSave({
+        date: localISODate(),
+        mood: mood ? MOODS[mood] : null,
+        reflection: note.trim(),
+        tomorrowFirst: first.trim(),
       });
+      if (first.trim() && onCreateTask) {
+        await onCreateTask({
+          title: first.trim(),
+          dueDate: localISODate(addDays(new Date(), 1)),
+          priority: 'High',
+        });
+      }
+      onDone?.();
+    } catch {
+      // handled
     }
-    onDone?.();
   };
 
   return (
