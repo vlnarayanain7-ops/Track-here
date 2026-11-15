@@ -49,27 +49,22 @@ export const updateSettingsSchema = z.object({
     evening: z.boolean().optional(),
     streaks: z.boolean().optional(),
     revisions: z.boolean().optional(),
-  }).passthrough().optional(),
-  examDate: z.string().or(z.date()).optional().nullable(),
-  examName: z.string().trim().max(100).optional().nullable(),
-  targetExam: z.string().trim().max(100).optional().nullable(),
-  dailyGoalMinutes: z.number().min(1).max(1440).optional(),
-  dailyStudyGoal: z.number().min(1).max(1440).optional(),
-}).passthrough();
-  notificationsEnabled: z.boolean().optional(),
-  activeNotifications: z.object({
-    morning: z.boolean().optional(),
-    evening: z.boolean().optional(),
     taskDeadline: z.boolean().optional(),
     revision: z.boolean().optional(),
-  }).optional(),
+  }).passthrough().optional(),
   quietHoursStart: z.string().regex(/^\d{2}:\d{2}$/).optional().nullable(),
   quietHoursEnd: z.string().regex(/^\d{2}:\d{2}$/).optional().nullable(),
   activeWeekdays: z.array(z.number().min(0).max(6)).optional(),
   theme: z.enum(['dark', 'light']).optional(),
   fontPreference: z.enum(['inter', 'geist']).optional(),
   streakGraceDays: z.number().min(0).max(3).optional(),
-});
+  examDate: z.string().or(z.date()).optional().nullable(),
+  examName: z.string().trim().max(100).optional().nullable(),
+  targetExam: z.string().trim().max(100).optional().nullable(),
+  dailyGoalMinutes: z.number().min(1).max(1440).optional(),
+  dailyStudyGoal: z.number().min(1).max(1440).optional(),
+  preferences: z.record(z.any()).optional(),
+}).passthrough();
 
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
