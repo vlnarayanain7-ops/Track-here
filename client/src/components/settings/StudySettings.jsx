@@ -1,14 +1,10 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { useAuth } from '@/hooks/useAuth';
 import * as usersApi from '@/api/users';
 import toast from 'react-hot-toast';
 import { toLocalDateString } from '@/lib/date';
-import {
-  PREPARATION_TYPES,
-} from '@/lib/constants';
-import { Target, Layers, Calendar, Clock, Globe, ArrowRight } from 'lucide-react';
+import { PREPARATION_TYPES } from '@/lib/constants';
+import { Target, Clock } from 'lucide-react';
 
 export default function StudySettings() {
   const { user, checkAuth } = useAuth();
@@ -25,8 +21,6 @@ export default function StudySettings() {
   );
   const [timezone, setTimezone] = useState(user?.timezone || 'Asia/Kolkata');
   const [weekStartsOn, setWeekStartsOn] = useState(user?.weekStartsOn ?? 1);
-  const [streakGraceDays, setStreakGraceDays] = useState(user?.streakGraceDays ?? 0);
-  const [showHabits, setShowHabits] = useState(user?.preferences?.showHabits ?? false);
   const [loading, setLoading] = useState(false);
 
   const timezones = [
@@ -61,66 +55,48 @@ export default function StudySettings() {
       // Update settings fields
       await usersApi.updateSettings({
         weekStartsOn: Number(weekStartsOn),
-        streakGraceDays: Number(streakGraceDays),
-        preferences: {
-          showHabits: Boolean(showHabits),
-        },
       });
 
       await checkAuth();
-      toast.success('Study preferences saved successfully!');
+      toast.success('Study goals saved');
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.message || 'Failed to update study preferences');
+      toast.error(err.response?.data?.message || 'Failed to save study goals');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSave} className="space-y-6 max-w-2xl select-none">
-      {/* 1. Subjects Link (Replaces duplicate manager) */}
-      <div className="card p-5 bg-[var(--surface)] border-[var(--line)] shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] border border-[var(--primary)]/30 flex items-center justify-center shrink-0">
-              <Layers className="w-5 h-5 stroke-[2.2]" />
-            </div>
-            <div>
-              <h3 className="text-sm sm:text-base font-bold font-heading text-[var(--text)]">
-                Subjects &amp; Chapters
-              </h3>
-              <p className="text-xs text-[var(--muted)] mt-0.5 max-w-md">
-                Subject management (adding, renaming, recoloring, and reordering) and chapter checklists are centralized in Syllabus &amp; Goals.
-              </p>
-            </div>
-          </div>
-          <Link
-            to="/subjects"
-            className="btn btn-primary h-[40px] px-4 text-xs font-semibold shrink-0"
-          >
-            <span>Open Syllabus &amp; Goals</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-      </div>
-
-      {/* 2. Target Examination & Goals */}
-      <div className="card p-5 sm:p-6 bg-[var(--surface)] border-[var(--line)] shadow-xs space-y-4">
+    <form onSubmit={handleSave} className="space-y-4 max-w-xl select-none">
+      <div className="card p-5 bg-[var(--surface)] border border-[var(--line)] rounded-2xl shadow-xs space-y-4">
         <div className="flex items-center gap-2 pb-2 border-b border-[var(--line)]">
           <Target className="w-4 h-4 text-[var(--primary)]" />
-          <h2 className="text-sm font-bold font-heading text-[var(--text)] uppercase tracking-wider">
-            Target Goal &amp; Milestones
+          <h2 className="text-sm font-bold font-heading text-[var(--text)] tracking-tight">
+            Study Goals &amp; Target
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <label className="field">
-            <span>Preparation Track</span>
+            <span className="text-xs font-medium text-[var(--muted)]">Daily Study Goal (Hours)</span>
+            <input
+              type="number"
+              min="0.5"
+              max="16"
+              step="0.5"
+              value={dailyGoalHours}
+              onChange={(e) => setDailyGoalHours(e.target.value)}
+              className="w-full h-9 px-3 text-sm rounded-lg border border-[var(--line)] bg-[var(--bg)] text-[var(--text)]"
+            />
+          </label>
+
+          <label className="field">
+            <span className="text-xs font-medium text-[var(--muted)]">Preparation Track</span>
             <select
               value={preparationType}
               onChange={(e) => setPreparationType(e.target.value)}
-              className="w-full"
+              className="w-full h-9 px-3 text-sm rounded-lg border border-[var(--line)] bg-[var(--bg)] text-[var(--text)]"
             >
               {PREPARATION_TYPES.map((p) => (
                 <option key={p.value} value={p.value}>
@@ -129,59 +105,38 @@ export default function StudySettings() {
               ))}
             </select>
           </label>
+        </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <label className="field">
-            <span>Specific Exam / Goal Name</span>
+            <span className="text-xs font-medium text-[var(--muted)]">Target Exam / Goal Name</span>
             <input
               type="text"
-              placeholder="e.g. GATE CSE 2027, JEE Advanced"
+              placeholder="e.g. Competitive Programming, GATE, SWE"
               value={examName}
               onChange={(e) => setExamName(e.target.value)}
-              className="w-full text-xs"
+              className="w-full h-9 px-3 text-sm rounded-lg border border-[var(--line)] bg-[var(--bg)] text-[var(--text)]"
             />
           </label>
-        </div>
 
-        <label className="field max-w-sm">
-          <span>Target Date <small className="text-[var(--muted)] font-normal">(optional countdown)</small></span>
-          <input
-            type="date"
-            value={examDate}
-            onChange={(e) => setExamDate(e.target.value)}
-            className="w-full"
-          />
-        </label>
-      </div>
-
-      {/* 3. Study Rhythm, Timezone & Habit Tracker */}
-      <div className="card p-5 sm:p-6 bg-[var(--surface)] border-[var(--line)] shadow-xs space-y-4">
-        <div className="flex items-center gap-2 pb-2 border-b border-[var(--line)]">
-          <Clock className="w-4 h-4 text-[var(--primary)]" />
-          <h2 className="text-sm font-bold font-heading text-[var(--text)] uppercase tracking-wider">
-            Rhythm &amp; Habit Settings
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="field">
-            <span>Daily Focus Goal (Hours)</span>
+            <span className="text-xs font-medium text-[var(--muted)]">Target Date (optional)</span>
             <input
-              type="number"
-              min="0.5"
-              max="16"
-              step="0.5"
-              value={dailyGoalHours}
-              onChange={(e) => setDailyGoalHours(e.target.value)}
-              className="w-full"
+              type="date"
+              value={examDate}
+              onChange={(e) => setExamDate(e.target.value)}
+              className="w-full h-9 px-3 text-sm rounded-lg border border-[var(--line)] bg-[var(--bg)] text-[var(--text)]"
             />
           </label>
+        </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1 border-t border-[var(--line)]/60">
           <label className="field">
-            <span>Timezone</span>
+            <span className="text-xs font-medium text-[var(--muted)]">Timezone</span>
             <select
               value={timezone}
               onChange={(e) => setTimezone(e.target.value)}
-              className="w-full"
+              className="w-full h-9 px-3 text-sm rounded-lg border border-[var(--line)] bg-[var(--bg)] text-[var(--text)]"
             >
               {timezones.map((tz) => (
                 <option key={tz} value={tz}>
@@ -190,64 +145,29 @@ export default function StudySettings() {
               ))}
             </select>
           </label>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="field">
-            <span>Week Starts On</span>
+            <span className="text-xs font-medium text-[var(--muted)]">Week Starts On</span>
             <select
               value={weekStartsOn}
               onChange={(e) => setWeekStartsOn(Number(e.target.value))}
-              className="w-full"
+              className="w-full h-9 px-3 text-sm rounded-lg border border-[var(--line)] bg-[var(--bg)] text-[var(--text)]"
             >
-              <option value={1}>Monday (Recommended standard)</option>
+              <option value={1}>Monday</option>
               <option value={0}>Sunday</option>
             </select>
           </label>
-
-          <label className="field">
-            <span>Streak Grace Days (0 - 2)</span>
-            <select
-              value={streakGraceDays}
-              onChange={(e) => setStreakGraceDays(Number(e.target.value))}
-              className="w-full"
-            >
-              <option value={0}>0 days (Strict daily discipline)</option>
-              <option value={1}>1 day grace per week</option>
-              <option value={2}>2 days grace per week</option>
-            </select>
-          </label>
         </div>
 
-        {/* Habit Tracker Toggle (Default OFF per Prompt 5) */}
-        <div className="pt-3 border-t border-[var(--line)] flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold text-[var(--text)] block">
-              Show Habit Tracker on Dashboard
-            </span>
-            <span className="text-xs text-[var(--muted)]">
-              Displays a compact daily consistency block on your home overview (disabled by default).
-            </span>
-          </div>
-          <input
-            type="checkbox"
-            checked={showHabits}
-            onChange={(e) => setShowHabits(e.target.checked)}
-            className="w-4 h-4 accent-[var(--primary)] rounded cursor-pointer"
-            aria-label="Show Habit Tracker on Dashboard"
-          />
+        <div className="flex justify-end pt-2">
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn btn-primary h-9 px-4 text-xs font-semibold rounded-lg"
+          >
+            {loading ? 'Saving...' : 'Save Study Goals'}
+          </button>
         </div>
-      </div>
-
-      {/* Save Button */}
-      <div className="flex justify-end pt-2">
-        <button
-          type="submit"
-          disabled={loading}
-          className="btn btn-primary btn-lg min-w-[160px] text-xs font-semibold"
-        >
-          {loading ? 'Saving...' : 'Save Study Goals'}
-        </button>
       </div>
     </form>
   );

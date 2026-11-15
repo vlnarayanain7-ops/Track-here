@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Play, Plus, Check } from 'lucide-react';
+import { Play, Plus, Check, Sun, Moon, RotateCcw, Target, Layers } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useTasks, useCreateTask, useUpdateTaskStatus } from '@/hooks/useTasks';
@@ -192,7 +192,7 @@ export default function DashboardPage() {
 
   return (
     <div className="w-full space-y-6">
-      {/* 1. Page Header: Greeting + ONE quiet journal button that fits time of day */}
+      {/* 1. Page Header: Greeting + Morning/Evening Review access */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
           <h1 className="text-[26px] font-bold font-heading tracking-tight text-[var(--text)] m-0">
@@ -203,7 +203,24 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div>
+        {/* Quick Review & Journal shortcuts visible on main dashboard */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link
+            to="/?journal=morning"
+            className="btn btn-ghost h-9 px-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-2)] text-xs font-semibold flex items-center gap-1.5 transition-colors"
+            title="Set today's priorities & focus"
+          >
+            <Sun className="w-3.5 h-3.5 text-amber-500" />
+            <span>Morning plan</span>
+          </Link>
+          <Link
+            to="/?journal=evening"
+            className="btn btn-ghost h-9 px-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-2)] text-xs font-semibold flex items-center gap-1.5 transition-colors"
+            title="Reflect on today's focus and score your progress"
+          >
+            <Moon className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Evening review</span>
+          </Link>
           <button
             type="button"
             onClick={() => {
@@ -222,6 +239,79 @@ export default function DashboardPage() {
           >
             {promptKind === 'morning' ? 'Morning plan' : promptKind === 'evening' ? 'Evening review' : 'Journal'}
           </button>
+        </div>
+      </div>
+
+      {/* Target Goal & Aligned Subjects (visible upon login so user immediately aligns studies) */}
+      <div className="card bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-5 space-y-3.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Target className="w-4 h-4 text-[var(--primary)]" />
+            <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] font-heading">
+              Daily Target Goal
+            </span>
+          </div>
+          <span className="text-xs font-medium text-[var(--muted)]">
+            {user?.examName ? user.examName : 'Daily Focus'} &middot; {formattedToday} of {formattedGoal} ({progressPct}%)
+          </span>
+        </div>
+
+        {/* Progress bar */}
+        <div className="h-1.5 rounded-full bg-[var(--line)] overflow-hidden">
+          <div
+            className="h-full bg-[var(--primary)] rounded-full transition-all duration-300"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+
+        {/* Aligned Subjects */}
+        <div className="pt-2 border-t border-[var(--line)]/60">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+              Your Subjects
+            </span>
+            <Link
+              to="/plan?tab=subjects"
+              className="text-[11px] font-medium text-[var(--primary)] hover:underline"
+            >
+              Manage subjects &rarr;
+            </Link>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {user?.subjects && user.subjects.length > 0 ? (
+              user.subjects.map((s) => {
+                const col = s.color || 'var(--primary)';
+                const colorVar = col.startsWith('--') ? `var(${col})` : col;
+                return (
+                  <Link
+                    key={s.name}
+                    to={`/study?subject=${encodeURIComponent(s.name)}`}
+                    className="h-8 px-3 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] hover:border-[var(--primary)]/50 text-xs font-medium text-[var(--text)] flex items-center gap-2 transition-colors cursor-pointer"
+                    title={`Start focus session for ${s.name}`}
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ background: colorVar }}
+                    />
+                    <span>{s.name}</span>
+                    {s.chapters?.length > 0 && (
+                      <span className="text-[10px] text-[var(--muted)]">
+                        {s.chapters.length} ch
+                      </span>
+                    )}
+                  </Link>
+                );
+              })
+            ) : (
+              <Link
+                to="/plan?tab=subjects"
+                className="text-xs text-[var(--muted)] hover:text-[var(--primary)] py-1"
+              >
+                + Add your subjects to align your daily plan
+              </Link>
+            )}
+          </div>
         </div>
       </div>
 
@@ -354,16 +444,31 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* 5. Quiet Review Line — ONLY when reviews are due */}
-        {dueRevisions.length > 0 && (
-          <p className="text-[13px] text-[var(--muted)] mt-5">
-            {plural(dueRevisions.length, 'review')} due &middot;{' '}
+        {/* 5. Revision Queue Line — Always visible and peaceful */}
+        {dueRevisions.length > 0 ? (
+          <p className="text-[13px] text-[var(--muted)] mt-5 flex items-center gap-2">
+            <RotateCcw className="w-3.5 h-3.5 text-[var(--primary)]" />
+            <span>{plural(dueRevisions.length, 'review')} due</span>
+            <span>&middot;</span>
             <button
               type="button"
               onClick={openReview}
               className="text-[var(--primary)] hover:underline font-medium cursor-pointer"
             >
               Start review
+            </button>
+          </p>
+        ) : (
+          <p className="text-[12px] text-[var(--muted)] mt-5 flex items-center gap-2">
+            <RotateCcw className="w-3.5 h-3.5 text-[var(--muted)]" />
+            <span>Revision queue: all caught up</span>
+            <span>&middot;</span>
+            <button
+              type="button"
+              onClick={openReview}
+              className="text-[var(--muted)] hover:text-[var(--text)] hover:underline font-medium cursor-pointer"
+            >
+              View queue
             </button>
           </p>
         )}

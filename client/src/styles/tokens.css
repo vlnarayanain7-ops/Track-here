@@ -18,8 +18,8 @@
 
   /* Streak gold/orange tokens */
   --streak-fg: #D97706;
-  --streak-bg: #FEF3C7;
-  --streak-border: #FCD34D;
+  --streak-bg: rgba(245, 158, 11, 0.09);
+  --streak-border: rgba(245, 158, 11, 0.22);
   --streak-flame: #F59E0B;
   --streak-glow: rgba(245, 158, 11, 0.45);
 
@@ -98,8 +98,8 @@
 
   /* Streak gold/orange tokens dark */
   --streak-fg: #FBBF24;
-  --streak-bg: rgba(245, 158, 11, 0.16);
-  --streak-border: rgba(245, 158, 11, 0.35);
+  --streak-bg: rgba(245, 158, 11, 0.08);
+  --streak-border: rgba(245, 158, 11, 0.22);
   --streak-flame: #FBBF24;
   --streak-glow: rgba(245, 158, 11, 0.55);
 
@@ -355,17 +355,17 @@
   font-weight: 700;
 }
 .hrs div {
-  height: 36px;
-  font-size: 12px;
+  height: 28px;
+  font-size: 11px;
   color: var(--mu);
-  transform: translateY(-8px);
+  transform: translateY(-6px);
   user-select: none;
 }
 .col {
   position: relative;
-  height: 648px;
+  height: 504px;
   border-left: 1px solid var(--ln);
-  background-image: repeating-linear-gradient(var(--ln) 0 1px, transparent 1px 36px);
+  background-image: repeating-linear-gradient(var(--ln) 0 1px, transparent 1px 28px);
 }
 .col.td {
   background-color: var(--soft);

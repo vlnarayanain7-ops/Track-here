@@ -180,8 +180,25 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
           title={`${currentStreak}-day streak`}
           aria-label={`${currentStreak}-day streak`}
         >
-          <Flame className="chipst-flame w-3.5 h-3.5 fill-current shrink-0" />
-          <span className="chipst-num">{currentStreak}</span>
+          <svg
+            className="chipst-flame w-4 h-4 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="none"
+          >
+            <defs>
+              <linearGradient id="flameGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#FFD000" />
+                <stop offset="45%" stopColor="#FF8A00" />
+                <stop offset="100%" stopColor="#FF3D00" />
+              </linearGradient>
+            </defs>
+            <path
+              fill="url(#flameGrad)"
+              d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"
+            />
+          </svg>
+          <span className="chipst-num font-heading font-bold">{currentStreak}</span>
         </Link>
 
         {/* Add menu */}

@@ -60,6 +60,14 @@ function GuestRoute({ children }) {
   return children;
 }
 
+// Accountability redirect preserving tab query
+function AccountabilityRedirect() {
+  const location = useLocation();
+  const search = new URLSearchParams(location.search);
+  const tab = search.get('tab');
+  return <Navigate to={tab === 'evening' ? '/?journal=evening' : '/?journal=morning'} replace />;
+}
+
 export default function App() {
   return (
     <Suspense fallback={<PageFallback />}>
@@ -150,7 +158,7 @@ export default function App() {
             <Route path="practice" element={<Navigate to="/progress?tab=practice" replace />} />
             <Route path="problems" element={<Navigate to="/progress?tab=practice" replace />} />
             <Route path="revisions" element={<Navigate to="/?review=1" replace />} />
-            <Route path="accountability" element={<Navigate to="/?journal=morning" replace />} />
+            <Route path="accountability" element={<AccountabilityRedirect />} />
           </Route>
         </Route>
       </Route>

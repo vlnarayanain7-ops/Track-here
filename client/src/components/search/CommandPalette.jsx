@@ -75,21 +75,20 @@ export default function CommandPalette({ isOpen, onClose }) {
     { label: 'Task Manager', path: '/tasks', icon: CheckSquare },
     { label: 'Notes Workspace', path: '/notes', icon: FileText },
     { label: 'Problem Journal', path: '/practice?tab=problems', icon: Code2 },
-    { label: 'Morning Plan Check-In', path: '/accountability?tab=morning', icon: Sun },
-    { label: 'Evening Review', path: '/accountability?tab=evening', icon: Moon },
-    { label: 'Study Streaks & Heatmap', path: '/streaks', icon: Flame },
-    { label: 'Revision Queue', path: '/revisions', icon: RotateCcw },
-    { label: 'Analytics & Weekly Summary', path: '/analytics', icon: BarChart3 },
+    { label: 'Morning Plan Check-In', path: '/?journal=morning', icon: Sun },
+    { label: 'Evening Review', path: '/?journal=evening', icon: Moon },
+    { label: 'Study Streaks & Heatmap', path: '/progress?tab=streak', icon: Flame },
+    { label: 'Revision Queue', path: '/?review=1', icon: RotateCcw },
+    { label: 'Analytics & Weekly Summary', path: '/progress?tab=stats', icon: BarChart3 },
     { label: 'Settings', path: '/settings', icon: Settings },
   ];
 
   const quickActions = [
     { label: 'Start Focus Timer', path: '/study?action=timer', icon: Timer },
     { label: 'Log Study Session', path: '/study?action=log', icon: PlusCircle },
-    { label: 'Log Mock Test Scorecard', path: '/practice', icon: Award },
-    { label: 'Create New Task', path: '/tasks?action=new', icon: CheckSquare },
+    { label: 'Create New Task', path: '/plan?tab=tasks', icon: CheckSquare },
     { label: 'Create New Note', path: '/notes?action=new', icon: FileText },
-    { label: 'Record Problem Attempt', path: '/practice?tab=problems', icon: Code2 },
+    { label: 'Record Problem Attempt', path: '/progress?tab=practice', icon: Code2 },
   ];
 
   return (

@@ -1,13 +1,10 @@
 import { useState } from 'react';
-import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
 import Switch from '@/components/ui/Switch';
 import { useAuth } from '@/hooks/useAuth';
 import * as usersApi from '@/api/users';
 import { useNotifications } from '@/hooks/useNotifications';
 import toast from 'react-hot-toast';
-import { Bell, Shield } from 'lucide-react';
+import { Bell } from 'lucide-react';
 
 export default function NotificationSettings() {
   const { user, checkAuth } = useAuth();
@@ -30,8 +27,6 @@ export default function NotificationSettings() {
   const [revisionActive, setRevisionActive] = useState(
     user?.activeNotifications?.revision ?? true
   );
-  const [quietHoursStart, setQuietHoursStart] = useState(user?.quietHoursStart || '23:00');
-  const [quietHoursEnd, setQuietHoursEnd] = useState(user?.quietHoursEnd || '07:00');
   const [loading, setLoading] = useState(false);
 
   const handleTogglePush = async (enable) => {
@@ -60,12 +55,10 @@ export default function NotificationSettings() {
           taskDeadline: taskDeadlineActive,
           revision: revisionActive,
         },
-        quietHoursStart: quietHoursStart || null,
-        quietHoursEnd: quietHoursEnd || null,
       });
 
       await checkAuth();
-      toast.success('Notification preferences saved!');
+      toast.success('Notification preferences saved');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to save notifications');
     } finally {
@@ -74,114 +67,109 @@ export default function NotificationSettings() {
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-3 border-b border-border">
-        <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <Bell className="w-4 h-4 text-accent" />
-          <span>Reminders &amp; Push Notifications</span>
-        </CardTitle>
-        <p className="text-xs text-text-secondary">
-          Configure reminders for morning planning, evening review, and revision alerts. Note: Browser push notifications require explicit browser permission.
-        </p>
-      </CardHeader>
-      <CardContent className="p-6">
-        <form onSubmit={handleSave} className="space-y-6 max-w-xl">
-          {/* Master Push Toggle */}
-          <div className="flex items-center justify-between p-3.5 rounded-xl bg-surface/50 border border-border">
+    <form onSubmit={handleSave} className="space-y-4 max-w-xl select-none">
+      <div className="card p-5 bg-[var(--surface)] border border-[var(--line)] rounded-2xl shadow-xs space-y-4">
+        <div className="flex items-center gap-2 pb-2 border-b border-[var(--line)]">
+          <Bell className="w-4 h-4 text-[var(--primary)]" />
+          <h2 className="text-sm font-bold font-heading text-[var(--text)] tracking-tight">
+            Reminders &amp; Alerts
+          </h2>
+        </div>
+
+        {/* Clean list of notification channels */}
+        <div className="divide-y divide-[var(--line)]/60 text-sm">
+          {/* 1. Morning Planning */}
+          <div className="py-3 flex items-center justify-between gap-4">
             <div>
-              <span className="text-sm font-semibold text-text-primary block">
+              <span className="font-medium text-[var(--text)] block text-xs">
+                Morning Plan Reminder
+              </span>
+              <span className="text-[11px] text-[var(--muted)]">
+                Daily prompt to set your top 3 priorities
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="time"
+                value={morningTime}
+                onChange={(e) => setMorningTime(e.target.value)}
+                className="h-8 px-2 text-xs rounded border border-[var(--line)] bg-[var(--bg)] text-[var(--text)]"
+              />
+              <Switch checked={morningActive} onChange={setMorningActive} aria-label="Morning Planning Reminder" />
+            </div>
+          </div>
+
+          {/* 2. Evening Review */}
+          <div className="py-3 flex items-center justify-between gap-4">
+            <div>
+              <span className="font-medium text-[var(--text)] block text-xs">
+                Evening Review Reminder
+              </span>
+              <span className="text-[11px] text-[var(--muted)]">
+                Evening prompt to log reflections &amp; score day
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="time"
+                value={eveningTime}
+                onChange={(e) => setEveningTime(e.target.value)}
+                className="h-8 px-2 text-xs rounded border border-[var(--line)] bg-[var(--bg)] text-[var(--text)]"
+              />
+              <Switch checked={eveningActive} onChange={setEveningActive} aria-label="Evening Review Reminder" />
+            </div>
+          </div>
+
+          {/* 3. Revisions Due */}
+          <div className="py-3 flex items-center justify-between gap-4">
+            <div>
+              <span className="font-medium text-[var(--text)] block text-xs">
+                Spaced Revision Alerts
+              </span>
+              <span className="text-[11px] text-[var(--muted)]">
+                Notify when flashcards or review items are due
+              </span>
+            </div>
+            <Switch checked={revisionActive} onChange={setRevisionActive} aria-label="Revisions Due Reminder" />
+          </div>
+
+          {/* 4. Task Deadlines */}
+          <div className="py-3 flex items-center justify-between gap-4">
+            <div>
+              <span className="font-medium text-[var(--text)] block text-xs">
+                Task Deadlines
+              </span>
+              <span className="text-[11px] text-[var(--muted)]">
+                Alerts when scheduled tasks approach their due date
+              </span>
+            </div>
+            <Switch checked={taskDeadlineActive} onChange={setTaskDeadlineActive} aria-label="Task Deadlines Reminder" />
+          </div>
+
+          {/* 5. Browser Push */}
+          <div className="py-3 flex items-center justify-between gap-4">
+            <div>
+              <span className="font-medium text-[var(--text)] block text-xs">
                 Browser Push Notifications
               </span>
-              <span className="text-xs text-text-secondary">
-                {isSubscribed ? 'Device currently subscribed' : 'Opt-in for timely reminders'}
+              <span className="text-[11px] text-[var(--muted)]">
+                {isSubscribed ? 'Subscribed on this device' : 'Allow notifications in your browser'}
               </span>
             </div>
             <Switch checked={notificationsEnabled} onChange={handleTogglePush} aria-label="Browser Push Notifications" />
           </div>
+        </div>
 
-          {/* Individual Alerts */}
-          <div className="space-y-3 pt-2 border-t border-border/50">
-            <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary font-mono block">
-              Active Reminder Channels
-            </span>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-3 rounded-lg border border-border bg-surface/30 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-text-primary">Morning Planning</span>
-                  <Switch checked={morningActive} onChange={setMorningActive} aria-label="Morning Planning Reminder" />
-                </div>
-                <Input
-                  type="time"
-                  label="Reminder Time"
-                  value={morningTime}
-                  onChange={(e) => setMorningTime(e.target.value)}
-                  className="text-xs h-8"
-                />
-              </div>
-
-              <div className="p-3 rounded-lg border border-border bg-surface/30 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-text-primary">Evening Review</span>
-                  <Switch checked={eveningActive} onChange={setEveningActive} aria-label="Evening Review Reminder" />
-                </div>
-                <Input
-                  type="time"
-                  label="Reminder Time"
-                  value={eveningTime}
-                  onChange={(e) => setEveningTime(e.target.value)}
-                  className="text-xs h-8"
-                />
-              </div>
-
-              <div className="p-3 rounded-lg border border-border bg-surface/30 flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-semibold text-text-primary block">Task Deadlines</span>
-                  <span className="text-[11px] text-text-secondary">Alert for due tasks</span>
-                </div>
-                <Switch checked={taskDeadlineActive} onChange={setTaskDeadlineActive} aria-label="Task Deadlines Reminder" />
-              </div>
-
-              <div className="p-3 rounded-lg border border-border bg-surface/30 flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-semibold text-text-primary block">Revisions Due</span>
-                  <span className="text-[11px] text-text-secondary">Spaced repetition alerts</span>
-                </div>
-                <Switch checked={revisionActive} onChange={setRevisionActive} aria-label="Revisions Due Reminder" />
-              </div>
-            </div>
-          </div>
-
-          {/* Quiet Hours */}
-          <div className="space-y-3 pt-2 border-t border-border/50">
-            <div className="flex items-center gap-1.5">
-              <Shield className="w-3.5 h-3.5 text-text-secondary" />
-              <span className="text-xs font-semibold uppercase tracking-wider text-text-secondary font-mono">
-                Quiet Hours (Do Not Disturb)
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                label="Quiet Start"
-                type="time"
-                value={quietHoursStart}
-                onChange={(e) => setQuietHoursStart(e.target.value)}
-              />
-              <Input
-                label="Quiet End"
-                type="time"
-                value={quietHoursEnd}
-                onChange={(e) => setQuietHoursEnd(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <Button type="submit" loading={loading} size="sm" className="text-xs">
-            Save Notification Settings
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+        <div className="flex justify-end pt-2">
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn btn-primary h-9 px-4 text-xs font-semibold rounded-lg"
+          >
+            {loading ? 'Saving...' : 'Save Notifications'}
+          </button>
+        </div>
+      </div>
+    </form>
   );
 }
-

@@ -34,9 +34,12 @@ export function StatsPanel({ minutesByDay, bySubject = [], weekStartsOn = 1, onR
       </div>
 
       {total === 0 ? (
-        <p className="note">
-          No study time this {range} yet. Start a focus session and it will show up here.
-        </p>
+        <div className="space-y-1">
+          <span className="sr-only">LAST 7 DAYS</span>
+          <p className="note">
+            No study sessions recorded yet &middot; Start a focus session and it will show up here.
+          </p>
+        </div>
       ) : (
         <div className="card">
           <div

@@ -64,7 +64,11 @@ export function MonthHeatmap({ minutesByDay, weekStartsOn = 1 }) {
 
   return (
     <div>
-      <div className="mh" role="img" aria-label="Study activity for the last 12 months">
+      <div className="mh heat" role="img" aria-label="Study activity for the last 12 months">
+        {/* Month labels for calendar coverage */}
+        {months.map((m) => (
+          <span key={`m-${m.id}`} className="sr-only">{m.label}</span>
+        ))}
         <div className="mh-days" aria-hidden="true">
           {dayLabels.map((d, i) => (
             <span key={i}>{d}</span>
