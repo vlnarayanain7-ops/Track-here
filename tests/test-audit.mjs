@@ -1,4 +1,4 @@
-import './_guard.mjs';
+import { teardownTestUsers } from './_guard.mjs';
 
 const BASE_URL = 'http://localhost:5000/api';
 
@@ -455,6 +455,8 @@ async function runAudit() {
   console.log(`FAILED: ${totalCount - passedCount}`);
   console.log('========================================================\n');
 
+  await teardownTestUsers();
+
   if (passedCount === totalCount) {
     console.log('🎉 ALL BACKEND FUNCTIONAL, ISOLATION & PERSISTENCE CHECKS PASSED!');
     process.exit(0);
@@ -464,7 +466,8 @@ async function runAudit() {
   }
 }
 
-runAudit().catch((err) => {
+runAudit().catch(async (err) => {
   console.error('Audit execution error:', err);
+  await teardownTestUsers();
   process.exit(1);
 });

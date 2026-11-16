@@ -1,3 +1,5 @@
+import { teardownTestUsers } from './_guard.mjs';
+
 const BASE_URL = process.env.BASE_URL || 'http://localhost:5000/api';
 
 function createClient() {
@@ -138,10 +140,12 @@ async function run() {
   check('Foreign user cannot read note', (await b.get(`/notes/${noteId}`)).status === 404);
 
   console.log(`\n${results.filter((item) => item.condition).length}/${results.length} production HTTP checks passed.`);
+  await teardownTestUsers();
   process.exit(results.every((item) => item.condition) ? 0 : 1);
 }
 
-run().catch((error) => {
+run().catch(async (error) => {
   console.error(error);
+  await teardownTestUsers();
   process.exit(1);
 });

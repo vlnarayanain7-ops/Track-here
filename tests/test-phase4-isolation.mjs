@@ -1,4 +1,4 @@
-import './_guard.mjs';
+import { teardownTestUsers } from './_guard.mjs';
 
 const BASE_URL = 'http://localhost:5000/api';
 
@@ -164,6 +164,11 @@ async function runIsolationAudit() {
   console.log('\n=================================================================');
   console.log('🎉 ALL PHASE 4 SECURITY & DATA LAYER CHECKS PASSED PERFECTLY!');
   console.log('=================================================================');
+  await teardownTestUsers();
 }
 
-runIsolationAudit().catch(console.error);
+runIsolationAudit().catch(async (err) => {
+  console.error(err);
+  await teardownTestUsers();
+  process.exit(1);
+});

@@ -9,8 +9,9 @@
     "postinstall": "npm --prefix client install --include=dev",
     "build": "npm --prefix client install --include=dev && npm --prefix client run build && node -e \"require('fs').cpSync('client/dist', 'dist', {recursive: true}); try { require('fs').unlinkSync('dist/_redirects'); } catch(e){}\"",
     "start": "npm --prefix server start",
-    "test:audit": "node tests/test-audit.mjs",
-    "test:production-audit": "node tests/production-audit.mjs"
+    "test:audit": "node tests/test-audit.mjs && node server/scripts/clean-test-users.mjs",
+    "test:production-audit": "node tests/production-audit.mjs && node server/scripts/clean-test-users.mjs",
+    "clean:test-users": "node server/scripts/clean-test-users.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.0",

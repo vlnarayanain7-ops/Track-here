@@ -1,4 +1,5 @@
 import { io } from '../client/node_modules/socket.io-client/build/esm/index.js';
+import { teardownTestUsers } from './_guard.mjs';
 
 const BASE_URL = 'http://localhost:5000/api';
 const SOCKET_URL = 'http://localhost:5000';
@@ -431,6 +432,8 @@ async function runRealtimeVerification() {
   console.log(`FAILED: ${failed}`);
   console.log('========================================================\n');
 
+  await teardownTestUsers();
+
   if (failed === 0) {
     console.log('🎉 ALL REAL-TIME SYNCHRONIZATION AND TENANT ISOLATION CHECKS PASSED!');
     process.exit(0);
@@ -440,7 +443,8 @@ async function runRealtimeVerification() {
   }
 }
 
-runRealtimeVerification().catch((err) => {
+runRealtimeVerification().catch(async (err) => {
   console.error('Test execution failed with error:', err);
+  await teardownTestUsers();
   process.exit(1);
 });

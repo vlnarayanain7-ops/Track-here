@@ -94,7 +94,7 @@ const connectDB = async () => {
     } catch (indexErr) {
       console.warn('Index sync notice:', indexErr.message);
     }
-    if (env.NODE_ENV === 'development') {
+    if (env.NODE_ENV === 'development' && process.env.SEED_DEFAULT_USER === 'true') {
       await seedDefaultUser();
     }
     return conn;
@@ -108,7 +108,9 @@ const connectDB = async () => {
           serverSelectionTimeoutMS: 2000,
         });
         console.log(`✅ Real Local MongoDB connected successfully: ${localConn.connection.host} (${localConn.connection.name})`);
-        await seedDefaultUser();
+        if (process.env.SEED_DEFAULT_USER === 'true') {
+          await seedDefaultUser();
+        }
         return localConn;
       } catch (localErr) {
         console.warn('Local MongoDB service on 27017 not available, falling back to in-memory MongoDB...');
@@ -124,7 +126,9 @@ const connectDB = async () => {
         const conn = await mongoose.connect(uri);
         console.log(`✅ In-Memory MongoDB connected: ${conn.connection.host} (${uri})`);
         console.warn('DEVELOPMENT ONLY: this is not an Atlas persistence verification.');
-        await seedDefaultUser();
+        if (process.env.SEED_DEFAULT_USER === 'true') {
+          await seedDefaultUser();
+        }
         return conn;
       } catch (memError) {
         console.error('Failed to start in-memory MongoDB:', memError.message);
