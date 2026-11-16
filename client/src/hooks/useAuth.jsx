@@ -104,6 +104,7 @@ export function AuthProvider({ children }) {
     try {
       await clearQueryCache();
       await clearReportsLocal();
+      localStorage.removeItem('trackhere_active_timer_v2');
     } catch {
       // ignore
     }

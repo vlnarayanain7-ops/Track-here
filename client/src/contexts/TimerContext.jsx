@@ -89,13 +89,16 @@ export function TimerProvider({ children }) {
     }
   }, []);
 
-  // 2. Synchronize / reconcile with Server Active Timer
+  // 2. Synchronize / reconcile with Server Active Timer on initial mount
   useEffect(() => {
-    // Properly extract session from Axios response: { success: true, data: { session: ... } }
-    const s = activeTimerQuery.data?.data?.session ?? activeTimerQuery.data?.session;
+    // Only perform initial mount recovery once
+    if (hasRecoveredRef.current) return;
+    if (!activeTimerQuery.isSuccess) return;
 
-    if (s && !hasRecoveredRef.current) {
-      hasRecoveredRef.current = true;
+    const s = activeTimerQuery.data?.data?.session ?? activeTimerQuery.data?.session;
+    hasRecoveredRef.current = true;
+
+    if (s && !isRunning && !isPaused) {
       setSession(s);
       sessionRef.current = s;
 
@@ -139,14 +142,16 @@ export function TimerProvider({ children }) {
           session: s,
         });
       }
-    } else if (activeTimerQuery.isSuccess && !s && hasRecoveredRef.current) {
-      // Server confirmed no active session
-      if (sessionRef.current) {
-        sessionRef.current = null;
-        setSession(null);
+    } else if (!s) {
+      // Server confirmed NO active session on mount: clear any stale ghost timer from localStorage
+      if (!sessionRef.current?._id?.startsWith('session_local_')) {
+        accumulatedRef.current = 0;
+        localStartRef.current = null;
+        setElapsedTime(0);
         setIsRunning(false);
         setIsPaused(false);
-        setElapsedTime(0);
+        setSession(null);
+        sessionRef.current = null;
         writeStoredTimer(null);
       }
     }
@@ -213,6 +218,7 @@ export function TimerProvider({ children }) {
 
   // 4. Timer Actions
   const startTimer = useCallback(async (data) => {
+    hasRecoveredRef.current = true;
     accumulatedRef.current = 0;
     localStartRef.current = Date.now();
     setElapsedTime(0);
@@ -347,6 +353,7 @@ export function TimerProvider({ children }) {
   }, [session, resumeMutation]);
 
   const finishTimer = useCallback(async (data = {}) => {
+    hasRecoveredRef.current = true;
     const current = localStartRef.current
       ? accumulatedRef.current + Math.max(0, Math.floor((Date.now() - localStartRef.current) / 1000))
       : elapsedTime;
@@ -363,6 +370,7 @@ export function TimerProvider({ children }) {
     setSession(null);
     sessionRef.current = null;
     writeStoredTimer(null);
+    qc.setQueryData(['activeTimer'], { success: true, data: { session: null } });
 
     if (sId && !sId.startsWith('session_local_')) {
       try {
@@ -420,6 +428,7 @@ export function TimerProvider({ children }) {
   }, [session, finishMutation, elapsedTime, qc]);
 
   const resetTimer = useCallback(async () => {
+    hasRecoveredRef.current = true;
     accumulatedRef.current = 0;
     localStartRef.current = null;
     setElapsedTime(0);
@@ -429,6 +438,7 @@ export function TimerProvider({ children }) {
     sessionRef.current = null;
     writeStoredTimer(null);
 
+    qc.setQueryData(['activeTimer'], { success: true, data: { session: null } });
     await cancelMutation.mutateAsync().catch(() => {});
     qc.invalidateQueries({ queryKey: ['activeTimer'] });
   }, [cancelMutation, qc]);
