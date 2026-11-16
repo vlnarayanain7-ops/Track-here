@@ -125,7 +125,7 @@ export const getProblem = asyncHandler(async (req, res) => {
   const problem = await Problem.findOne({
     _id: req.params.id,
     user: req.user.id,
-  });
+  }).lean();
 
   if (!problem) {
     throw ApiError.notFound('Problem not found');
@@ -134,7 +134,7 @@ export const getProblem = asyncHandler(async (req, res) => {
   const attempts = await ProblemAttempt.find({
     problem: problem._id,
     user: req.user.id,
-  }).sort({ attemptNumber: 1 });
+  }).sort({ attemptNumber: 1 }).lean();
 
   res.json({
     problem,

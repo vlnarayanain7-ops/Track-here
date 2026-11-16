@@ -2,21 +2,17 @@ import { startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, en
 import { toZonedTime } from 'date-fns-tz';
 import mongoose from 'mongoose';
 import StudySession from '../models/StudySession.js';
+import { DailyTotal } from '../models/rewards.js';
 import Task from '../models/Task.js';
 import Problem from '../models/Problem.js';
 import { getStreakInfo } from './streakService.js';
+import { parseDateRange } from '../utils/dateRange.js';
 
 /**
  * Get the "today" boundaries in user's timezone.
  */
 function getTodayRange(timezone) {
-  const now = toZonedTime(new Date(), timezone);
-  const todayStr = format(now, 'yyyy-MM-dd');
-  return {
-    start: new Date(`${todayStr}T00:00:00`),
-    end: new Date(`${todayStr}T23:59:59.999`),
-    todayStr,
-  };
+  return parseDateRange('today', timezone);
 }
 
 /**
@@ -37,9 +33,14 @@ export async function getDashboardStats(userId, timezone = 'Asia/Kolkata') {
   const monthStartStr = format(monthStart, 'yyyy-MM-dd');
   const monthEndStr = format(monthEnd, 'yyyy-MM-dd');
 
+  const { start: weekStartBound, end: weekEndBound } = parseDateRange(weekStartStr, timezone);
+  const { start: monthStartBound, end: monthEndBound } = parseDateRange(monthStartStr, timezone);
+
+  const todayStr = format(now, 'yyyy-MM-dd');
+
   // Run all queries in parallel
   const [
-    todayStudy,
+    todayStudyDoc,
     weekStudy,
     monthStudy,
     totalStudy,
@@ -48,25 +49,22 @@ export async function getDashboardStats(userId, timezone = 'Asia/Kolkata') {
     problemStats,
     streakInfo,
   ] = await Promise.all([
-    // Today's study time
-    StudySession.aggregate([
-      { $match: { user: userObjId, date: { $gte: todayStart, $lte: todayEnd } } },
-      { $group: { _id: null, total: { $sum: '$focusDuration' }, sessions: { $sum: 1 } } },
+    // Today's study time from DailyTotal
+    DailyTotal.findOne({ user: userObjId, date: todayStr }).lean(),
+    // This week's study time from DailyTotal
+    DailyTotal.aggregate([
+      { $match: { user: userObjId, date: { $gte: weekStartStr, $lte: weekEndStr } } },
+      { $group: { _id: null, total: { $sum: '$minutes' } } },
     ]),
-    // This week's study time
-    StudySession.aggregate([
-      { $match: { user: userObjId, date: { $gte: new Date(`${weekStartStr}T00:00:00`), $lte: new Date(`${weekEndStr}T23:59:59.999`) } } },
-      { $group: { _id: null, total: { $sum: '$focusDuration' } } },
+    // This month's study time from DailyTotal
+    DailyTotal.aggregate([
+      { $match: { user: userObjId, date: { $gte: monthStartStr, $lte: monthEndStr } } },
+      { $group: { _id: null, total: { $sum: '$minutes' } } },
     ]),
-    // This month's study time
-    StudySession.aggregate([
-      { $match: { user: userObjId, date: { $gte: new Date(`${monthStartStr}T00:00:00`), $lte: new Date(`${monthEndStr}T23:59:59.999`) } } },
-      { $group: { _id: null, total: { $sum: '$focusDuration' } } },
-    ]),
-    // All-time total
-    StudySession.aggregate([
+    // All-time total from DailyTotal
+    DailyTotal.aggregate([
       { $match: { user: userObjId } },
-      { $group: { _id: null, total: { $sum: '$focusDuration' } } },
+      { $group: { _id: null, total: { $sum: '$minutes' } } },
     ]),
     // Today's completed tasks
     Task.countDocuments({
@@ -97,8 +95,8 @@ export async function getDashboardStats(userId, timezone = 'Asia/Kolkata') {
 
   return {
     today: {
-      studyMinutes: todayStudy[0]?.total || 0,
-      sessions: todayStudy[0]?.sessions || 0,
+      studyMinutes: todayStudyDoc?.minutes || 0,
+      sessions: todayStudyDoc?.sessions || 0,
       tasksCompleted: todayTasks,
     },
     week: {
@@ -129,8 +127,10 @@ export async function getStudyTimeStats(userId, period = 'daily', timezone = 'As
   const userObjId = new mongoose.Types.ObjectId(userId);
   const now = toZonedTime(new Date(), timezone);
   const todayStr = format(now, 'yyyy-MM-dd');
-  const startDate = subDays(new Date(`${todayStr}T00:00:00`), days);
-  const endDate = new Date(`${todayStr}T23:59:59.999`);
+  const pastDateStr = format(subDays(now, days), 'yyyy-MM-dd');
+
+  const { start: startDate } = parseDateRange(pastDateStr, timezone);
+  const { end: endDate } = parseDateRange(todayStr, timezone);
 
   let groupFormat;
   switch (period) {
@@ -144,44 +144,41 @@ export async function getStudyTimeStats(userId, period = 'daily', timezone = 'As
       groupFormat = '%Y-%m-%d';
   }
 
-  const results = await StudySession.aggregate([
-    {
-      $match: {
-        user: userObjId,
-        date: { $gte: startDate, $lte: endDate },
-      },
-    },
-    {
-      $group: {
-        _id: { $dateToString: { format: groupFormat, date: '$date', timezone } },
-        totalMinutes: { $sum: '$focusDuration' },
-        sessions: { $sum: 1 },
-      },
-    },
-    { $sort: { _id: 1 } },
-  ]);
+  const rows = await DailyTotal.find({
+    user: userObjId,
+    date: { $gte: pastDateStr, $lte: todayStr },
+  }).lean();
 
   // For daily, fill in missing dates with 0
   if (period === 'daily') {
-    const allDays = eachDayOfInterval({ start: startDate, end: endDate });
     const dataMap = {};
-    for (const r of results) {
-      dataMap[r._id] = r;
+    for (const r of rows) {
+      dataMap[r.date] = r;
     }
+    const allDays = eachDayOfInterval({ start: startDate, end: endDate });
     return allDays.map((day) => {
       const key = format(day, 'yyyy-MM-dd');
       return {
         date: key,
-        totalMinutes: dataMap[key]?.totalMinutes || 0,
+        totalMinutes: dataMap[key]?.minutes || 0,
         sessions: dataMap[key]?.sessions || 0,
       };
     });
   }
 
-  return results.map((r) => ({
-    period: r._id,
-    totalMinutes: r.totalMinutes,
-    sessions: r.sessions,
+  const periodMap = {};
+  for (const r of rows) {
+    const d = new Date(`${r.date}T12:00:00Z`);
+    const key = period === 'monthly' ? format(d, 'yyyy-MM') : format(d, 'yyyy-I');
+    if (!periodMap[key]) periodMap[key] = { totalMinutes: 0, sessions: 0 };
+    periodMap[key].totalMinutes += r.minutes || 0;
+    periodMap[key].sessions += r.sessions || 0;
+  }
+
+  return Object.entries(periodMap).map(([periodKey, val]) => ({
+    period: periodKey,
+    totalMinutes: val.totalMinutes,
+    sessions: val.sessions,
   }));
 }
 
@@ -197,52 +194,35 @@ export async function getWeeklySummary(userId, timezone = 'Asia/Kolkata') {
   const weekStartStr = format(weekStart, 'yyyy-MM-dd');
   const weekEndStr = format(weekEnd, 'yyyy-MM-dd');
 
-  const [categoryBreakdown, activityBreakdown, dailyBreakdown] = await Promise.all([
-    StudySession.aggregate([
-      {
-        $match: {
-          user: userObjId,
-          date: { $gte: new Date(`${weekStartStr}T00:00:00`), $lte: new Date(`${weekEndStr}T23:59:59.999`) },
-        },
-      },
-      {
-        $group: {
-          _id: '$category',
-          totalMinutes: { $sum: '$focusDuration' },
-          sessions: { $sum: 1 },
-        },
-      },
-    ]),
-    StudySession.aggregate([
-      {
-        $match: {
-          user: userObjId,
-          date: { $gte: new Date(`${weekStartStr}T00:00:00`), $lte: new Date(`${weekEndStr}T23:59:59.999`) },
-        },
-      },
-      {
-        $group: {
-          _id: '$activityType',
-          totalMinutes: { $sum: '$focusDuration' },
-        },
-      },
-    ]),
-    StudySession.aggregate([
-      {
-        $match: {
-          user: userObjId,
-          date: { $gte: new Date(`${weekStartStr}T00:00:00`), $lte: new Date(`${weekEndStr}T23:59:59.999`) },
-        },
-      },
-      {
-        $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$date', timezone } },
-          totalMinutes: { $sum: '$focusDuration' },
-        },
-      },
-      { $sort: { _id: 1 } },
-    ]),
-  ]);
+  const { start: weekStartDate } = parseDateRange(weekStartStr, timezone);
+  const { end: weekEndDate } = parseDateRange(weekEndStr, timezone);
+
+  const weekRows = await DailyTotal.find({
+    user: userObjId,
+    date: { $gte: weekStartStr, $lte: weekEndStr },
+  }).lean();
+
+  const subjectsMap = new Map();
+  for (const r of weekRows) {
+    if (r.bySubject) {
+      const entries = r.bySubject instanceof Map ? r.bySubject.entries() : Object.entries(r.bySubject);
+      for (const [subj, mins] of entries) {
+        subjectsMap.set(subj, (subjectsMap.get(subj) || 0) + mins);
+      }
+    }
+  }
+
+  const categoryBreakdown = [...subjectsMap.entries()].map(([cat, totalMinutes]) => ({
+    _id: cat,
+    totalMinutes,
+    sessions: 0,
+  }));
+
+  const dailyBreakdown = weekRows.map((r) => ({
+    _id: r.date,
+    totalMinutes: r.minutes,
+    sessions: r.sessions,
+  }));
 
   const totalMinutes = categoryBreakdown.reduce((sum, c) => sum + c.totalMinutes, 0);
 
@@ -256,10 +236,7 @@ export async function getWeeklySummary(userId, timezone = 'Asia/Kolkata') {
       sessions: c.sessions,
       percentage: totalMinutes > 0 ? Math.round((c.totalMinutes / totalMinutes) * 100) : 0,
     })),
-    activityBreakdown: activityBreakdown.map((a) => ({
-      activityType: a._id,
-      totalMinutes: a.totalMinutes,
-    })),
+    activityBreakdown: [],
     dailyBreakdown: dailyBreakdown.map((d) => ({
       date: d._id,
       totalMinutes: d.totalMinutes,
@@ -327,19 +304,21 @@ export async function getConsistencyMetrics(userId, timezone = 'Asia/Kolkata') {
   const now = toZonedTime(new Date(), timezone);
   const todayStr = format(now, 'yyyy-MM-dd');
 
-  // Last 30 days
-  const thirtyDaysAgo = subDays(new Date(`${todayStr}T00:00:00`), 30);
+  // Last 30 days bounded in user timezone
+  const past30Str = format(subDays(now, 30), 'yyyy-MM-dd');
+  const { start: thirtyDaysAgo } = parseDateRange(past30Str, timezone);
+  const { end: todayEnd } = parseDateRange(todayStr, timezone);
 
   const dailyTotals = await StudySession.aggregate([
     {
       $match: {
         user: userObjId,
-        date: { $gte: thirtyDaysAgo, $lte: new Date(`${todayStr}T23:59:59.999`) },
+        date: { $gte: thirtyDaysAgo, $lte: todayEnd },
       },
     },
     {
       $group: {
-        _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$date', timezone } },
         totalMinutes: { $sum: '$focusDuration' },
       },
     },

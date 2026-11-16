@@ -765,6 +765,10 @@ h1, h2, h3 {
   color: var(--primary);
 }
 dialog.sheet {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
   margin: 0 0 0 auto;
   height: 100dvh;
   max-height: none;
@@ -774,6 +778,11 @@ dialog.sheet {
   background: var(--bg);
   color: var(--text);
   padding: 0;
+  z-index: 50;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.25);
+}
+dialog.sheet:not([open]) {
+  display: none !important;
 }
 dialog.sheet::backdrop {
   background: rgba(0, 0, 0, 0.35);
@@ -797,7 +806,7 @@ dialog.sheet::backdrop {
 .mh {
   display: flex;
   gap: 8px;
-  --cell: 12px;
+  --cell: 11px;
   min-width: 0;
   max-width: 100%;
 }
@@ -821,9 +830,10 @@ dialog.sheet::backdrop {
 }
 .mh-row {
   display: flex;
-  gap: 14px;
+  gap: 10px;
   width: max-content;
   padding-bottom: 4px;
+  padding-right: 10px;
 }
 .mh-grid {
   display: grid;
@@ -840,7 +850,7 @@ dialog.sheet::backdrop {
   outline-offset: 1px;
 }
 .mh-label {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
   margin-top: 6px;
 }

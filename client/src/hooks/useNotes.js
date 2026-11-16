@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as api from '../api/notes';
 import toast from 'react-hot-toast';
+import { enqueueOutbox, generateClientId } from '../lib/outbox';
 
 export function useNotes(params = {}) {
   return useQuery({
@@ -25,7 +26,18 @@ export function useCreateNote() {
       qc.invalidateQueries({ queryKey: ['notes'] });
       toast.success('Note created!');
     },
-    onError: (err) => {
+    onError: async (err, variables) => {
+      if (!err.response || !navigator.onLine) {
+        await enqueueOutbox({
+          endpoint: '/notes',
+          method: 'POST',
+          payload: variables,
+          clientId: generateClientId('note'),
+        });
+        qc.invalidateQueries({ queryKey: ['notes'] });
+        toast.success('Note saved on this device. Changes will sync.');
+        return;
+      }
       toast.error(err.response?.data?.message || 'Failed to create note');
     },
   });

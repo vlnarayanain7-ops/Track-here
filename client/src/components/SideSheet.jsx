@@ -8,11 +8,17 @@ export function SideSheet({ open, isOpen, title, onClose, children }) {
     const d = ref.current;
     if (!d) return;
     if (isSheetOpen && !d.open) {
-      d.showModal();
+      try {
+        d.showModal();
+      } catch {
+        d.setAttribute('open', '');
+      }
     } else if (!isSheetOpen && d.open) {
       d.close();
     }
   }, [isSheetOpen]);
+
+  if (!isSheetOpen) return null;
 
   return (
     <dialog

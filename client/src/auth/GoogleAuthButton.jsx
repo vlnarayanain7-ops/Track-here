@@ -37,7 +37,16 @@ export function GoogleAuthButton({ buttonText = 'Continue with Google' }) {
                   navigate('/', { replace: true });
                 }
               } catch (err) {
-                const msg = err.response?.data?.message || err.message || 'Google authentication failed';
+                let msg = err.response?.data?.message;
+                if (!msg) {
+                  if (!err.response) {
+                    msg = 'Backend server is unreachable. Please ensure "npm run dev" is running.';
+                  } else if (err.response.status === 500) {
+                    msg = 'Backend server error (500). Please try again.';
+                  } else {
+                    msg = err.message || 'Google authentication failed';
+                  }
+                }
                 toast.error(msg);
               } finally {
                 setLoading(false);

@@ -93,12 +93,13 @@ api.interceptors.response.use(
     handleRequestDone(error.config);
     const originalRequest = error.config;
 
-    // Do NOT attempt refresh on public auth endpoints (login, register, refresh)
+    // Do NOT attempt refresh on public auth endpoints (login, register, refresh, me)
     const isAuthEndpoint =
       originalRequest?.url?.includes('/auth/login') ||
       originalRequest?.url?.includes('/auth/register') ||
       originalRequest?.url?.includes('/auth/google') ||
       originalRequest?.url?.includes('/auth/refresh') ||
+      originalRequest?.url?.includes('/auth/me') ||
       originalRequest?.url?.includes('/auth/forgot-password') ||
       originalRequest?.url?.includes('/auth/reset-password');
 
@@ -131,4 +132,5 @@ api.interceptors.response.use(
   }
 );
 
+export { api };
 export default api;

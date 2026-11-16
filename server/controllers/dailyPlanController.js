@@ -4,6 +4,7 @@ import Task from '../models/Task.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { emitToUser } from '../services/socketService.js';
+import { parseDateRange } from '../utils/dateRange.js';
 
 // ─── Validation Schemas ───────────────────────────────────────
 
@@ -24,17 +25,6 @@ export const createDailyPlanSchema = z.object({
 }).passthrough();
 
 export const updateDailyPlanSchema = createDailyPlanSchema.partial().passthrough();
-
-// ─── Helper ───────────────────────────────────────────────────
-
-function parseDateRange(dateStr) {
-  const d = new Date(dateStr);
-  const start = new Date(d);
-  start.setUTCHours(0, 0, 0, 0);
-  const end = new Date(d);
-  end.setUTCHours(23, 59, 59, 999);
-  return { start, end };
-}
 
 // ─── Controllers ──────────────────────────────────────────────
 
@@ -58,28 +48,22 @@ export const getDailyPlans = asyncHandler(async (req, res) => {
  */
 export const getDailyPlan = asyncHandler(async (req, res) => {
   const { date } = req.params;
-  const targetDate = date === 'today' ? new Date().toISOString().split('T')[0] : date;
-  const { start, end } = parseDateRange(targetDate);
+  const tz = req.user?.timezone || 'Asia/Kolkata';
+  const { start, end } = parseDateRange(date, tz);
 
   const plan = await DailyPlan.findOne({
     user: req.user.id,
     date: { $gte: start, $lte: end },
-  }).populate('priorityTasks');
+  }).populate('priorityTasks').lean();
 
   if (!plan) {
     // If not found, check yesterday's incomplete tasks to help populate
-    const yesterday = new Date(start);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yStart = new Date(yesterday);
-    yStart.setUTCHours(0, 0, 0, 0);
-    const yEnd = new Date(yesterday);
-    yEnd.setUTCHours(23, 59, 59, 999);
-
+    const yesterdayStart = new Date(start.getTime() - 24 * 60 * 60 * 1000);
     const pendingTasks = await Task.find({
       user: req.user.id,
       status: { $in: ['Todo', 'In Progress'] },
       dueDate: { $lte: end },
-    }).limit(10).select('title priority dueDate');
+    }).limit(10).select('title priority dueDate').lean();
 
     return res.json({
       plan: null,
@@ -95,8 +79,8 @@ export const getDailyPlan = asyncHandler(async (req, res) => {
  */
 export const createDailyPlan = asyncHandler(async (req, res) => {
   const { date, ...rest } = req.body;
-  const targetDate = new Date(date);
-  const { start, end } = parseDateRange(date);
+  const tz = req.user?.timezone || 'Asia/Kolkata';
+  const { start, end } = parseDateRange(date, tz);
 
   // Check if plan already exists for this date
   let plan = await DailyPlan.findOne({
@@ -115,7 +99,7 @@ export const createDailyPlan = asyncHandler(async (req, res) => {
 
   plan = await DailyPlan.create({
     user: req.user.id,
-    date: targetDate,
+    date: start,
     ...rest,
   });
 
@@ -129,8 +113,8 @@ export const createDailyPlan = asyncHandler(async (req, res) => {
  */
 export const updateDailyPlan = asyncHandler(async (req, res) => {
   const { date } = req.params;
-  const targetDate = date === 'today' ? new Date().toISOString().split('T')[0] : date;
-  const { start, end } = parseDateRange(targetDate);
+  const tz = req.user?.timezone || 'Asia/Kolkata';
+  const { start, end } = parseDateRange(date, tz);
 
   const plan = await DailyPlan.findOneAndUpdate(
     {

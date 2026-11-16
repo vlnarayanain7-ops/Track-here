@@ -60,6 +60,7 @@ const feedbackSchema = new mongoose.Schema(
 
 feedbackSchema.index({ createdAt: -1 });
 feedbackSchema.index({ user: 1 });
+feedbackSchema.index({ createdAt: 1 }, { expireAfterSeconds: 180 * 24 * 3600 });
 
 const Feedback = mongoose.model('Feedback', feedbackSchema);
 

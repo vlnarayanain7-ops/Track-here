@@ -32,7 +32,7 @@ export const getTimetableSlots = asyncHandler(async (req, res) => {
     query.dayOfWeek = Number(dayOfWeek);
   }
 
-  const slots = await TimetableSlot.find(query).sort({ dayOfWeek: 1, startTime: 1 });
+  const slots = await TimetableSlot.find(query).sort({ dayOfWeek: 1, startTime: 1 }).lean();
 
   res.json({
     success: true,

@@ -53,12 +53,20 @@ export function SignUp() {
         email: form.email.trim(),
         password: form.password,
         ageBand: form.age, // '13_17' or '18_plus'
+        termsVersion: '2026-11-20',
       });
 
       toast.success('Account created successfully!');
       navigate('/onboarding', { replace: true });
     } catch (error) {
-      const serverMsg = error.response?.data?.message || error.message || 'Registration failed.';
+      let serverMsg = error.response?.data?.message;
+      if (!serverMsg) {
+        if (error.response?.status === 500 || !error.response) {
+          serverMsg = 'Cannot connect to backend server (500). Please ensure "npm run dev" is running.';
+        } else {
+          serverMsg = error.message || 'Registration failed.';
+        }
+      }
       setErr({ form: serverMsg });
     } finally {
       setBusy(false);

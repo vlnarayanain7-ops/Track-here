@@ -9,30 +9,32 @@ const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // ─── Validation Schemas ───────────────────────────────────────
 
 export const createNoteSchema = z.object({
-  title: z.string().trim().min(1, 'Title is required'),
-  content: z.string().optional().nullable(),
-  contentMarkdown: z.string().optional().nullable(),
-  contentHtml: z.string().optional().nullable(),
-  folder: z.string().optional(),
-  tags: z.array(z.string()).optional(),
+  title: z.string().trim().min(1, 'Title is required').max(200, 'Title too long'),
+  content: z.string().max(51_200, 'Note body cannot exceed 50 KB').optional().nullable(),
+  contentMarkdown: z.string().max(51_200, 'Note body cannot exceed 50 KB').optional().nullable(),
+  contentHtml: z.string().max(100_000).optional().nullable(),
+  folder: z.string().max(100).optional(),
+  tags: z.array(z.string().max(50)).optional(),
   isPinned: z.boolean().optional(),
   pinned: z.boolean().optional(),
   subject: z.string().optional().nullable(),
   category: z.string().optional().nullable(),
+  clientId: z.string().optional(),
   lastEditedAt: z.string().or(z.date()).optional().nullable(),
 });
 
 export const updateNoteSchema = z.object({
-  title: z.string().trim().min(1, 'Title is required').optional(),
-  content: z.string().optional().nullable(),
-  contentMarkdown: z.string().optional().nullable(),
-  contentHtml: z.string().optional().nullable(),
-  folder: z.string().optional(),
-  tags: z.array(z.string()).optional(),
+  title: z.string().trim().min(1, 'Title is required').max(200, 'Title too long').optional(),
+  content: z.string().max(51_200, 'Note body cannot exceed 50 KB').optional().nullable(),
+  contentMarkdown: z.string().max(51_200, 'Note body cannot exceed 50 KB').optional().nullable(),
+  contentHtml: z.string().max(100_000).optional().nullable(),
+  folder: z.string().max(100).optional(),
+  tags: z.array(z.string().max(50)).optional(),
   isPinned: z.boolean().optional(),
   pinned: z.boolean().optional(),
   subject: z.string().optional().nullable(),
   category: z.string().optional().nullable(),
+  clientId: z.string().optional(),
   lastEditedAt: z.string().or(z.date()).optional().nullable(),
 });
 
@@ -71,7 +73,8 @@ export const getNotes = asyncHandler(async (req, res) => {
       .select('-content -contentHtml') // Exclude heavy fields from list
       .sort(safeSort)
       .skip(skip)
-      .limit(safeLimit),
+      .limit(safeLimit)
+      .lean(),
     Note.countDocuments(query),
   ]);
 
@@ -93,6 +96,22 @@ export const getNotes = asyncHandler(async (req, res) => {
  * POST /api/notes
  */
 export const createNote = asyncHandler(async (req, res) => {
+  if (req.body.clientId) {
+    const existing = await Note.findOne({ user: req.user.id, clientId: req.body.clientId });
+    if (existing) {
+      return res.status(200).json({
+        success: true,
+        message: 'Note already exists',
+        data: { note: existing },
+      });
+    }
+  }
+
+  const noteCount = await Note.countDocuments({ user: req.user.id });
+  if (noteCount >= 500) {
+    throw new ApiError(400, 'Maximum limit of 500 notes reached per user.');
+  }
+
   const noteData = {
     ...req.body,
     user: req.user.id,
@@ -100,6 +119,12 @@ export const createNote = asyncHandler(async (req, res) => {
   };
   if (req.body.pinned !== undefined && noteData.isPinned === undefined) {
     noteData.isPinned = Boolean(req.body.pinned);
+  }
+  if (!noteData.folder && (req.body.subject || req.body.category)) {
+    noteData.folder = req.body.subject || req.body.category;
+  }
+  if (!noteData.folder || typeof noteData.folder !== 'string' || !noteData.folder.trim()) {
+    noteData.folder = 'General';
   }
 
   const note = await Note.create(noteData);
@@ -139,6 +164,9 @@ export const updateNote = asyncHandler(async (req, res) => {
   };
   if (req.body.pinned !== undefined && updateData.isPinned === undefined) {
     updateData.isPinned = Boolean(req.body.pinned);
+  }
+  if (!updateData.folder && (req.body.subject || req.body.category)) {
+    updateData.folder = req.body.subject || req.body.category;
   }
 
   const note = await Note.findOneAndUpdate(

@@ -84,7 +84,7 @@ const userSchema = new mongoose.Schema(
     },
     theme: {
       type: String,
-      enum: ['dark', 'light'],
+      enum: ['dark', 'light', 'system'],
       default: 'light',
     },
     fontPreference: {
@@ -119,6 +119,22 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: { show_habits: false, theme: 'light' },
     },
+    milestones: [
+      {
+        days: { type: Number, required: true },
+        at: { type: Date, default: Date.now },
+      },
+    ],
+    rewardRun: {
+      type: Number,
+      default: 0,
+    },
+    bestRewardRun: {
+      type: Number,
+      default: 0,
+    },
+    termsVersion: String,
+    termsAcceptedAt: Date,
   },
   {
     timestamps: true,

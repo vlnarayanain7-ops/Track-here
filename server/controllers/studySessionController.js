@@ -4,6 +4,7 @@ import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { emitToUser } from '../services/socketService.js';
 import { defaultSessionName } from '../utils/sessionName.js';
+import { applySession } from '../lib/milestones.js';
 
 // ─── Validation Schemas ───────────────────────────────────────
 
@@ -69,7 +70,8 @@ export const getSessions = asyncHandler(async (req, res) => {
       .sort(safeSort)
       .skip(skip)
       .limit(safeLimit)
-      .populate('linkedTask', 'title status'),
+      .populate('linkedTask', 'title status')
+      .lean(),
     StudySession.countDocuments(query),
   ]);
 
@@ -91,22 +93,40 @@ export const getSessions = asyncHandler(async (req, res) => {
  * POST /api/study-sessions
  */
 export const createSession = asyncHandler(async (req, res) => {
+  if (req.body.clientId) {
+    const existing = await StudySession.findOne({ user: req.user.id, clientId: req.body.clientId });
+    if (existing) {
+      return res.status(200).json({
+        success: true,
+        message: 'Study session already exists',
+        data: { session: existing },
+      });
+    }
+  }
+
   const sessionDate = req.body.date ? new Date(req.body.date) : new Date();
   const tz = req.user?.timezone || 'Asia/Kolkata';
   const subName = req.body.category && req.body.category !== 'Focus' ? req.body.category : null;
   const topic = req.body.topic?.trim() || defaultSessionName(sessionDate, tz, subName);
+  const durationSec = Math.round((Number(req.body.focusDuration) || 0) * 60);
 
   const sessionData = {
     ...req.body,
     topic,
     user: req.user.id,
     date: sessionDate,
+    source: 'manual',
+    heartbeatOk: false,
+    durationSec,
+    startedAt: req.body.startTime ? new Date(req.body.startTime) : sessionDate,
+    subjectName: subName || 'Focus',
   };
 
   if (req.body.startTime) sessionData.startTime = new Date(req.body.startTime);
   if (req.body.endTime) sessionData.endTime = new Date(req.body.endTime);
 
   const session = await StudySession.create(sessionData);
+  await applySession(req.user, session);
   emitToUser(req.user.id, 'session:created', session);
 
   res.status(201).json({
@@ -182,21 +202,48 @@ export const deleteSession = asyncHandler(async (req, res) => {
 export const startTimer = asyncHandler(async (req, res) => {
   const now = new Date();
 
-  // Clear any existing active timer sessions for this user so they are never blocked by 409
-  await StudySession.updateMany(
-    {
-      user: req.user.id,
-      isTimerSession: true,
-      'timerState.status': { $in: ['running', 'paused'] },
-    },
-    {
-      $set: {
-        activeTimerKey: null,
-        'timerState.status': 'completed',
-        endTime: now,
-      },
+  // Safely close any previous running or paused timer sessions, preserving any accumulated study time
+  const danglingSessions = await StudySession.find({
+    user: req.user.id,
+    isTimerSession: true,
+    'timerState.status': { $in: ['running', 'paused'] },
+  });
+
+  for (const s of danglingSessions) {
+    const started = s.timerState?.startedAt || s.startTime || s.createdAt;
+    let accumulated = s.timerState?.accumulatedDuration || 0;
+    if (s.timerState?.status === 'running' && started) {
+      const elapsed = Math.max(0, Math.floor((now - started) / 1000) - (s.timerState?.totalPausedDuration || 0));
+      // A timer running over 6 hours is closed at 6 hours
+      accumulated = Math.min(elapsed, 6 * 3600);
     }
-  );
+    const mins = Math.max(s.focusDuration || 0, Math.round(accumulated / 60));
+    const heartbeatsCount = s.heartbeats?.length || 0;
+    const heartbeatOk = accumulated <= 60 ? (heartbeatsCount >= 1) : (heartbeatsCount * 60 >= 0.9 * accumulated);
+
+    await StudySession.updateOne(
+      { _id: s._id },
+      {
+        $set: {
+          activeTimerKey: null,
+          'timerState.status': 'completed',
+          'timerState.accumulatedDuration': accumulated,
+          endTime: now,
+          focusDuration: mins,
+          durationSec: accumulated,
+          source: 'timer',
+          heartbeatOk,
+          startedAt: started,
+          subjectName: s.category || 'Focus',
+        },
+      }
+    );
+    s.focusDuration = mins;
+    s.durationSec = accumulated;
+    s.source = 'timer';
+    s.heartbeatOk = heartbeatOk;
+    await applySession(req.user, s);
+  }
 
   const category = req.body.category || 'Focus';
   const tz = req.user?.timezone || 'Asia/Kolkata';
@@ -211,8 +258,16 @@ export const startTimer = asyncHandler(async (req, res) => {
     subtopic: req.body.subtopic,
     date: now,
     startTime: now,
+    startedAt: now,
     focusDuration: 0,
+    durationSec: 0,
     isTimerSession: true,
+    source: 'timer',
+    heartbeatOk: false,
+    heartbeats: [now],
+    lastHeartbeatAt: now,
+    subjectName: subName || 'Focus',
+    clientId: req.body.clientId,
     activeTimerKey: 'active',
     timerState: {
       status: 'running',
@@ -334,6 +389,16 @@ export const finishTimer = asyncHandler(async (req, res) => {
     const subName = (extra.category || current.category) !== 'Focus' ? (extra.category || current.category) : null;
     extra.topic = defaultSessionName(current.startTime || current.timerState?.startedAt || now, tz, subName);
   }
+  const clientMins = Number(req.body?.focusDuration);
+  const computedMins = accumulatedDuration >= 20 ? Math.max(1, Math.round(accumulatedDuration / 60)) : Math.floor(accumulatedDuration / 60);
+  const finalFocusDuration = !isNaN(clientMins) && clientMins > 0 ? Math.max(clientMins, computedMins) : computedMins;
+
+  const cappedDuration = Math.min(accumulatedDuration, 6 * 3600);
+  const heartbeatsCount = (current.heartbeats?.length || 0) + 1;
+  const heartbeatOk = cappedDuration <= 60
+    ? (heartbeatsCount >= 1)
+    : (heartbeatsCount * 60 >= 0.9 * cappedDuration);
+
   const session = await StudySession.findOneAndUpdate(query, {
     $set: {
       ...extra,
@@ -342,12 +407,20 @@ export const finishTimer = asyncHandler(async (req, res) => {
       'timerState.status': 'completed',
       'timerState.pausedAt': null,
       'timerState.totalPausedDuration': totalPausedDuration,
-      'timerState.accumulatedDuration': accumulatedDuration,
-      focusDuration: Math.floor(accumulatedDuration / 60),
+      'timerState.accumulatedDuration': cappedDuration,
+      focusDuration: finalFocusDuration,
+      durationSec: cappedDuration,
+      source: 'timer',
+      heartbeatOk,
+      startedAt: current.timerState?.startedAt || current.startTime || now,
+      subjectName: extra.category || current.category || 'Focus',
+      lastHeartbeatAt: now,
     },
+    $push: { heartbeats: now },
   }, { returnDocument: 'after' });
 
   if (!session) throw ApiError.badRequest('Timer is already completed or was changed by another device');
+  await applySession(req.user, session);
   emitToUser(req.user.id, 'timer:finished', session);
   emitToUser(req.user.id, 'session:created', session);
 
@@ -356,6 +429,61 @@ export const finishTimer = asyncHandler(async (req, res) => {
     message: 'Timer session completed',
     data: { session },
   });
+});
+
+/**
+ * POST /api/study-sessions/timer/heartbeat
+ */
+export const heartbeatTimer = asyncHandler(async (req, res) => {
+  const now = new Date();
+  const query = req.params.id
+    ? { _id: req.params.id, user: req.user.id, isTimerSession: true, 'timerState.status': 'running' }
+    : { user: req.user.id, isTimerSession: true, 'timerState.status': 'running' };
+
+  const current = await StudySession.findOne(query);
+  if (!current) {
+    return res.json({ ok: false, message: 'No running timer found' });
+  }
+
+  const started = current.timerState?.startedAt || current.startTime || current.createdAt;
+  const currentElapsed = Math.max(0, Math.floor((now - started) / 1000) - (current.timerState?.totalPausedDuration || 0));
+
+  // A timer running over 6 hours is closed at 6 hours
+  if (currentElapsed >= 6 * 3600) {
+    const cappedDuration = 6 * 3600;
+    const heartbeatsCount = (current.heartbeats?.length || 0) + 1;
+    const heartbeatOk = heartbeatsCount * 60 >= 0.9 * cappedDuration;
+    const finalFocusMinutes = Math.round(cappedDuration / 60);
+
+    current.activeTimerKey = null;
+    current.timerState.status = 'completed';
+    current.timerState.accumulatedDuration = cappedDuration;
+    current.endTime = now;
+    current.focusDuration = finalFocusMinutes;
+    current.durationSec = cappedDuration;
+    current.source = 'timer';
+    current.heartbeatOk = heartbeatOk;
+    current.heartbeats.push(now);
+    current.lastHeartbeatAt = now;
+    await current.save();
+
+    await applySession(req.user, current);
+    emitToUser(req.user.id, 'timer:finished', current);
+
+    return res.json({
+      ok: true,
+      autoClosed: true,
+      message: 'Timer reached maximum duration of 6 hours and was closed.',
+      session: current,
+    });
+  }
+
+  current.heartbeats = current.heartbeats || [];
+  current.heartbeats.push(now);
+  current.lastHeartbeatAt = now;
+  await current.save();
+
+  res.json({ ok: true, active: true });
 });
 
 /**

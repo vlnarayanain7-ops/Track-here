@@ -25,6 +25,11 @@ const noteSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    clientId: {
+      type: String,
+      sparse: true,
+      unique: true,
+    },
     lastEditedAt: Date,
   },
   {

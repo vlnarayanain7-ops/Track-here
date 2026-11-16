@@ -83,7 +83,8 @@ export const getMockTests = asyncHandler(async (req, res) => {
     MockTest.find(query)
       .sort({ testDate: -1, createdAt: -1 })
       .skip(skip)
-      .limit(safeLimit),
+      .limit(safeLimit)
+      .lean(),
     MockTest.countDocuments(query),
   ]);
 

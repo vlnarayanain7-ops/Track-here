@@ -38,7 +38,8 @@ export const search = asyncHandler(async (req, res) => {
     })
       .sort({ date: -1 })
       .limit(10)
-      .select('topic subtopic category focusDuration date activityType'),
+      .select('topic subtopic category focusDuration date activityType')
+      .lean(),
 
     Task.find({
       user: userId,
@@ -50,7 +51,8 @@ export const search = asyncHandler(async (req, res) => {
     })
       .sort({ dueDate: 1 })
       .limit(10)
-      .select('title status priority dueDate category'),
+      .select('title status priority dueDate category')
+      .lean(),
 
     Note.find({
       user: userId,
@@ -62,7 +64,8 @@ export const search = asyncHandler(async (req, res) => {
     })
       .sort({ updatedAt: -1 })
       .limit(10)
-      .select('title folder tags isPinned updatedAt'),
+      .select('title folder tags isPinned updatedAt')
+      .lean(),
 
     Problem.find({
       user: userId,
@@ -74,7 +77,8 @@ export const search = asyncHandler(async (req, res) => {
     })
       .sort({ updatedAt: -1 })
       .limit(10)
-      .select('name platform difficulty status solvedIndependently'),
+      .select('name platform difficulty status solvedIndependently')
+      .lean(),
   ]);
 
   res.json({

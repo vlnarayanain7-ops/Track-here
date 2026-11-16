@@ -21,6 +21,16 @@ import { emitToUser } from '../services/socketService.js';
 
 // ─── Validation Schemas ───────────────────────────────────────
 
+export const acceptTerms = asyncHandler(async (req, res) => {
+  const { version } = z.object({ version: z.string().min(1) }).parse(req.body);
+  const user = await User.findByIdAndUpdate(
+    req.user.id,
+    { $set: { termsVersion: version, termsAcceptedAt: new Date() } },
+    { returnDocument: 'after' }
+  );
+  res.json({ ok: true, termsVersion: user.termsVersion, termsAcceptedAt: user.termsAcceptedAt });
+});
+
 export const updateProfileSchema = z.object({
   name: z.string().trim().min(2).max(50).optional(),
   avatar: z.string().optional().nullable(),
@@ -62,7 +72,7 @@ export const updateSettingsSchema = z.object({
   quietHoursStart: z.string().regex(/^\d{2}:\d{2}$/).optional().nullable(),
   quietHoursEnd: z.string().regex(/^\d{2}:\d{2}$/).optional().nullable(),
   activeWeekdays: z.array(z.number().min(0).max(6)).optional(),
-  theme: z.enum(['dark', 'light']).optional(),
+  theme: z.enum(['dark', 'light', 'system']).optional(),
   fontPreference: z.enum(['inter', 'geist']).optional(),
   streakGraceDays: z.number().min(0).max(3).optional(),
   examDate: z.string().or(z.date()).optional().nullable(),

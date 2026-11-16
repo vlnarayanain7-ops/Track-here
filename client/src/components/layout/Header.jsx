@@ -21,6 +21,7 @@ import { useStreakData, useAnalytics } from '@/hooks/useAnalytics';
 import { useTimer } from '@/hooks/useTimer';
 import { getTheme, setTheme } from '@/lib/theme';
 import { cn, formatTimerDisplay } from '@/lib/utils';
+import { getPendingOutboxCount } from '@/lib/outbox';
 
 export default function Header({ onOpenCommandPalette, onQuickAdd }) {
   const { user, logout } = useAuth();
@@ -30,9 +31,31 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [currentTheme, setCurrentTheme] = useState(() => getTheme());
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
+  const [pendingSync, setPendingSync] = useState(0);
 
   const addMenuRef = useRef(null);
   const avatarMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    const updateOutbox = async () => {
+      const count = await getPendingOutboxCount();
+      setPendingSync(count);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('th:outbox-changed', updateOutbox);
+    updateOutbox();
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('th:outbox-changed', updateOutbox);
+    };
+  }, []);
 
   // Timer
   const { isRunning, isPaused, elapsedTime, pauseTimer, resumeTimer, finishTimer } = useTimer();
@@ -41,12 +64,11 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
   const { data: streakData } = useStreakData();
   const { data: analyticsData } = useAnalytics();
   const currentStreak = streakData?.currentStreak ?? analyticsData?.streaks?.currentStreak ?? 0;
-  const todayMinutes =
-    streakData?.byDay?.[new Date().toISOString().slice(0, 10)] ??
-    analyticsData?.today?.studyMinutes ??
-    analyticsData?.data?.today?.studyMinutes ??
-    0;
-  const isActiveToday = Boolean(streakData?.isActiveToday || todayMinutes >= 25);
+  const isActiveToday = Boolean(
+    streakData?.isActiveToday ??
+    analyticsData?.streaks?.isActiveToday ??
+    (analyticsData?.today?.studyMinutes >= 25)
+  );
   const streakState = currentStreak === 0 ? 'idle' : isActiveToday ? 'lit' : 'risk';
 
   // Pop animation whenever streak updates (0 to 1, 1 to 2, or x to y)
@@ -268,6 +290,28 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
               <div className="px-3 py-2">
                 <p className="text-xs font-semibold text-[var(--text)] truncate">{user?.name || 'Scholar'}</p>
                 <p className="text-[11px] text-[var(--muted)] truncate">{user?.email || ''}</p>
+              </div>
+
+              {/* Offline ready / Sync status */}
+              <div className="px-3 py-1.5 flex items-center justify-between text-[11px] bg-[var(--surface-2)]">
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={cn(
+                      'w-2 h-2 rounded-full shrink-0',
+                      !isOnline || pendingSync > 0
+                        ? 'bg-[var(--flame)] animate-pulse'
+                        : 'bg-emerald-500'
+                    )}
+                  />
+                  <span className="font-medium text-[var(--text)]">
+                    {!isOnline || pendingSync > 0 ? 'Offline: changes will sync' : 'Offline ready'}
+                  </span>
+                </div>
+                {pendingSync > 0 && (
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[var(--surface)] text-[var(--muted)] font-mono">
+                    {pendingSync} pending
+                  </span>
+                )}
               </div>
 
               {/* Theme selector: System, Light, Dark */}

@@ -2,7 +2,7 @@ import User from '../models/User.js';
 import StudySession from '../models/StudySession.js';
 import mongoose from 'mongoose';
 import asyncHandler from '../utils/asyncHandler.js';
-import { subDays } from 'date-fns';
+import { subDays, startOfMonth, startOfYear, format } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import {
   getDashboardStats,
@@ -12,23 +12,26 @@ import {
   getConsistencyMetrics,
 } from '../services/analyticsService.js';
 import { getStreakInfo } from '../services/streakService.js';
+import { parseDateRange } from '../utils/dateRange.js';
 
 /**
  * Helper to compute by-subject breakdown for a given range (week | month | year)
  */
 async function computeBySubject(userId, timezone, range = 'week', userSubjects = []) {
   const now = toZonedTime(new Date(), timezone);
-  let startDate = new Date(now);
+  let startDate;
 
   if (range === 'month') {
-    startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+    const startStr = format(startOfMonth(now), 'yyyy-MM-dd');
+    startDate = parseDateRange(startStr, timezone).start;
   } else if (range === 'year') {
-    startDate = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
+    const startStr = format(startOfYear(now), 'yyyy-MM-dd');
+    startDate = parseDateRange(startStr, timezone).start;
   } else {
     // week (Monday-based)
     const dayOfWeek = (now.getDay() + 6) % 7;
-    startDate = subDays(now, dayOfWeek);
-    startDate.setHours(0, 0, 0, 0);
+    const startStr = format(subDays(now, dayOfWeek), 'yyyy-MM-dd');
+    startDate = parseDateRange(startStr, timezone).start;
   }
 
   const subjectAgg = await StudySession.aggregate([
@@ -62,7 +65,7 @@ async function computeBySubject(userId, timezone, range = 'week', userSubjects =
  * GET /api/analytics/dashboard or /api/analytics
  */
 export const getDashboard = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user.id).select('timezone dailyStudyGoal subjects');
+  const user = await User.findById(req.user.id).select('timezone dailyStudyGoal subjects').lean();
   const timezone = user?.timezone || 'Asia/Kolkata';
   const range = (req.query.range || 'week').toLowerCase();
 
@@ -83,7 +86,7 @@ export const getDashboard = asyncHandler(async (req, res) => {
  */
 export const getStudyTime = asyncHandler(async (req, res) => {
   const { period = 'week' } = req.query;
-  const user = await User.findById(req.user.id).select('timezone');
+  const user = await User.findById(req.user.id).select('timezone').lean();
   const timezone = user?.timezone || 'Asia/Kolkata';
 
   const stats = await getStudyTimeStats(req.user.id, period, timezone);

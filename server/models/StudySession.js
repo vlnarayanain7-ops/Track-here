@@ -85,6 +85,36 @@ const studySessionSchema = new mongoose.Schema(
         default: 0,
       },
     },
+    clientId: {
+      type: String,
+      sparse: true,
+      unique: true,
+    },
+    source: {
+      type: String,
+      enum: ['timer', 'manual'],
+      default: 'manual',
+    },
+    heartbeatOk: {
+      type: Boolean,
+      default: false,
+    },
+    heartbeats: [{
+      type: Date,
+    }],
+    lastHeartbeatAt: {
+      type: Date,
+    },
+    durationSec: {
+      type: Number,
+      default: 0,
+    },
+    startedAt: {
+      type: Date,
+    },
+    subjectName: {
+      type: String,
+    },
   },
   {
     timestamps: true,

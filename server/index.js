@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
+import compression from 'compression';
 
 import env from './config/env.js';
 import corsOptions from './config/cors.js';
@@ -30,6 +31,11 @@ import searchRoutes from './routes/search.js';
 import mockTestRoutes from './routes/mockTests.js';
 import timetableRoutes from './routes/timetable.js';
 import feedbackRoutes from './routes/feedback.js';
+import reportsRoutes from './routes/reports.js';
+import rewardsRoutes from './routes/rewards.js';
+import verifyRoutes from './routes/verify.js';
+import adminRoutes from './routes/admin.js';
+import { RewardCounter } from './models/rewards.js';
 
 const app = express();
 
@@ -40,6 +46,7 @@ app.set('trust proxy', 1);
 
 app.use(helmet());
 app.use(cors(corsOptions));
+app.use(compression());
 app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -132,6 +139,10 @@ app.use('/api/search', searchRoutes);
 app.use('/api/mock-tests', mockTestRoutes);
 app.use('/api/timetable', timetableRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/reports', reportsRoutes);
+app.use('/api/rewards', rewardsRoutes);
+app.use('/api/verify', verifyRoutes);
+app.use('/api/admin', adminRoutes);
 
 // ─── 404 & Error Handling ─────────────────────────────────────
 
@@ -152,8 +163,9 @@ const io = initSocket(httpServer);
 const startServer = async () => {
   try {
     await connectDB();
+    await RewardCounter.updateOne({ _id: 'surprise' }, { $setOnInsert: { claimed: 0 } }, { upsert: true });
 
-    httpServer.listen(env.PORT, () => {
+    httpServer.listen(env.PORT, '0.0.0.0', () => {
       console.log(`🚀 Track Here Server running on port ${env.PORT} in ${env.NODE_ENV} mode`);
       console.log(`📡 Client URL: ${env.CLIENT_URL}`);
       console.log(`⚡ Real-time WebSocket engine active`);

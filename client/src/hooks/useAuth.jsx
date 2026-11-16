@@ -2,6 +2,8 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import { useQueryClient } from '@tanstack/react-query';
 import * as authApi from '../api/auth';
 import { setupRealtimeSync, disconnectSocket } from '../lib/socket';
+import { clearQueryCache } from '../lib/queryClient';
+import { clearReportsLocal } from '../lib/localStore';
 
 const AuthContext = createContext(null);
 
@@ -45,12 +47,13 @@ export function AuthProvider({ children }) {
     try {
       await authApi.getCsrfToken();
     } catch {
-      // Authentication calls will surface a meaningful error if the API is unavailable.
+      // Non-blocking: CSRF cookie will be retrieved on first state-changing mutation if needed
     }
   }, []);
 
   useEffect(() => {
-    initializeCsrf().finally(checkAuth);
+    // Parallelize CSRF initialization and Auth check to eliminate sequential roundtrips
+    Promise.all([initializeCsrf(), checkAuth()]);
   }, [checkAuth, initializeCsrf]);
 
   // Wakeup recovery: When phone screen turns on or user returns to tab, restore session seamlessly
@@ -95,6 +98,12 @@ export function AuthProvider({ children }) {
     try {
       disconnectSocket();
       await authApi.logout();
+    } catch {
+      // ignore
+    }
+    try {
+      await clearQueryCache();
+      await clearReportsLocal();
     } catch {
       // ignore
     }

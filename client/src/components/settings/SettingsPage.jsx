@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import * as usersApi from '@/api/users';
 import { getTheme, setTheme } from '@/lib/theme';
@@ -681,6 +681,14 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+      {/* Footer Legal Links */}
+      <div className="flex items-center justify-center gap-3 pt-6 border-t border-[var(--line)] text-xs text-[var(--muted)]">
+        <Link to="/terms" className="hover:underline hover:text-[var(--text)]">Terms of Service</Link>
+        <span>·</span>
+        <Link to="/privacy" className="hover:underline hover:text-[var(--text)]">Privacy Policy</Link>
+        <span>·</span>
+        <Link to="/rewards-rules" className="hover:underline hover:text-[var(--text)]">Rewards Rules</Link>
+      </div>
     </div>
   );
 }

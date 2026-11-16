@@ -23,6 +23,7 @@ export const registerSchema = z.object({
   email: z.string().trim().email('Invalid email address').toLowerCase(),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   ageBand: z.enum(['under13', '13_17', '18_plus']).optional(),
+  termsVersion: z.string().optional(),
 });
 
 export const loginSchema = z.object({
@@ -57,11 +58,14 @@ export const register = asyncHandler(async (req, res) => {
   }
 
   // Create user
+  const termsVersion = req.body.termsVersion || '2026-11-20';
   const user = await User.create({
     name,
     email,
     password,
     ageBand: ageBand === '13_17' ? '13_17' : '18_plus',
+    termsVersion,
+    termsAcceptedAt: new Date(),
   });
 
   // Generate tokens

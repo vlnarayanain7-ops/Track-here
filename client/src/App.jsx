@@ -15,6 +15,7 @@ const PlanPage = lazy(() => import('@/components/plan/PlanPage'));
 const NotesPage = lazy(() => import('@/components/notes/NotesPage'));
 const ProgressPage = lazy(() => import('@/components/progress/ProgressPage'));
 const SettingsPage = lazy(() => import('@/components/settings/SettingsPage'));
+const RevisionsPage = lazy(() => import('@/components/revisions/RevisionsPage'));
 
 // Lazy-Loaded Public & Auth Pages
 const LandingPage = lazy(() => import('@/components/landing/LandingPage'));
@@ -24,9 +25,14 @@ const SignUp = lazy(() => import('./auth/SignUp').then((m) => ({ default: m.Sign
 const ForgotPassword = lazy(() => import('./auth/ForgotReset').then((m) => ({ default: m.ForgotPassword })));
 const ResetPassword = lazy(() => import('./auth/ForgotReset').then((m) => ({ default: m.ResetPassword })));
 
-// Lazy-Loaded Legal Pages
+// Lazy-Loaded Legal & Verification Pages
 const TermsPage = lazy(() => import('@/components/legal/LegalPages').then((m) => ({ default: m.TermsPage })));
 const PrivacyPage = lazy(() => import('@/components/legal/LegalPages').then((m) => ({ default: m.PrivacyPage })));
+const RewardsRulesPage = lazy(() => import('@/components/legal/LegalPages').then((m) => ({ default: m.RewardsRulesPage })));
+const VerifyCertificatePage = lazy(() => import('@/components/verify/VerifyCertificatePage'));
+const AdminPage = lazy(() => import('@/components/admin/AdminPage'));
+
+import RequireTerms from '@/components/RequireTerms';
 
 // Calm Fallback Loader
 function PageFallback() {
@@ -69,12 +75,17 @@ function AccountabilityRedirect() {
 }
 
 export default function App() {
+  const { user, checkAuth } = useAuth();
+
   return (
     <Suspense fallback={<PageFallback />}>
       <Routes>
-      {/* Public Legal Pages */}
+      {/* Public Legal & Verification Pages */}
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/rewards-rules" element={<RewardsRulesPage />} />
+      <Route path="/verify/:serial" element={<VerifyCertificatePage />} />
+      <Route path="/admin" element={<AdminPage />} />
 
       {/* Guest Landing & Auth Routes */}
       <Route
@@ -141,7 +152,14 @@ export default function App() {
           <Route path="/onboarding" element={<OnboardingFlow />} />
 
           {/* Main AppShell Protected Routes */}
-          <Route path="/" element={<AppLayout />}>
+          <Route
+            path="/"
+            element={
+              <RequireTerms user={user} onAccepted={() => checkAuth()}>
+                <AppLayout />
+              </RequireTerms>
+            }
+          >
             <Route index element={<DashboardPage />} />
             <Route path="study" element={<StudyPage />} />
             <Route path="plan" element={<PlanPage />} />
@@ -157,7 +175,7 @@ export default function App() {
             <Route path="analytics" element={<Navigate to="/progress?tab=stats" replace />} />
             <Route path="practice" element={<Navigate to="/progress?tab=practice" replace />} />
             <Route path="problems" element={<Navigate to="/progress?tab=practice" replace />} />
-            <Route path="revisions" element={<Navigate to="/?review=1" replace />} />
+            <Route path="revisions" element={<RevisionsPage />} />
             <Route path="accountability" element={<AccountabilityRedirect />} />
           </Route>
         </Route>

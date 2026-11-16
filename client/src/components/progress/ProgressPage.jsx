@@ -1,13 +1,20 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Check, Clock, FileText, AlertCircle, Sparkles } from 'lucide-react';
+import { Plus, Check, Clock, FileText, AlertCircle, Sparkles, Award, FileCheck, Gift, Download, Share2, Trash2, Eye } from 'lucide-react';
 import { useStreakData, useAnalytics } from '@/hooks/useAnalytics';
 import { useProblems, useCreateProblem } from '@/hooks/useProblems';
 import { useMockTests, useCreateMockTest } from '@/hooks/useMockTests';
 import { useCreateRevision } from '@/hooks/useRevisions';
+import { useRewardsMe, useSubmitProof, useClaimReward } from '@/hooks/useRewards';
+import { useAuth } from '@/hooks/useAuth';
 import { StatsPanel } from '@/components/StatsPanel';
 import { MonthHeatmap } from '@/components/MonthHeatmap';
 import SideSheet from '@/components/SideSheet';
+import RewardsSheet from '@/components/rewards/RewardsSheet';
+import ReportModal from '@/components/progress/ReportModal';
+import { certificateBlob, shareBlob } from '@/lib/certificate';
+import { listReportsLocal, deleteReportLocal } from '@/lib/localStore';
+import { shareReportCard } from '@/lib/reportCard';
 import { plural } from '@/lib/plural';
 import { toast } from 'react-hot-toast';
 
@@ -46,15 +53,47 @@ export default function ProgressPage() {
   };
 
   // Queries
+  const { user } = useAuth();
   const [statsRange, setStatsRange] = useState('week');
   const { data: streakData, isLoading: streakLoading } = useStreakData();
   const { data: analyticsData } = useAnalytics({ range: statsRange });
   const { data: problemsData } = useProblems();
   const { data: mockTestsData } = useMockTests();
+  const { data: rewardsData } = useRewardsMe();
 
   const createProblemMutation = useCreateProblem();
   const createMockTestMutation = useCreateMockTest();
   const createRevisionMutation = useCreateRevision();
+  const submitProofMutation = useSubmitProof();
+  const claimRewardMutation = useClaimReward();
+
+  // Rewards Sheet state
+  const [rewardsOpen, setRewardsOpen] = useState(false);
+
+  // Report Modal state
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportType, setReportType] = useState('daily'); // 'daily' | 'weekly'
+  const [reportDate, setReportDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [reportMinutes, setReportMinutes] = useState(0);
+  const [reportSessions, setReportSessions] = useState(0);
+  const [reportStreak, setReportStreak] = useState(0);
+  const [reportTopSubject, setReportTopSubject] = useState(null);
+
+  // Saved reports (device-only via IndexedDB)
+  const [savedReports, setSavedReports] = useState([]);
+
+  const refreshSavedReports = async () => {
+    try {
+      const list = await listReportsLocal();
+      setSavedReports(list || []);
+    } catch (e) {
+      console.warn('Failed to list local reports', e);
+    }
+  };
+
+  useEffect(() => {
+    refreshSavedReports();
+  }, []);
 
   // Dialog / SideSheet state for Log Practice
   const [logPracticeOpen, setLogPracticeOpen] = useState(false);
@@ -83,7 +122,12 @@ export default function ProgressPage() {
   const activeDaysThisYear = streakData?.activeDaysThisYear ?? 0;
   const nextMilestone = streakData?.nextMilestone ?? 3;
   const history = streakData?.history || [];
+  const thisWeek = streakData?.thisWeek || [];
   const last7Days = streakData?.last7Days || [];
+  const activeStreakDays = streakData?.activeStreakDays || [];
+
+  // Toggle for streak week dots: 'recent' (rolling 7 days ending today) vs 'calendar' (Mon-Sun of current week)
+  const [weekViewMode, setWeekViewMode] = useState('recent');
 
   // Shared single source of truth for minutes per local day (covers at least 371 days)
   const minutesByDay = useMemo(() => {
@@ -164,6 +208,76 @@ export default function ProgressPage() {
     }
   };
 
+  const has7DayBadge = (rewardsData?.milestones || []).includes(7);
+  const has30DayCert = (rewardsData?.milestones || []).includes(30);
+
+  const handleOpenDailyReport = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const todayMins = minutesByDay.get(today) || 0;
+    setReportType('daily');
+    setReportDate(today);
+    setReportMinutes(todayMins);
+    setReportSessions(todayMins > 0 ? Math.max(1, Math.round(todayMins / 30)) : 0);
+    setReportStreak(currentStreak);
+    setReportTopSubject(null);
+    setReportModalOpen(true);
+  };
+
+  const handleOpenWeeklyReport = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const past7 = last7Days || [];
+    const totalWeeklyMins = past7.reduce((acc, d) => acc + (d.minutes || 0), 0);
+    setReportType('weekly');
+    setReportDate(today);
+    setReportMinutes(totalWeeklyMins);
+    setReportSessions(past7.filter((d) => (d.minutes || 0) > 0).length);
+    setReportStreak(currentStreak);
+    setReportTopSubject(null);
+    setReportModalOpen(true);
+  };
+
+  const handleDownloadCertificate = async () => {
+    if (!rewardsData?.certificate) {
+      toast.error('Certificate not yet earned.');
+      return;
+    }
+    try {
+      const b = await certificateBlob({
+        name: rewardsData.certificate.showName ? rewardsData.certificate.displayName : '',
+        serial: rewardsData.certificate.serial,
+        issuedAt: rewardsData.certificate.issuedAt,
+      });
+      await shareBlob(
+        b,
+        `track-here-certificate-${rewardsData.certificate.serial}.png`,
+        'Track Here 30-Day Certificate'
+      );
+      toast.success('Certificate downloaded');
+    } catch (err) {
+      toast.error('Could not generate certificate: ' + err.message);
+    }
+  };
+
+  const handleProofSubmit = async (payload) => {
+    await submitProofMutation.mutateAsync(payload);
+    toast.success(`Month ${payload.month} proof submitted for review.`);
+  };
+
+  const handleClaimSubmit = async (address) => {
+    await claimRewardMutation.mutateAsync(address);
+    toast.success('Surprise reward claim submitted successfully!');
+  };
+
+  const handleDeleteSavedReport = async (id) => {
+    try {
+      await deleteReportLocal(id);
+      await refreshSavedReports();
+      toast.success('Report removed from device');
+    } catch (err) {
+      toast.error('Failed to delete report: ' + err.message);
+    }
+  };
+
   return (
     <div className="w-full max-w-[960px] mx-auto space-y-4">
       <h1 className="text-[26px] font-bold font-heading tracking-tight text-[var(--tx)]">Progress</h1>
@@ -218,18 +332,123 @@ export default function ProgressPage() {
             </div>
           </div>
 
-          {/* This week row of 7 dots */}
-          <div className="week">
-            <span>This week</span>
-            {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((dayChar, i) => {
-              const dayData = last7Days[i];
-              const isOn = dayData ? dayData.isActive : false;
-              return (
-                <i key={i} className={isOn ? 'on' : ''}>
-                  {dayChar}
-                </i>
-              );
-            })}
+          {/* ONE quiet milestones row under the streak numbers */}
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => setRewardsOpen(true)}
+            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setRewardsOpen(true)}
+            className="flex items-center justify-between p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] hover:border-[var(--primary)]/40 transition-colors cursor-pointer group select-none"
+            title="Open Rewards & Milestones"
+          >
+            <div className="flex items-center gap-3 sm:gap-5 flex-wrap">
+              {/* 7-day badge */}
+              <div className="flex items-center gap-1.5 text-xs">
+                <Award className={`w-4 h-4 ${has7DayBadge ? 'text-amber-500' : 'text-[var(--muted)]'}`} />
+                <span className={has7DayBadge ? 'font-semibold text-[var(--text)]' : 'text-[var(--muted)]'}>
+                  7-day badge {has7DayBadge ? '✓' : ''}
+                </span>
+              </div>
+
+              <span className="text-[var(--muted)] select-none">·</span>
+
+              {/* 30-day certificate */}
+              <div className="flex items-center gap-1.5 text-xs">
+                <FileCheck className={`w-4 h-4 ${has30DayCert ? 'text-emerald-500' : 'text-[var(--muted)]'}`} />
+                <span className={has30DayCert ? 'font-semibold text-[var(--text)]' : 'text-[var(--muted)]'}>
+                  30-day certificate {has30DayCert ? '✓' : ''}
+                </span>
+              </div>
+
+              <span className="text-[var(--muted)] select-none">·</span>
+
+              {/* Small locked gift that says "Surprise" */}
+              <div className="flex items-center gap-1.5 text-xs">
+                <Gift className={`w-4 h-4 ${rewardsData?.rewardRun >= 150 ? 'text-purple-400' : 'text-[var(--muted)]'}`} />
+                <span className={rewardsData?.rewardRun >= 150 ? 'font-semibold text-[var(--text)]' : 'text-[var(--muted)]'}>
+                  Surprise {rewardsData?.rewardRun >= 150 ? 'Unlocked' : 'Locked'}
+                </span>
+              </div>
+            </div>
+
+            <span className="text-[11px] text-[var(--primary)] font-medium shrink-0 group-hover:underline">
+              Rewards →
+            </span>
+          </div>
+
+          {/* Week row of 7 dots with Recent 7 days vs Calendar week toggle */}
+          <div className="week flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-xs text-[var(--muted)]">
+                {weekViewMode === 'recent' ? 'Recent 7 days' : 'This week'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setWeekViewMode((v) => (v === 'recent' ? 'calendar' : 'recent'))}
+                className="text-[11px] text-[var(--primary)] hover:underline cursor-pointer bg-transparent border-0 p-0"
+                title="Switch between rolling 7 days and calendar week"
+              >
+                ({weekViewMode === 'recent' ? 'view calendar week' : 'view last 7 days'})
+              </button>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {(weekViewMode === 'recent' && last7Days.length > 0 ? last7Days : thisWeek.length > 0 ? thisWeek : ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((char) => ({ day: char, isActive: false }))).map((dayData, i) => {
+                const isOn = Boolean(dayData?.isActive);
+                const isToday = Boolean(dayData?.isToday);
+                return (
+                  <i
+                    key={dayData?.date || i}
+                    className={isOn ? 'on' : ''}
+                    title={`${dayData?.label || dayData?.day || ''}${dayData?.date ? ` (${dayData.date})` : ''}: ${dayData?.minutes || 0}m${isOn ? ' · Streak qualified (≥25m)' : ''}${isToday ? ' · Today' : ''}`}
+                    style={isToday ? { outline: '2px solid var(--primary)', outlineOffset: '1px' } : undefined}
+                  >
+                    {dayData?.day || dayData}
+                  </i>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Active streak transparency notice */}
+          {currentStreak > 0 && (
+            <div className="text-[12px] text-[var(--muted)] space-y-1 -mt-2">
+              <p className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-semibold text-[var(--text)]">{currentStreak}-day continuous streak:</span>
+                <span>
+                  {activeStreakDays?.length > 0
+                    ? activeStreakDays.map((d) => `${d.label} (${d.minutes}m)`).join(' → ')
+                    : `${currentStreak} consecutive days (≥25 min/day)`}
+                </span>
+              </p>
+              <p className="text-[11px] text-[var(--muted)]">
+                Unbroken streak across calendar days (Sat Nov 14 → Sun Nov 15 → Mon Nov 16 Today).
+              </p>
+            </div>
+          )}
+
+          {/* Focus Reports row */}
+          <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
+            <span className="text-xs text-[var(--muted)] font-medium">Focus Reports</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleOpenDailyReport}
+                className="btn text-xs h-7 px-2.5 flex items-center gap-1.5 cursor-pointer border border-[var(--line)] hover:border-[var(--primary)]"
+                title="Generate today's shareable focus report"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[var(--primary)]" />
+                <span>Today</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenWeeklyReport}
+                className="btn text-xs h-7 px-2.5 flex items-center gap-1.5 cursor-pointer border border-[var(--line)] hover:border-[var(--primary)]"
+                title="Generate this week's shareable focus report"
+              >
+                <Clock className="w-3.5 h-3.5 text-[var(--primary)]" />
+                <span>This week</span>
+              </button>
+            </div>
           </div>
 
           {/* LeetCode Month Heatmap */}
@@ -241,6 +460,79 @@ export default function ProgressPage() {
           <p className="note" style={{ marginTop: '12px' }}>
             25+ focused minutes in a day counts toward your streak.
           </p>
+
+          {/* Saved Reports (device only) */}
+          {savedReports.length > 0 && (
+            <div className="space-y-3 pt-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                  Saved reports on device ({savedReports.length})
+                </h3>
+              </div>
+              <div className="space-y-2">
+                {savedReports.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--line)]"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <FileText className="w-4 h-4 text-[var(--primary)] shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-xs font-medium text-[var(--text)] truncate">
+                          {item.summary?.type === 'weekly' ? 'Weekly Report' : 'Daily Report'} · {item.summary?.date || item.id}
+                        </div>
+                        <div className="text-[11px] text-[var(--muted)]">
+                          {formatDuration(item.summary?.minutes || 0)} · {item.summary?.sessions || 0} sessions · {item.summary?.streak || 0}d streak
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReportType(item.summary?.type || 'daily');
+                          setReportDate(item.summary?.date || new Date().toISOString().split('T')[0]);
+                          setReportMinutes(item.summary?.minutes || 0);
+                          setReportSessions(item.summary?.sessions || 0);
+                          setReportStreak(item.summary?.streak || 0);
+                          setReportTopSubject(item.summary?.topSubject || null);
+                          setReportModalOpen(true);
+                        }}
+                        className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface)] cursor-pointer"
+                        title="Open report"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (item.blob) {
+                            await shareReportCard(
+                              item.blob,
+                              `track-here-${item.summary?.type || 'report'}-${item.summary?.date || 'card'}.png`
+                            );
+                          }
+                        }}
+                        className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface)] cursor-pointer"
+                        title="Share report"
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSavedReport(item.id)}
+                        className="p-1.5 rounded-lg text-[var(--danger)] hover:bg-[var(--surface)] cursor-pointer"
+                        title="Delete report from device"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -414,6 +706,29 @@ export default function ProgressPage() {
           </div>
         </form>
       </SideSheet>
+      {/* Rewards Sheet */}
+      <RewardsSheet
+        open={rewardsOpen}
+        onClose={() => setRewardsOpen(false)}
+        data={rewardsData}
+        onProof={handleProofSubmit}
+        onCertificate={handleDownloadCertificate}
+        onClaim={handleClaimSubmit}
+      />
+
+      {/* Focus Report Modal */}
+      <ReportModal
+        open={reportModalOpen}
+        onClose={() => setReportModalOpen(false)}
+        type={reportType}
+        dateStr={reportDate}
+        minutes={reportMinutes}
+        sessions={reportSessions}
+        streak={reportStreak}
+        topSubject={reportTopSubject}
+        userName={user?.name || ''}
+        onSaved={refreshSavedReports}
+      />
     </div>
   );
 }

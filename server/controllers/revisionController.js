@@ -1,8 +1,10 @@
 import { z } from 'zod';
 import Revision from '../models/Revision.js';
+import User from '../models/User.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { emitToUser } from '../services/socketService.js';
+import { getEndOfToday } from '../utils/dateRange.js';
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -76,9 +78,8 @@ export const getRevisions = asyncHandler(async (req, res) => {
  * GET /api/revisions/due
  */
 export const getDueRevisions = asyncHandler(async (req, res) => {
-  const now = new Date();
-  const endOfToday = new Date(now);
-  endOfToday.setUTCHours(23, 59, 59, 999);
+  const user = await User.findById(req.user.id).select('timezone').lean();
+  const endOfToday = getEndOfToday(user?.timezone);
 
   const due = await Revision.find({
     user: req.user.id,
@@ -87,7 +88,8 @@ export const getDueRevisions = asyncHandler(async (req, res) => {
   })
     .sort({ dueDate: 1 })
     .populate('linkedNote', 'title folder')
-    .populate('linkedProblem', 'name platform difficulty');
+    .populate('linkedProblem', 'name platform difficulty')
+    .lean();
 
   res.json(due);
 });
@@ -101,7 +103,8 @@ export const getRevision = asyncHandler(async (req, res) => {
     user: req.user.id,
   })
     .populate('linkedNote')
-    .populate('linkedProblem');
+    .populate('linkedProblem')
+    .lean();
 
   if (!revision) {
     throw ApiError.notFound('Revision item not found');

@@ -36,9 +36,22 @@ export function SignIn() {
       } else {
         navigate(from, { replace: true });
       }
-    } catch {
-      // Security rule: Never reveal whether an email exists in the database
-      setErr('Email or password is incorrect.');
+    } catch (error) {
+      const serverMsg = error.response?.data?.message;
+      if (serverMsg) {
+        setErr(serverMsg);
+        toast.error(serverMsg);
+      } else if (error.response?.status === 401) {
+        setErr('Invalid email or password.');
+        toast.error('Invalid email or password.');
+      } else if (error.response?.status === 500 || !error.response) {
+        setErr('Cannot connect to backend server. Please ensure "npm run dev" is running.');
+        toast.error('Server offline or unreachable. Please run "npm run dev" to start both client and server.');
+      } else {
+        const msg = error.message || 'Email or password is incorrect.';
+        setErr(msg);
+        toast.error(msg);
+      }
     } finally {
       setBusy(false);
     }
@@ -109,6 +122,14 @@ export function SignIn() {
             Create an account
           </Link>
         </p>
+
+        <div className="flex items-center justify-center gap-3 pt-3 border-t border-[var(--line)] text-[11px] text-[var(--muted)]">
+          <Link to="/terms" className="hover:underline hover:text-[var(--text)]">Terms</Link>
+          <span>·</span>
+          <Link to="/privacy" className="hover:underline hover:text-[var(--text)]">Privacy</Link>
+          <span>·</span>
+          <Link to="/rewards-rules" className="hover:underline hover:text-[var(--text)]">Rewards Rules</Link>
+        </div>
       </form>
     </AuthLayout>
   );

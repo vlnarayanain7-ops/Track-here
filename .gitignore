@@ -23,6 +23,7 @@ server/.env.*
 Thumbs.db
 .vscode/
 .idea/
+.github/
 # Logs and Backups
 push.bat
 *.log

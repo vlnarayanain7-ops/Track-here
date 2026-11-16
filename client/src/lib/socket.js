@@ -11,7 +11,8 @@ const getSocketUrl = () => {
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
     if (host === 'localhost' || host === '127.0.0.1') {
-      return window.location.port === '5173' ? 'http://localhost:5000' : undefined;
+      // Connect via relative origin so Vite proxy forwards to 127.0.0.1:5000 without IPv6 resets
+      return undefined;
     }
     return 'https://trackhere-api.onrender.com';
   }
@@ -102,7 +103,8 @@ export function setupRealtimeSync(queryClient) {
   s.on('connect', () => {
     queryClient.invalidateQueries({ queryKey: ['tasks'] });
     queryClient.invalidateQueries({ queryKey: ['analytics'] });
-    queryClient.invalidateQueries({ queryKey: ['study-sessions'] });
+    queryClient.invalidateQueries({ queryKey: ['studySessions'] });
+    queryClient.invalidateQueries({ queryKey: ['activeTimer'] });
   });
 
   // Task events
@@ -124,51 +126,55 @@ export function setupRealtimeSync(queryClient) {
   // Note events
   s.on('note:created', () => {
     queryClient.invalidateQueries({ queryKey: ['notes'] });
+    queryClient.invalidateQueries({ queryKey: ['folders'] });
   });
 
   s.on('note:updated', () => {
     queryClient.invalidateQueries({ queryKey: ['notes'] });
+    queryClient.invalidateQueries({ queryKey: ['folders'] });
   });
 
   s.on('note:deleted', () => {
     queryClient.invalidateQueries({ queryKey: ['notes'] });
+    queryClient.invalidateQueries({ queryKey: ['folders'] });
   });
 
   // Study Session & Timer events
   s.on('session:created', () => {
-    queryClient.invalidateQueries({ queryKey: ['study-sessions'] });
+    queryClient.invalidateQueries({ queryKey: ['studySessions'] });
     queryClient.invalidateQueries({ queryKey: ['analytics'] });
-    queryClient.invalidateQueries({ queryKey: ['streak'] });
+    queryClient.invalidateQueries({ queryKey: ['studyStats'] });
   });
 
   s.on('session:updated', () => {
-    queryClient.invalidateQueries({ queryKey: ['study-sessions'] });
+    queryClient.invalidateQueries({ queryKey: ['studySessions'] });
     queryClient.invalidateQueries({ queryKey: ['analytics'] });
+    queryClient.invalidateQueries({ queryKey: ['studyStats'] });
   });
 
   s.on('session:deleted', () => {
-    queryClient.invalidateQueries({ queryKey: ['study-sessions'] });
+    queryClient.invalidateQueries({ queryKey: ['studySessions'] });
     queryClient.invalidateQueries({ queryKey: ['analytics'] });
-    queryClient.invalidateQueries({ queryKey: ['streak'] });
+    queryClient.invalidateQueries({ queryKey: ['studyStats'] });
   });
 
   s.on('timer:started', () => {
-    queryClient.invalidateQueries({ queryKey: ['timer'] });
+    queryClient.invalidateQueries({ queryKey: ['activeTimer'] });
   });
 
   s.on('timer:paused', () => {
-    queryClient.invalidateQueries({ queryKey: ['timer'] });
+    queryClient.invalidateQueries({ queryKey: ['activeTimer'] });
   });
 
   s.on('timer:resumed', () => {
-    queryClient.invalidateQueries({ queryKey: ['timer'] });
+    queryClient.invalidateQueries({ queryKey: ['activeTimer'] });
   });
 
   s.on('timer:finished', () => {
-    queryClient.invalidateQueries({ queryKey: ['timer'] });
-    queryClient.invalidateQueries({ queryKey: ['study-sessions'] });
+    queryClient.invalidateQueries({ queryKey: ['activeTimer'] });
+    queryClient.invalidateQueries({ queryKey: ['studySessions'] });
     queryClient.invalidateQueries({ queryKey: ['analytics'] });
-    queryClient.invalidateQueries({ queryKey: ['streak'] });
+    queryClient.invalidateQueries({ queryKey: ['studyStats'] });
   });
 
   // Problem events
@@ -202,13 +208,14 @@ export function setupRealtimeSync(queryClient) {
 
   // Daily Plan & Review events
   s.on('dailyPlan:updated', () => {
-    queryClient.invalidateQueries({ queryKey: ['daily-plans'] });
-    queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
+    queryClient.invalidateQueries({ queryKey: ['dailyPlans'] });
+    queryClient.invalidateQueries({ queryKey: ['dailyPlan'] });
   });
 
   s.on('dailyReview:updated', () => {
-    queryClient.invalidateQueries({ queryKey: ['daily-reviews'] });
-    queryClient.invalidateQueries({ queryKey: ['daily-review'] });
+    queryClient.invalidateQueries({ queryKey: ['dailyReviews'] });
+    queryClient.invalidateQueries({ queryKey: ['dailyReview'] });
+    queryClient.invalidateQueries({ queryKey: ['analytics'] });
   });
 
   // Timetable events
@@ -218,15 +225,15 @@ export function setupRealtimeSync(queryClient) {
 
   // Mock Test events
   s.on('mockTest:created', () => {
-    queryClient.invalidateQueries({ queryKey: ['mock-tests'] });
+    queryClient.invalidateQueries({ queryKey: ['mockTests'] });
   });
 
   s.on('mockTest:updated', () => {
-    queryClient.invalidateQueries({ queryKey: ['mock-tests'] });
+    queryClient.invalidateQueries({ queryKey: ['mockTests'] });
   });
 
   s.on('mockTest:deleted', () => {
-    queryClient.invalidateQueries({ queryKey: ['mock-tests'] });
+    queryClient.invalidateQueries({ queryKey: ['mockTests'] });
   });
 
   // User events

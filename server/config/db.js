@@ -51,11 +51,46 @@ const connectDB = async () => {
     console.log(isTest ? 'Connecting to local test MongoDB...' : 'Connecting to MongoDB Atlas / configured URI...');
     const conn = await mongoose.connect(targetUri, {
       serverSelectionTimeoutMS: 4000,
+      maxPoolSize: 20,
+      minPoolSize: 2,
+      socketTimeoutMS: 45000,
+      connectTimeoutMS: 10000,
     });
     console.log(`✅ MongoDB connected successfully: ${conn.connection.host}`);
     try {
-      const StudySession = (await import('../models/StudySession.js')).default;
-      await StudySession.syncIndexes();
+      const [
+        { default: StudySession },
+        { default: Task },
+        { default: Note },
+        { default: Revision },
+        { default: Problem },
+        { default: DailyPlan },
+        { default: DailyReview },
+        { default: MockTest },
+        { default: TimetableSlot },
+      ] = await Promise.all([
+        import('../models/StudySession.js'),
+        import('../models/Task.js'),
+        import('../models/Note.js'),
+        import('../models/Revision.js'),
+        import('../models/Problem.js'),
+        import('../models/DailyPlan.js'),
+        import('../models/DailyReview.js'),
+        import('../models/MockTest.js'),
+        import('../models/TimetableSlot.js'),
+      ]);
+
+      await Promise.allSettled([
+        StudySession.syncIndexes(),
+        Task.syncIndexes(),
+        Note.syncIndexes(),
+        Revision.syncIndexes(),
+        Problem.syncIndexes(),
+        DailyPlan.syncIndexes(),
+        DailyReview.syncIndexes(),
+        MockTest.syncIndexes(),
+        TimetableSlot.syncIndexes(),
+      ]);
     } catch (indexErr) {
       console.warn('Index sync notice:', indexErr.message);
     }

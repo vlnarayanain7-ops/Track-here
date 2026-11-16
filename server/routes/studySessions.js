@@ -11,6 +11,7 @@ import {
   finishTimer,
   cancelTimer,
   getActiveTimer,
+  heartbeatTimer,
   createSessionSchema,
   updateSessionSchema,
   startTimerSchema,
@@ -37,6 +38,8 @@ router.put('/timer/:id/finish', finishTimer);
 router.post('/timer/:id/finish', finishTimer);
 router.post('/timer/finish', finishTimer);
 router.post('/timer/cancel', cancelTimer);
+router.post('/timer/heartbeat', heartbeatTimer);
+router.post('/timer/:id/heartbeat', heartbeatTimer);
 
 // CRUD routes
 router.get('/', getSessions);

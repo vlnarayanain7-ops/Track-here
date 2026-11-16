@@ -7,6 +7,7 @@ import User from '../models/User.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { emitToUser } from '../services/socketService.js';
+import { parseDateRange } from '../utils/dateRange.js';
 
 // ─── Validation Schemas ───────────────────────────────────────
 
@@ -28,17 +29,6 @@ export const createDailyReviewSchema = z.object({
 }).passthrough();
 
 export const updateDailyReviewSchema = createDailyReviewSchema.partial().passthrough();
-
-// ─── Helper ───────────────────────────────────────────────────
-
-function parseDateRange(dateStr) {
-  const d = new Date(dateStr);
-  const start = new Date(d);
-  start.setUTCHours(0, 0, 0, 0);
-  const end = new Date(d);
-  end.setUTCHours(23, 59, 59, 999);
-  return { start, end };
-}
 
 // ─── Controllers ──────────────────────────────────────────────
 
@@ -63,28 +53,28 @@ export const getDailyReviews = asyncHandler(async (req, res) => {
  */
 export const getDailyReview = asyncHandler(async (req, res) => {
   const { date } = req.params;
-  const targetDate = date === 'today' ? new Date().toISOString().split('T')[0] : date;
-  const { start, end } = parseDateRange(targetDate);
+  const user = await User.findById(req.user.id).select('dailyStudyGoal timezone').lean();
+  const tz = user?.timezone || 'Asia/Kolkata';
+  const { start, end } = parseDateRange(date, tz);
 
-  const [existingReview, user, sessions, completedTasksList, attempts] = await Promise.all([
+  const [existingReview, sessions, completedTasksList, attempts] = await Promise.all([
     DailyReview.findOne({
       user: req.user.id,
       date: { $gte: start, $lte: end },
-    }).populate('completedTasks'),
-    User.findById(req.user.id).select('dailyStudyGoal'),
+    }).populate('completedTasks').lean(),
     StudySession.find({
       user: req.user.id,
       date: { $gte: start, $lte: end },
-    }),
+    }).select('focusDuration problemsAttempted problemsSolved').lean(),
     Task.find({
       user: req.user.id,
       status: 'Completed',
       completedAt: { $gte: start, $lte: end },
-    }),
+    }).select('title').lean(),
     ProblemAttempt.find({
       user: req.user.id,
       attemptedAt: { $gte: start, $lte: end },
-    }),
+    }).select('outcome').lean(),
   ]);
 
   // Calculate live stats for this date
@@ -114,8 +104,8 @@ export const getDailyReview = asyncHandler(async (req, res) => {
  */
 export const createDailyReview = asyncHandler(async (req, res) => {
   const { date, ...rest } = req.body;
-  const targetDate = new Date(date);
-  const { start, end } = parseDateRange(date);
+  const tz = req.user?.timezone || 'Asia/Kolkata';
+  const { start, end } = parseDateRange(date, tz);
 
   // Check if review already exists
   let review = await DailyReview.findOne({
@@ -133,7 +123,7 @@ export const createDailyReview = asyncHandler(async (req, res) => {
 
   review = await DailyReview.create({
     user: req.user.id,
-    date: targetDate,
+    date: start,
     ...rest,
   });
 
@@ -147,8 +137,8 @@ export const createDailyReview = asyncHandler(async (req, res) => {
  */
 export const updateDailyReview = asyncHandler(async (req, res) => {
   const { date } = req.params;
-  const targetDate = date === 'today' ? new Date().toISOString().split('T')[0] : date;
-  const { start, end } = parseDateRange(targetDate);
+  const tz = req.user?.timezone || 'Asia/Kolkata';
+  const { start, end } = parseDateRange(date, tz);
 
   const review = await DailyReview.findOneAndUpdate(
     {

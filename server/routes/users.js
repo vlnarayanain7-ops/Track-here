@@ -8,6 +8,7 @@ import {
   exportData,
   importData,
   deleteAccount,
+  acceptTerms,
   updateProfileSchema,
   renameSubjectSchema,
   updateSettingsSchema,
@@ -22,6 +23,7 @@ const router = Router();
 router.use(auth);
 router.use(csrfProtection);
 
+router.post('/accept-terms', acceptTerms);
 router.get('/profile', getProfile);
 router.put('/profile', validate(updateProfileSchema), updateProfile);
 router.post('/subjects/rename', validate(renameSubjectSchema), renameSubject);

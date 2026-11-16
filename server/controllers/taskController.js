@@ -97,7 +97,8 @@ export const getTasks = asyncHandler(async (req, res) => {
       .sort(safeSort)
       .skip(skip)
       .limit(safeLimit)
-      .populate('linkedStudySession', 'topic focusDuration date'),
+      .populate('linkedStudySession', 'topic focusDuration date')
+      .lean(),
     Task.countDocuments(query),
   ]);
 

@@ -22,6 +22,7 @@ export default function NotesPage() {
   // Editor state
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [folder, setFolder] = useState('General');
   const [isSaved, setIsSaved] = useState(true);
   const [saveError, setSaveError] = useState(null);
   const saveTimeoutRef = useRef(null);
@@ -69,16 +70,18 @@ export default function NotesPage() {
       setActiveNoteId(activeNote._id);
       setTitle(activeNote.title || '');
       setBody(activeNote.contentMarkdown || activeNote.contentHtml || '');
+      setFolder(activeNote.folder || 'General');
       setIsSaved(true);
       setSaveError(null);
     } else {
       setTitle('');
       setBody('');
+      setFolder(selectedSubject || 'General');
     }
   }, [activeNote?._id]);
 
   // Autosave with 800ms debounce
-  const triggerAutosave = (newTitle, newBody, immediate = false) => {
+  const triggerAutosave = (newTitle, newBody, newFolder = folder, immediate = false) => {
     setIsSaved(false);
     setSaveError(null);
 
@@ -91,6 +94,7 @@ export default function NotesPage() {
             id: activeNote._id,
             data: {
               title: newTitle || 'Untitled note',
+              folder: newFolder || 'General',
               contentMarkdown: newBody,
               contentHtml: newBody,
             },
@@ -98,7 +102,7 @@ export default function NotesPage() {
         } else if (newTitle?.trim() || newBody?.trim()) {
           const res = await createNoteMutation.mutateAsync({
             title: newTitle.trim() || 'Untitled note',
-            folder: selectedSubject || userSubjects[0] || 'General',
+            folder: newFolder || selectedSubject || 'General',
             contentMarkdown: newBody,
             contentHtml: newBody,
           });
@@ -127,13 +131,19 @@ export default function NotesPage() {
   const handleTitleChange = (e) => {
     const val = e.target.value;
     setTitle(val);
-    triggerAutosave(val, body);
+    triggerAutosave(val, body, folder);
   };
 
   const handleBodyChange = (e) => {
     const val = e.target.value;
     setBody(val);
-    triggerAutosave(title, val);
+    triggerAutosave(title, val, folder);
+  };
+
+  const handleFolderChange = (e) => {
+    const val = e.target.value;
+    setFolder(val);
+    triggerAutosave(title, body, val, true);
   };
 
   // Format toolbar helpers
@@ -157,10 +167,11 @@ export default function NotesPage() {
   };
 
   const handleCreateNote = async () => {
+    const targetFolder = selectedSubject || 'General';
     try {
       const res = await createNoteMutation.mutateAsync({
         title: 'Untitled note',
-        folder: selectedSubject || userSubjects[0] || 'General',
+        folder: targetFolder,
         contentMarkdown: '',
         contentHtml: '',
       });
@@ -169,6 +180,7 @@ export default function NotesPage() {
         setActiveNoteId(created._id);
         setTitle(created.title || 'Untitled note');
         setBody('');
+        setFolder(created.folder || targetFolder);
         setMobileEditing(true);
       }
       await refetch();
@@ -251,9 +263,11 @@ export default function NotesPage() {
           <select
             value={selectedSubject}
             onChange={(e) => setSelectedSubject(e.target.value)}
-            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--ln)] bg-[var(--sf)] text-[var(--tx)] focus:outline-none"
+            className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-[var(--ln)] bg-[var(--sf)] text-[var(--tx)] focus:outline-none cursor-pointer"
+            aria-label="Filter notes by subject"
           >
             <option value="">All subjects</option>
+            <option value="General">General (Normal notes)</option>
             {userSubjects.map((sub) => (
               <option key={sub} value={sub}>
                 {sub}
@@ -263,7 +277,7 @@ export default function NotesPage() {
 
           {/* Notes list */}
           {notes.length === 0 ? (
-            <p className="note py-6 text-center text-xs">No notes yet</p>
+            <p className="note py-6 text-center text-xs">No notes in this subject yet</p>
           ) : (
             <div className="nl">
               {notes.map((note) => {
@@ -282,7 +296,12 @@ export default function NotesPage() {
                       {note.pinned && <Pin className="w-3 h-3 text-[var(--pr)] fill-current shrink-0" />}
                       <span className="truncate">{note.title || 'Untitled note'}</span>
                     </b>
-                    <span>{formatRelativeDate(note.updatedAt || note.createdAt)}</span>
+                    <span className="flex items-center justify-between text-[11px] text-[var(--mu)] mt-0.5">
+                      <span>{formatRelativeDate(note.updatedAt || note.createdAt)}</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-[var(--sf2)] text-[var(--mu)]">
+                        {note.folder || 'General'}
+                      </span>
+                    </span>
                   </button>
                 );
               })}
@@ -305,6 +324,24 @@ export default function NotesPage() {
             <span data-testid="mobile-saved-indicator" className="text-[11px] text-[var(--mu)]">
               {isSaved ? 'Saved' : 'Saving...'}
             </span>
+          </div>
+
+          {/* Subject Selector for current note */}
+          <div className="flex items-center gap-2 pb-1">
+            <span className="text-xs text-[var(--mu)] font-medium">Subject:</span>
+            <select
+              value={folder}
+              onChange={handleFolderChange}
+              className="h-7 px-2 text-xs rounded-lg border border-[var(--ln)] bg-[var(--sf2)] text-[var(--tx)] focus:border-[var(--pr)] focus:outline-none cursor-pointer"
+              aria-label="Note subject"
+            >
+              <option value="General">General (Normal note)</option>
+              {userSubjects.map((sub) => (
+                <option key={sub} value={sub}>
+                  {sub}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Top controls: Pin, Delete, Saved Indicator */}

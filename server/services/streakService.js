@@ -3,6 +3,7 @@ import { toZonedTime } from 'date-fns-tz';
 import mongoose from 'mongoose';
 import StudySession from '../models/StudySession.js';
 import User from '../models/User.js';
+import { DailyTotal } from '../models/rewards.js';
 
 const MINIMUM_ACTIVE_MINUTES = 25;
 
@@ -37,25 +38,15 @@ export async function getStreakInfo(userId) {
   const startDate = subDays(now, dayOfWeek + (53 - 1) * 7);
 
   const userObjId = new mongoose.Types.ObjectId(userId);
-  const results = await StudySession.aggregate([
-    {
-      $match: {
-        user: userObjId,
-        date: { $exists: true, $ne: null },
-      },
-    },
-    {
-      $group: {
-        _id: { $dateToString: { format: '%Y-%m-%d', date: '$date', timezone } },
-        totalMinutes: { $sum: '$focusDuration' },
-      },
-    },
-    { $sort: { _id: 1 } },
-  ]);
+  const minDateStr = format(subDays(startDate, 30), 'yyyy-MM-dd');
+  const rows = await DailyTotal.find({
+    user: userObjId,
+    date: { $gte: minDateStr },
+  }).select('date minutes').lean();
 
   const map = {};
-  for (const r of results) {
-    map[r._id] = r.totalMinutes;
+  for (const r of rows) {
+    map[r.date] = r.minutes;
   }
 
   // Build the 53-week history array
@@ -84,6 +75,7 @@ export async function getStreakInfo(userId) {
   let currentStreak = 0;
   let checkOffset = isActiveToday ? 0 : 1;
   let graceUsed = 0;
+  const activeStreakDays = [];
 
   for (let i = checkOffset; i < 400; i++) {
     const d = subDays(now, i);
@@ -93,6 +85,11 @@ export async function getStreakInfo(userId) {
     if (minutes >= MINIMUM_ACTIVE_MINUTES) {
       currentStreak++;
       graceUsed = 0;
+      activeStreakDays.unshift({
+        date: dateStr,
+        label: format(d, 'EEE MMM d'),
+        minutes,
+      });
     } else if (graceUsed < graceDays) {
       graceUsed++;
     } else {
@@ -140,8 +137,33 @@ export async function getStreakInfo(userId) {
     nextMilestone = currentStreak + 10;
   }
 
-  // Last 7 days (M, T, W, T, F, S, S)
-  const dayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  // Current calendar week (Monday to Sunday in user's timezone)
+  const weekDayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  const weekDayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const currentDayOfWeek = (now.getDay() + 6) % 7; // Monday = 0, Sunday = 6
+  const mondayDate = subDays(now, currentDayOfWeek);
+
+  const thisWeek = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(mondayDate.getTime() + i * 86400000);
+    const dateStr = format(d, 'yyyy-MM-dd');
+    const minutes = map[dateStr] || 0;
+    const hours = Math.round((minutes / 60) * 10) / 10;
+    const isToday = dateStr === todayStr;
+    const isFuture = i > currentDayOfWeek;
+    thisWeek.push({
+      day: weekDayNames[i],
+      label: weekDayLabels[i],
+      date: dateStr,
+      minutes,
+      hours,
+      isActive: minutes >= MINIMUM_ACTIVE_MINUTES,
+      isToday,
+      isFuture,
+    });
+  }
+
+  // Rolling last 7 days ending today
   const last7Days = [];
   for (let i = 6; i >= 0; i--) {
     const d = subDays(now, i);
@@ -150,11 +172,13 @@ export async function getStreakInfo(userId) {
     const minutes = map[dateStr] || 0;
     const hours = Math.round((minutes / 60) * 10) / 10;
     last7Days.push({
-      day: dayNames[dayIdx],
+      day: weekDayNames[dayIdx],
+      label: weekDayLabels[dayIdx],
       date: dateStr,
       minutes,
       hours,
       isActive: minutes >= MINIMUM_ACTIVE_MINUTES,
+      isToday: dateStr === todayStr,
     });
   }
 
@@ -166,7 +190,9 @@ export async function getStreakInfo(userId) {
     nextMilestone,
     history,
     byDay: map,
+    thisWeek,
     last7Days,
+    activeStreakDays,
   };
 }
 

@@ -6,6 +6,7 @@ import MobileTabBar from './MobileTabBar';
 import CommandPalette from '@/components/search/CommandPalette';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import WakeBanner from '@/components/WakeBanner';
+import { TimerProvider } from '@/contexts/TimerContext';
 import { cn } from '@/lib/utils';
 
 function ContentFallback() {
@@ -20,7 +21,7 @@ function ContentFallback() {
   );
 }
 
-export default function AppLayout() {
+function AppLayoutShell() {
   const navigate = useNavigate();
   const location = useLocation();
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -92,5 +93,13 @@ export default function AppLayout() {
         />
       </div>
     </div>
+  );
+}
+
+export default function AppLayout() {
+  return (
+    <TimerProvider>
+      <AppLayoutShell />
+    </TimerProvider>
   );
 }
