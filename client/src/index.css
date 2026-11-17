@@ -295,4 +295,31 @@
       transform: scale(1);
     }
   }
+
+  /* Pomodoro & History (Prompt 15) */
+  .dots { display: flex; gap: 8px; align-items: center; justify-content: center; }
+  .dots i { width: 10px; height: 10px; border-radius: 5px; background: var(--ln, var(--line)); transition: background-color 0.2s ease; display: inline-block; }
+  .dots i.on { background: var(--pr, var(--primary)); }
+  .linklike { background: none; border: 0; padding: 0; color: var(--pr, var(--primary)); font: inherit; cursor: pointer; text-decoration: underline; }
+  .seg button:disabled, .chip:disabled { opacity: .5; cursor: not-allowed; }
+
+  .hday { display: flex; justify-content: space-between; align-items: baseline; margin: 20px 0 4px; font-weight: 600; color: var(--ink, var(--text)); }
+  .hrow { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--ln, var(--line)); }
+  .hrow .ht { width: 118px; color: var(--mu, var(--muted)); font-size: 13px; flex: none; }
+  .hrow .g { flex: 1; min-width: 0; }
+  .hrow .g b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: var(--ink, var(--text)); }
+  .hrow small { display: flex; align-items: center; gap: 6px; color: var(--mu, var(--muted)); font-size: 13px; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 4px; }
+  .menu { position: relative; }
+  .menu summary { list-style: none; cursor: pointer; padding: 4px 8px; border-radius: 8px; color: var(--mu, var(--muted)); font-size: 16px; line-height: 1; user-select: none; }
+  .menu summary::-webkit-details-marker { display: none; }
+  .menu[open] { position: relative; }
+  .menu-dropdown { position: absolute; right: 0; top: 100%; z-index: 30; min-width: 110px; background: var(--sf, var(--surface)); border: 1px solid var(--ln, var(--line)); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); padding: 4px; }
+  .menu-dropdown button { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 6px 12px; font-size: 13px; color: var(--tx, var(--text)); cursor: pointer; border-radius: 6px; }
+  .menu-dropdown button:hover { background: var(--sf2, var(--surface-2)); }
+  dialog.sheet.wide, .sheet.wide { width: min(520px, 100vw) !important; max-width: min(520px, 100vw) !important; }
+  @media (max-width: 760px) {
+    .hrow { flex-wrap: wrap; }
+    .hrow .ht { width: 100%; }
+  }
 }
