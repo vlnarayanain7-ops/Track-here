@@ -19,6 +19,13 @@ export const createSessionSchema = z.object({
   startTime: z.string().or(z.date()).optional().nullable(),
   endTime: z.string().or(z.date()).optional().nullable(),
   focusDuration: z.number().min(0, 'Focus duration must be non-negative'),
+  duration: z.number().optional().nullable(),
+  durationSec: z.number().optional().nullable(),
+  startedAt: z.string().or(z.date()).optional().nullable(),
+  source: z.string().optional(),
+  clientId: z.string().optional().nullable(),
+  completed: z.boolean().optional(),
+  subjectName: z.string().optional().nullable(),
   videoDuration: z.number().min(0).optional(),
   problemsAttempted: z.number().min(0).optional(),
   problemsSolved: z.number().min(0).optional(),
@@ -27,9 +34,9 @@ export const createSessionSchema = z.object({
   keyLearnings: z.string().optional().nullable(),
   nextAction: z.string().optional().nullable(),
   linkedTask: z.string().optional().nullable(),
-}).strict();
+}).passthrough();
 
-export const updateSessionSchema = createSessionSchema.partial().strict();
+export const updateSessionSchema = createSessionSchema.partial().passthrough();
 
 export const startTimerSchema = z.object({
   category: categorySchema,
@@ -108,17 +115,21 @@ export const createSession = asyncHandler(async (req, res) => {
   const tz = req.user?.timezone || 'Asia/Kolkata';
   const subName = req.body.category && req.body.category !== 'Focus' ? req.body.category : null;
   const topic = req.body.topic?.trim() || defaultSessionName(sessionDate, tz, subName);
-  const durationSec = Math.round((Number(req.body.focusDuration) || 0) * 60);
+  const durationSec = req.body.durationSec != null
+    ? Number(req.body.durationSec)
+    : Math.round((Number(req.body.focusDuration) || 0) * 60);
 
   const sessionData = {
     ...req.body,
     topic,
     user: req.user.id,
     date: sessionDate,
-    source: 'manual',
-    heartbeatOk: false,
+    source: req.body.source || 'manual',
+    heartbeatOk: req.body.heartbeatOk ?? false,
     durationSec,
-    startedAt: req.body.startTime ? new Date(req.body.startTime) : sessionDate,
+    startedAt: req.body.startedAt
+      ? new Date(req.body.startedAt)
+      : (req.body.startTime ? new Date(req.body.startTime) : sessionDate),
     subjectName: subName || 'Focus',
   };
 
