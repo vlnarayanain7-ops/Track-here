@@ -12,7 +12,11 @@
     "test:audit": "node tests/test-audit.mjs && node server/scripts/clean-test-users.mjs",
     "test:production-audit": "node tests/production-audit.mjs && node server/scripts/clean-test-users.mjs",
     "clean:test-users": "node server/scripts/clean-test-users.mjs",
-    "test:pomodoro": "node --test client/src/lib/pomodoro.test.js"
+    "migrate:sessions:dry": "node server/scripts/migrate-session-durations.mjs",
+    "test:pomodoro": "node --test client/src/lib/pomodoro.test.js",
+    "test:sessions": "node --test client/src/lib/sessions.test.js",
+    "test:history": "node --test client/src/lib/history.test.js",
+    "test:unit": "node --test client/src/lib/*.test.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.0",

@@ -9,6 +9,7 @@ export default function SideSheet({
   title,
   children,
   className,
+  wide = false,
 }) {
   const isSheetOpen = open ?? isOpen ?? false;
   const overlayRef = useRef(null);
@@ -32,6 +33,9 @@ export default function SideSheet({
   return (
     <div
       ref={overlayRef}
+      role="dialog"
+      aria-label={title}
+      aria-modal="true"
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose?.();
       }}
@@ -40,6 +44,7 @@ export default function SideSheet({
       <div
         className={cn(
           'relative w-full max-w-lg h-full bg-[var(--surface)] border-l border-[var(--line)] shadow-2xl flex flex-col animate-slide-in-right overflow-hidden',
+          wide && 'max-w-[520px]',
           className
         )}
       >

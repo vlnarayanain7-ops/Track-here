@@ -233,6 +233,54 @@ async function run() {
   }
 
   // ==========================================
+  // TEST 4: Duration formatting (no bare "m", shows "1m")
+  // ==========================================
+  console.log('\nRunning Test 4: Duration formatting (no bare "m", shows "1m")...');
+  {
+    const oneMinSession = {
+      _id: 'sess-1min-test',
+      topic: '1-minute Quick Review',
+      category: 'Algorithms',
+      subject: 'Algorithms',
+      durationSec: 65, // > 60s, formats as 1m
+      startedAt: new Date().toISOString(),
+      date: new Date().toISOString(),
+    };
+    const { page } = await setupPage(context, { sessions: [oneMinSession] });
+    await page.goto('http://localhost:5173/study', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('.time b');
+    await page.waitForSelector('text=1-minute Quick Review');
+
+    // Check Today's sessions row
+    const todayOneMinVisible = await page.getByText(/^1m$/).first().isVisible();
+    console.log("Today's sessions shows '1m':", todayOneMinVisible);
+
+    // Open History Drawer
+    await page.getByRole('button', { name: 'History' }).click();
+    await page.waitForSelector('.sheet.wide');
+    await page.waitForSelector('.hday');
+
+    const historyOneMinVisible = await page.getByRole('dialog', { name: 'History' }).getByText('1m').first().isVisible();
+    console.log("History shows '1m':", historyOneMinVisible);
+
+    // Check for any bare "m" in <b> tags
+    const bareMCount = await page.locator('b', { hasText: /^m$/ }).count();
+    console.log('Bare "m" count in <b> elements:', bareMCount);
+
+    const passed = todayOneMinVisible && historyOneMinVisible && bareMCount === 0;
+    results.push({
+      test: "A finished session shows '1m' and no bare 'm' exists anywhere",
+      passed,
+    });
+
+    // Capture screenshot of the 1m session in Today's sessions & History
+    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'step-15-duration-1m-verified.png') });
+    console.log('Captured 1m duration verification screenshot.');
+
+    await page.close();
+  }
+
+  // ==========================================
   // CAPTURE ALL REQUIRED PROMPT 15 SCREENSHOTS
   // ==========================================
   console.log('\nCapturing screenshots required by Prompt 15...');

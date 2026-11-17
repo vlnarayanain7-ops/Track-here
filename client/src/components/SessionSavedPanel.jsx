@@ -1,17 +1,13 @@
 import { useState } from 'react';
-import { fmtDuration } from '@/lib/format';
+import { fmtSessionDuration } from '@/lib/sessions.js';
 
 export function SessionSavedPanel({ session, subjects = [], onSave, onSkip }) {
   const [name, setName] = useState(session?.topic || '');
   const [subjectId, setSubjectId] = useState(session?.category || '');
 
-  const durationMin = Math.round(
-    (session?.durationSec != null ? session.durationSec : (session?.focusDuration || 0) * 60) / 60
-  );
-
   return (
     <section className="saved" aria-live="polite">
-      <b>Session saved · {fmtDuration(Math.max(1, durationMin))}</b>
+      <b>Session saved · {fmtSessionDuration(session)}</b>
       <span className="note">Named automatically. Rename it if you like.</span>
       <input
         className="input"

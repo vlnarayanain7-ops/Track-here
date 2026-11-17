@@ -1,26 +1,28 @@
 // src/lib/history.js
-const key = (d) => new Intl.DateTimeFormat('en-CA').format(d);
+import { sessionMinutes, sessionSeconds } from './sessions.js';
+
+export const dayKey = (d) => new Intl.DateTimeFormat('en-CA').format(new Date(d)); // the user's LOCAL date
+export const level = (m) => (m <= 0 ? 0 : m < 25 ? 1 : m < 60 ? 2 : m < 120 ? 3 : m < 240 ? 4 : 5); // --heat-N
 
 const clock = (d) =>
   d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).toLowerCase();
 
 export const timeRange = (s) => {
-  const rawDate = s.startedAt || s.date || s.startTime;
-  const a = rawDate ? new Date(rawDate) : new Date();
-  const durSec = s.durationSec ?? (s.duration ? s.duration * 60 : 0);
-  const b = new Date(a.getTime() + durSec * 1000);
+  const rawDate = s.startedAt || s.date || s.startTime || new Date();
+  const a = new Date(rawDate);
+  const sec = sessionSeconds(s) ?? 0;
+  const b = new Date(a.getTime() + sec * 1000);
   return `${clock(a)} – ${clock(b)}`;
 };
 
 export function groupByDay(sessions, now = new Date()) {
-  const today = key(now);
-  const yesterday = key(new Date(now.getTime() - 864e5));
+  const today = dayKey(now);
+  const yesterday = dayKey(new Date(now.getTime() - 864e5));
   const groups = new Map();
 
   for (const s of sessions) {
-    const rawDate = s.startedAt || s.date || s.startTime;
-    const d = rawDate ? new Date(rawDate) : new Date();
-    const k = key(d);
+    const rawDate = s.startedAt || s.date || s.startTime || new Date();
+    const k = dayKey(rawDate);
     groups.set(k, [...(groups.get(k) ?? []), s]);
   }
 
@@ -38,11 +40,8 @@ export function groupByDay(sessions, now = new Date()) {
               month: 'short',
               day: 'numeric',
             }),
-      minutes: items.reduce((acc, s) => {
-        const sec = s.durationSec ?? (s.duration ? s.duration * 60 : 0);
-        return acc + Math.round(sec / 60);
-      }, 0),
-      items: items.sort((a, b) => {
+      minutes: items.reduce((a, s) => a + sessionMinutes(s), 0),
+      items: [...items].sort((a, b) => {
         const ta = new Date(a.startedAt || a.date || a.startTime || 0).getTime();
         const tb = new Date(b.startedAt || b.date || b.startTime || 0).getTime();
         return tb - ta;

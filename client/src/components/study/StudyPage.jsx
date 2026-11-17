@@ -7,12 +7,12 @@ import { createStudySession, updateStudySession, deleteStudySession } from '@/ap
 import api from '@/api/axios';
 import { enqueueOutbox, generateClientId } from '@/lib/outbox';
 import { defaultSessionName } from '@/lib/sessionNames';
-import { fmtDuration } from '@/lib/format';
 import toast from 'react-hot-toast';
 
 import PomodoroTimer from './PomodoroTimer';
 import TimerSettings, { loadPrefs, savePrefs } from './TimerSettings';
 import HistoryDrawer from './HistoryDrawer';
+import TodaySessions from './TodaySessions';
 import SessionSavedPanel from '@/components/SessionSavedPanel';
 import SessionForm from './SessionForm';
 
@@ -29,6 +29,16 @@ export default function StudyPage() {
       typeof s === 'string' ? { id: s, name: s, color: 'c1' } : { ...s, id: s.id || s._id || s.name }
     );
   }, [user]);
+
+  const subjectsById = useMemo(() => {
+    const map = {};
+    for (const s of subjects) {
+      if (s.id) map[s.id] = s;
+      if (s._id) map[s._id] = s;
+      if (s.name) map[s.name] = s;
+    }
+    return map;
+  }, [subjects]);
 
   // Pomodoro preferences from localStorage ('th-pomo-prefs')
   const [prefs, setPrefs] = useState(loadPrefs);
@@ -213,45 +223,11 @@ export default function StudyPage() {
       )}
 
       {/* Today's Sessions Section */}
-      <div className="mt-10">
-        <div className="sec">
-          <h2 className="text-base font-semibold text-[var(--text)]">Today's sessions</h2>
-          <button
-            type="button"
-            onClick={() => setHistoryOpen(true)}
-            className="btn btn-ghost text-sm text-[var(--muted)] hover:text-[var(--text)]"
-          >
-            History
-          </button>
-        </div>
-
-        {todaySessions.length === 0 ? (
-          <p className="note py-4 text-sm text-[var(--muted)]">
-            No focus sessions logged today.
-          </p>
-        ) : (
-          <div className="divide-y divide-[var(--line)]">
-            {todaySessions.map((s, idx) => {
-              const dur = s.durationSec
-                ? Math.round(s.durationSec / 60)
-                : s.focusDuration || s.duration || 0;
-              return (
-                <div key={s._id || s.id || idx} className="row">
-                  <span className="g">
-                    <span className="font-semibold text-[var(--text)]">
-                      {s.topic || 'Focus session'}
-                    </span>
-                    <span className="note"> · {s.category || s.subject || 'Focus'}</span>
-                  </span>
-                  <b className="font-semibold text-sm text-[var(--text)]">
-                    {fmtDuration(dur)}
-                  </b>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      <TodaySessions
+        sessions={todaySessions}
+        subjectsById={subjectsById}
+        onHistory={() => setHistoryOpen(true)}
+      />
 
       {/* Timer Settings Popover */}
       <TimerSettings

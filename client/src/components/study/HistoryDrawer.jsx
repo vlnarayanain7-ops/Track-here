@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import SideSheet from '@/components/ui/SideSheet';
 import { groupByDay, timeRange } from '@/lib/history';
+import { fmtSessionDuration, sessionMinutes } from '@/lib/sessions.js';
 import { fmtDuration } from '@/lib/format';
 import toast from 'react-hot-toast';
 
@@ -18,9 +19,6 @@ function Row({ s, subject, onRename, onDelete }) {
       setName(s.topic || 'Focus session');
     }
   };
-
-  const durSec = s.durationSec ?? (s.duration ? s.duration * 60 : 0);
-  const durMin = Math.round(durSec / 60);
 
   // Close details menu when clicked outside
   useEffect(() => {
@@ -78,7 +76,7 @@ function Row({ s, subject, onRename, onDelete }) {
             : ''}
         </small>
       </span>
-      <b>{fmtDuration(durMin)}</b>
+      <b>{fmtSessionDuration(s)}</b>
       <details ref={detailsRef} className="menu">
         <summary aria-label="Session actions">⋯</summary>
         <div className="menu-dropdown">
@@ -252,8 +250,7 @@ export function HistoryDrawer({
       const rawDate = s.startedAt || s.date || s.startTime;
       if (!rawDate) continue;
       const k = new Intl.DateTimeFormat('en-CA').format(new Date(rawDate));
-      const sec = s.durationSec ?? (s.duration ? s.duration * 60 : 0);
-      map.set(k, (map.get(k) || 0) + Math.round(sec / 60));
+      map.set(k, (map.get(k) || 0) + sessionMinutes(s));
     }
     return map;
   }, [activeSessions]);

@@ -1,6 +1,7 @@
 import { Edit2, Trash2, CheckCircle2, Clock, BookOpen } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
-import { formatDuration, formatDate } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
+import { fmtSessionDuration } from '@/lib/sessions.js';
 
 export default function SessionCard({ session, onEdit, onDelete }) {
   const getCategoryColor = (cat) => {
@@ -80,7 +81,7 @@ export default function SessionCard({ session, onEdit, onDelete }) {
           <Clock className="w-3.5 h-3.5 text-emerald-700" />
           <span className="text-text-muted">Focus:</span>
           <strong className="text-emerald-900 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-            {formatDuration(session.focusDuration)}
+            {fmtSessionDuration(session)}
           </strong>
         </div>
 
