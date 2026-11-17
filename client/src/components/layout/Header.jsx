@@ -1,9 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import {
   Search,
   Plus,
   Flame,
+  Sun as TodayIcon,
+  AlarmClock,
+  ListTodo,
+  FileText,
   Sun,
   Moon,
   Laptop,
@@ -22,6 +26,14 @@ import { useTimer } from '@/hooks/useTimer';
 import { getTheme, setTheme } from '@/lib/theme';
 import { cn, formatTimerDisplay } from '@/lib/utils';
 import { getPendingOutboxCount } from '@/lib/outbox';
+
+const NAV_ITEMS = [
+  { to: '/', label: 'Today', icon: TodayIcon, end: true },
+  { to: '/study', label: 'Focus', icon: AlarmClock },
+  { to: '/plan', label: 'Plan', icon: ListTodo },
+  { to: '/notes', label: 'Notes', icon: FileText },
+  { to: '/progress', label: 'Progress', icon: Flame },
+];
 
 export default function Header({ onOpenCommandPalette, onQuickAdd }) {
   const { user, logout } = useAuth();
@@ -128,12 +140,38 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
   ];
 
   return (
-    <header className="sticky top-0 z-30 h-14 bg-[var(--bg)] border-b border-[var(--line)] px-4 sm:px-8 flex items-center justify-between gap-3 select-none">
-      {/* Brand on mobile (< 768px) where sidebar is hidden */}
-      <div className="md:hidden flex items-center">
-        <Link to="/" className="font-heading font-bold text-[17px] text-[var(--text)] tracking-tight">
-          Track Here
+    <header className="sticky top-0 z-30 h-16 bg-[var(--bg)] border-b border-[var(--line)] px-4 sm:px-8 flex items-center justify-between gap-4 select-none">
+      {/* Left: Stacked Brand + Shifted Navigation Tabs */}
+      <div className="flex items-center gap-6 sm:gap-8">
+        <Link
+          to="/"
+          className="font-heading font-bold text-[15px] sm:text-[16px] text-[var(--text)] tracking-tight leading-tight flex flex-col shrink-0 hover:opacity-90 transition-opacity"
+        >
+          <span>Track</span>
+          <span>Here</span>
         </Link>
+
+        {/* Primary 5 Navigation Tabs (Desktop >= 768px, Golden 9px curve) */}
+        <nav aria-label="Primary" className="hidden md:flex items-center gap-1.5">
+          {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-2 h-9 px-3 rounded-[9px] text-sm font-medium transition-colors select-none',
+                  isActive
+                    ? 'bg-[var(--primary-soft)] text-[var(--primary)] font-semibold'
+                    : 'text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]'
+                )
+              }
+            >
+              <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
+              <span>{label}</span>
+            </NavLink>
+          ))}
+        </nav>
       </div>
 
       {/* Right-aligned actions */}
@@ -142,11 +180,11 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
         {(isRunning || isPaused) && (
           <div
             onClick={() => navigate('/study')}
-            className="flex items-center gap-2 h-9 px-3 rounded-full bg-[var(--primary-soft)] border border-[var(--primary)]/30 text-[var(--primary)] cursor-pointer text-xs font-semibold shadow-2xs hover:brightness-105 transition-all"
+            className="flex items-center gap-2 h-8 px-2.5 rounded-[9px] bg-[var(--primary-soft)] text-[var(--primary)] cursor-pointer text-xs font-semibold shadow-2xs hover:brightness-105 transition-all"
             title="Focus session active — click to view timer"
           >
             <Clock className="w-3.5 h-3.5 shrink-0 animate-pulse" />
-            <span className="font-mono tracking-tight font-bold">
+            <span className="font-mono tracking-tight font-bold text-xs">
               {formatTimerDisplay(elapsedTime)}
             </span>
             <div className="flex items-center gap-0.5 pl-1 border-l border-[var(--primary)]/30">
@@ -158,7 +196,7 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
                     pauseTimer();
                   }}
                   title="Pause"
-                  className="p-1 hover:brightness-125 rounded"
+                  className="p-1 hover:brightness-125 rounded-[6px]"
                 >
                   <Pause className="w-3 h-3" />
                 </button>
@@ -170,7 +208,7 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
                     resumeTimer();
                   }}
                   title="Resume"
-                  className="p-1 hover:brightness-125 rounded"
+                  className="p-1 hover:brightness-125 rounded-[6px]"
                 >
                   <Play className="w-3 h-3" />
                 </button>
@@ -182,7 +220,7 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
                   finishTimer();
                 }}
                 title="Finish"
-                className="p-1 text-[var(--danger)] hover:brightness-125 rounded"
+                className="p-1 text-[var(--danger)] hover:brightness-125 rounded-[6px]"
               >
                 <Square className="w-3 h-3" />
               </button>
@@ -194,7 +232,7 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
         <button
           type="button"
           onClick={onOpenCommandPalette}
-          className="btn-search w-9 h-9 rounded-lg border border-transparent hover:border-[var(--line)] hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--text)] transition-colors flex items-center justify-center cursor-pointer"
+          className="btn-search w-8 h-8 rounded-[9px] hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--text)] transition-colors flex items-center justify-center cursor-pointer"
           aria-label="Search (Ctrl K)"
           title="Search (Ctrl K)"
         >
@@ -204,7 +242,13 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
         {/* Streak chip (3 states: idle, risk, lit) */}
         <Link
           to="/progress"
-          className={cn('chipst', streakState, isPopping && 'is-popping')}
+          className={cn(
+            'flex items-center gap-1.5 h-8 px-2.5 rounded-[9px] text-xs font-bold transition-all cursor-pointer select-none',
+            streakState === 'idle'
+              ? 'text-[var(--muted)] hover:bg-[var(--surface-2)]'
+              : 'text-[#F59E0B] hover:brightness-110',
+            isPopping && 'scale-105'
+          )}
           title={
             currentStreak === 0
               ? 'Start your streak today (25+ min)'
@@ -214,48 +258,39 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
           }
           aria-label={`${currentStreak}-day streak`}
         >
-          <svg
-            className="chipst-flame w-4 h-4 shrink-0"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <defs>
-              <linearGradient id="streakFlameGrad" x1="0" y1="1" x2="0" y2="0">
-                <stop offset="0%" stopColor="#F97316" />
-                <stop offset="100%" stopColor="#FBBF24" />
-              </linearGradient>
-            </defs>
-            <path
-              d="M12 2c1 4 6 5.5 6 11a6 6 0 0 1-12 0c0-2.2 1-3.6 2.3-4.8.2 1.8 1 2.8 2.2 3-.6-3.4.3-6 1.5-9.2z"
-              fill={streakState === 'idle' ? 'var(--mu)' : 'url(#streakFlameGrad)'}
-            />
-          </svg>
-          <span className="chipst-num font-heading font-bold">{currentStreak}</span>
+          <Flame
+            className={cn(
+              'w-4 h-4 shrink-0',
+              streakState === 'idle' ? 'text-[var(--muted)]' : 'text-[#F59E0B] fill-[#F59E0B]'
+            )}
+          />
+          <span className="font-heading font-bold">{currentStreak}</span>
         </Link>
 
-        {/* Add menu */}
+        {/* Add / New menu */}
         <div className="relative" ref={addMenuRef}>
           <button
             type="button"
             onClick={() => setAddMenuOpen((prev) => !prev)}
             aria-haspopup="menu"
             aria-expanded={addMenuOpen}
-            className="btn-add h-9 px-3 rounded-lg border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-2)] text-[var(--text)] text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="btn-add h-8 px-3 rounded-[9px] bg-[var(--primary)] text-[var(--on-primary)] hover:opacity-90 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+            title="Quick Add (N)"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add</span>
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>New</span>
           </button>
 
           {addMenuOpen && (
             <div
               role="menu"
-              className="card absolute right-0 mt-1.5 w-44 p-1 shadow-xl z-50 bg-[var(--surface)] border border-[var(--line)] rounded-xl animate-scale-in"
+              className="card absolute right-0 mt-1.5 w-44 p-1 shadow-xl z-50 bg-[var(--surface)] border border-[var(--line)] rounded-[9px] animate-scale-in"
             >
               {quickAddKinds.map((item) => (
                 <button
                   key={item.kind}
                   role="menuitem"
-                  className="w-full text-left px-3 py-2 text-xs rounded-lg hover:bg-[var(--surface-2)] text-[var(--text)] font-medium transition-colors"
+                  className="w-full text-left px-3 py-2 text-xs rounded-[6px] hover:bg-[var(--surface-2)] text-[var(--text)] font-medium transition-colors cursor-pointer"
                   onClick={() => {
                     setAddMenuOpen(false);
                     onQuickAdd?.(item.kind);
@@ -275,16 +310,16 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
             onClick={() => setAvatarMenuOpen((prev) => !prev)}
             aria-haspopup="menu"
             aria-expanded={avatarMenuOpen}
-            className="av w-9 h-9 rounded-full bg-[var(--text)] text-[var(--bg)] font-heading font-bold text-xs flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity border-0"
+            className="av w-8 h-8 rounded-[9px] bg-[var(--surface-2)] border border-[var(--line)] text-[var(--text)] font-heading font-bold text-xs flex items-center justify-center cursor-pointer hover:border-[var(--muted)] transition-colors border-0"
             aria-label="Account menu"
           >
-            {user?.name ? user.name[0].toUpperCase() : 'N'}
+            {user?.name ? user.name.slice(0, 2).toUpperCase() : 'LN'}
           </button>
 
           {avatarMenuOpen && (
             <div
               role="menu"
-              className="card absolute right-0 mt-1.5 w-60 p-1.5 shadow-xl z-50 bg-[var(--surface)] border border-[var(--line)] rounded-xl divide-y divide-[var(--line)] animate-scale-in"
+              className="card absolute right-0 mt-1.5 w-60 p-1.5 shadow-xl z-50 bg-[var(--surface)] border border-[var(--line)] rounded-[9px] divide-y divide-[var(--line)] animate-scale-in"
             >
               {/* User info */}
               <div className="px-3 py-2">
