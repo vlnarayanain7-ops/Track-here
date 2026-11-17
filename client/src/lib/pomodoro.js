@@ -15,9 +15,18 @@ export const initialState = (presetId = 'classic', custom) => ({
   presetId, custom: custom ?? null, cfg: configFor(presetId, custom), phase: 'focus',
   running: false, startedAt: null, accMs: 0, completedFocus: 0, firstStartedAt: null, clientId: null, subjectId: null,
 });
-export const elapsedMs = (s, now) => s.accMs + (s.running ? now - s.startedAt : 0);
-export const plannedMs = s => (s.presetId === 'stopwatch' ? null : phaseMinutes(s.cfg, s.phase) * 60_000);
-export const remainingMs = (s, now) => (s.presetId === 'stopwatch' ? null : Math.max(0, plannedMs(s) - elapsedMs(s, now)));
+export const elapsedMs = (s, now) => {
+  const currentRun = s.running && s.startedAt ? Math.max(0, now - s.startedAt) : 0;
+  return Math.max(0, s.accMs + currentRun);
+};
+export const plannedMs = (s) => (s.presetId === 'stopwatch' ? null : phaseMinutes(s.cfg, s.phase) * 60_000);
+export const remainingMs = (s, now) => {
+  if (s.presetId === 'stopwatch') return null;
+  const planned = plannedMs(s);
+  if (!planned) return 0;
+  const elapsed = elapsedMs(s, now);
+  return Math.min(planned, Math.max(0, planned - elapsed));
+};
 export const nextPhaseOf = (s, completed) => (s.phase === 'focus' ? (completed % s.cfg.every === 0 ? 'long' : 'short') : 'focus');
 
 export function reduce(s, a, now = Date.now()) {

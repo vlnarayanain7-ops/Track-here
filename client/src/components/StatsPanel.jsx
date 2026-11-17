@@ -6,7 +6,12 @@ export function StatsPanel({ minutesByDay, bySubject = [], weekStartsOn = 1, onR
   const [range, setRange] = useState('week');
   const rows = useMemo(() => buckets(minutesByDay, range, weekStartsOn), [minutesByDay, range, weekStartsOn]);
   const total = rows.reduce((a, r) => a + r.minutes, 0);
-  const max = Math.max(...rows.map((r) => r.minutes), 1);
+
+  // Scaled benchmark ceiling: at least 60 min for daily views (week/month) or 300 min for year view
+  const benchmarkMin = range === 'year' ? 300 : 60;
+  const max = Math.max(...rows.map((r) => r.minutes), benchmarkMin);
+  const subjectMax = Math.max(...bySubject.map((x) => x.minutes), benchmarkMin);
+
   const pick = (r) => {
     setRange(r);
     onRangeChange?.(r);
@@ -93,10 +98,10 @@ export function StatsPanel({ minutesByDay, bySubject = [], weekStartsOn = 1, onR
                     background: s.color?.startsWith('var(') || s.color?.startsWith('#')
                       ? s.color
                       : `var(--c-${s.color || 'slate'})`,
-                    width: `${
-                      (s.minutes / Math.max(...bySubject.map((x) => x.minutes), 1)) *
-                      100
-                    }%`,
+                    width: `${Math.min(
+                      100,
+                      Math.max(2, (s.minutes / subjectMax) * 100)
+                    )}%`,
                   }}
                 />
               </div>

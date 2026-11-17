@@ -22,11 +22,13 @@ const load = () => {
 
 export function usePomodoro({ prefs = {}, onSave, onPhaseEnd }) {
   const [state, setState] = useState(load);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(Date.now);
   const handled = useRef(null); // never finish the same block twice
 
   const dispatch = useCallback((a) => {
-    setState((s) => reduce(s, a, Date.now()));
+    const current = Date.now();
+    setNow(current);
+    setState((s) => reduce(s, a, current));
   }, []);
 
   useEffect(() => {
@@ -39,7 +41,8 @@ export function usePomodoro({ prefs = {}, onSave, onPhaseEnd }) {
 
   useEffect(() => {
     if (!state.running) return;
-    const t = setInterval(() => setNow(Date.now()), 500);
+    setNow(Date.now());
+    const t = setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(t);
   }, [state.running]);
 
@@ -51,8 +54,9 @@ export function usePomodoro({ prefs = {}, onSave, onPhaseEnd }) {
     if (handled.current === key) return;
     handled.current = key;
 
+    const current = Date.now();
     if (state.phase === 'focus') {
-      onSave?.(focusSnapshot(state, Date.now(), { completed: true }));
+      onSave?.(focusSnapshot(state, current, { completed: true }));
     }
     onPhaseEnd?.(state.phase); // chime, notification, toast
     dispatch({
@@ -62,11 +66,16 @@ export function usePomodoro({ prefs = {}, onSave, onPhaseEnd }) {
     });
   }, [left, state.running, state.phase, state.clientId, prefs.autoBreak, prefs.autoFocus, onSave, onPhaseEnd, dispatch]);
 
-  const start = () => dispatch({ type: 'start', id: generateUUID() });
+  const start = () => {
+    const current = Date.now();
+    setNow(current);
+    dispatch({ type: 'start', id: generateUUID() });
+  };
 
   const finish = () => {
     // "Finish" in focus, "Skip" in a break
     const t = Date.now();
+    setNow(t);
     if (state.phase === 'focus' && state.firstStartedAt) {
       const snap = focusSnapshot(state, t, { completed: false });
       if (snap.durationSec >= MIN_SAVE_SEC) {
@@ -90,7 +99,15 @@ export function usePomodoro({ prefs = {}, onSave, onPhaseEnd }) {
     dispatch,
     start,
     finish,
-    pause: () => dispatch({ type: 'pause' }),
-    reset: () => dispatch({ type: 'reset' }),
+    pause: () => {
+      const current = Date.now();
+      setNow(current);
+      dispatch({ type: 'pause' });
+    },
+    reset: () => {
+      const current = Date.now();
+      setNow(current);
+      dispatch({ type: 'reset' });
+    },
   };
 }

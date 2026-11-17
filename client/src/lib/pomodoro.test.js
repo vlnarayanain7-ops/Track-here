@@ -58,4 +58,10 @@ describe('pomodoro', () => {
     expect(s.phase).toBe('focus');
     expect(s.running).toBe(false);
   });
+
+  it('never exceeds planned duration even if clock skew occurs (never 25:06)', () => {
+    let s = reduce(initialState('classic'), { type: 'start', id: 'a' }, T0 + 6000);
+    // If evaluated with a stale or earlier now timestamp:
+    expect(remainingMs(s, T0)).toBe(min(25));
+  });
 });

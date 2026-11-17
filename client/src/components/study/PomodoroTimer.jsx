@@ -10,12 +10,15 @@ const MODES = [
   ['long', 'Long break'],
 ];
 
-const fmtClock = (ms) => {
+const fmtClock = (ms, up = false) => {
   if (ms === null || ms === undefined || isNaN(ms)) return '00:00';
-  const s = Math.ceil(ms / 1000);
-  const mins = Math.floor(s / 60);
-  const secs = s % 60;
-  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  const total = Math.max(0, up ? Math.floor(ms / 1000) : Math.ceil(ms / 1000));
+  const h = Math.floor(total / 3600),
+    m = Math.floor((total % 3600) / 60),
+    s = total % 60;
+  const mm = String(m).padStart(2, '0'),
+    ss = String(s).padStart(2, '0');
+  return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 };
 
 export function PomodoroTimer({
@@ -49,7 +52,14 @@ export function PomodoroTimer({
   const stopwatch = s.presetId === 'stopwatch';
   const brk = s.phase !== 'focus';
   const ms = stopwatch ? t.elapsed : t.left;
-  const clock = fmtClock(ms);
+  const clock = fmtClock(ms, stopwatch);
+
+  // Sync custom preset updates while stopped
+  useEffect(() => {
+    if (s.presetId === 'custom' && !s.running && prefs?.custom) {
+      t.dispatch({ type: 'preset', presetId: 'custom', custom: prefs.custom });
+    }
+  }, [prefs?.custom, s.presetId, s.running, t]);
 
   useEffect(() => {
     onPhaseChange?.(s.phase);
@@ -199,9 +209,15 @@ export function PomodoroTimer({
           type="button"
           className="btn btn-primary btn-lg"
           onClick={s.running ? t.pause : t.start}
-          title={s.running ? 'Pause (Press Space)' : 'Start (Press Space)'}
+          title={
+            s.running
+              ? 'Pause (Press Space)'
+              : s.accMs > 0
+              ? 'Resume (Press Space)'
+              : 'Start (Press Space)'
+          }
         >
-          {s.running ? 'Pause' : 'Start'}
+          {s.running ? 'Pause' : s.accMs > 0 ? 'Resume' : 'Start'}
         </button>
         <button
           type="button"
