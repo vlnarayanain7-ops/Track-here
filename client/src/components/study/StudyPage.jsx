@@ -13,7 +13,6 @@ import PomodoroTimer from './PomodoroTimer';
 import TimerSettings, { loadPrefs, savePrefs } from './TimerSettings';
 import HistoryDrawer from './HistoryDrawer';
 import TodaySessions from './TodaySessions';
-import SessionSavedPanel from '@/components/SessionSavedPanel';
 import SessionForm from './SessionForm';
 
 export default function StudyPage() {
@@ -46,7 +45,6 @@ export default function StudyPage() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [sessionToEdit, setSessionToEdit] = useState(null);
-  const [savedSession, setSavedSession] = useState(null);
   const [currentPhase, setCurrentPhase] = useState('focus');
 
   // Study sessions query
@@ -128,10 +126,8 @@ export default function StudyPage() {
       };
 
       try {
-        const res = await createStudySession(payload);
-        const created = res?.data?.session || res?.session || { ...payload, _id: res?.data?._id || 'temp_' + Date.now() };
-        setSavedSession(created);
-        toast.success(`Focus block saved (${focusMins}m)`);
+        await createStudySession(payload);
+        toast.success(`Focus block saved automatically (${focusMins}m)`);
       } catch (err) {
         // Enqueue to offline outbox if offline or server unreachable
         try {
@@ -140,8 +136,7 @@ export default function StudyPage() {
             method: 'POST',
             payload,
           });
-          setSavedSession(payload);
-          toast.success(`Saved locally on this device (${focusMins}m)`);
+          toast.success(`Saved automatically on this device (${focusMins}m)`);
         } catch {
           toast.error('Could not save focus session');
         }
@@ -155,24 +150,6 @@ export default function StudyPage() {
     },
     [qc, refetch]
   );
-
-  // Update session from SessionSavedPanel
-  const handleUpdateSavedSession = async ({ topic: newTopic, category: newCategory }) => {
-    if (savedSession?._id) {
-      try {
-        await updateStudySession(savedSession._id, {
-          topic: newTopic,
-          category: newCategory,
-        });
-        toast.success('Session renamed');
-      } catch {
-        toast.error('Failed to update session');
-      }
-    }
-    setSavedSession(null);
-    refetch();
-    qc.invalidateQueries({ queryKey: ['studySessions'] });
-  };
 
   // Rename session from History
   const handleRenameSession = async (id, newTopic) => {
@@ -209,18 +186,6 @@ export default function StudyPage() {
         onOpenSettings={() => setSettingsOpen(true)}
         onPhaseChange={setCurrentPhase}
       />
-
-      {/* Small "Session saved" panel (Prompt 12): Skip keeps automatic name, Save renames it */}
-      {savedSession && (
-        <div className="w-full flex justify-center mt-3">
-          <SessionSavedPanel
-            session={savedSession}
-            subjects={subjects}
-            onSkip={() => setSavedSession(null)}
-            onSave={handleUpdateSavedSession}
-          />
-        </div>
-      )}
 
       {/* Today's Sessions Section */}
       <TodaySessions
