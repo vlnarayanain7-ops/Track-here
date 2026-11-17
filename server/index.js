@@ -179,6 +179,14 @@ const startServer = async () => {
   }
 };
 
+process.on('uncaughtException', (err) => {
+  console.error('[UNCAUGHT EXCEPTION - Server Kept Alive]', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[UNHANDLED REJECTION - Server Kept Alive]', reason);
+});
+
 startServer();
 
 export { httpServer, io };

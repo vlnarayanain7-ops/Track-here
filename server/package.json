@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node index.js",
     "build": "node -e \"console.log('Backend build complete')\"",
-    "dev": "node --watch index.js"
+    "dev": "node --watch-path=controllers --watch-path=models --watch-path=routes --watch-path=middleware --watch-path=config --watch-path=services --watch-path=utils --watch-path=index.js index.js"
   },
   "keywords": [
     "study",

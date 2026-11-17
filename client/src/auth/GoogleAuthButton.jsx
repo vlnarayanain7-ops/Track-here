@@ -40,9 +40,11 @@ export function GoogleAuthButton({ buttonText = 'Continue with Google' }) {
                 let msg = err.response?.data?.message;
                 if (!msg) {
                   if (!err.response) {
-                    msg = 'Backend server is unreachable. Please ensure "npm run dev" is running.';
+                    msg = 'Backend server is unreachable. Please ensure "npm run dev" is running in your terminal.';
+                  } else if (err.response.status === 503) {
+                    msg = 'Backend server is initializing. Please try again in a few seconds.';
                   } else if (err.response.status === 500) {
-                    msg = 'Backend server error (500). Please try again.';
+                    msg = 'Backend server is reconnecting. Please try again.';
                   } else {
                     msg = err.message || 'Google authentication failed';
                   }

@@ -128,6 +128,16 @@ api.interceptors.response.use(
       }
     }
 
+    // Auto-retry transient connection blips or 503 startup status once after 600ms
+    if (
+      !originalRequest?._retryCount &&
+      (!error.response || error.response.status === 503 || error.code === 'ERR_NETWORK')
+    ) {
+      originalRequest._retryCount = 1;
+      await new Promise((r) => setTimeout(r, 600));
+      return api(originalRequest);
+    }
+
     return Promise.reject(error);
   }
 );
