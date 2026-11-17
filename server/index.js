@@ -36,6 +36,7 @@ import rewardsRoutes from './routes/rewards.js';
 import verifyRoutes from './routes/verify.js';
 import adminRoutes from './routes/admin.js';
 import { RewardCounter } from './models/rewards.js';
+import { freePort } from './scripts/free-port.mjs';
 
 const app = express();
 
@@ -160,6 +161,23 @@ app.use(errorHandler);
 const httpServer = http.createServer(app);
 const io = initSocket(httpServer);
 
+httpServer.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.warn(`[PORT ${env.PORT} IN USE] Automatically freeing port ${env.PORT} and retrying...`);
+    freePort(env.PORT);
+    setTimeout(() => {
+      try {
+        httpServer.close();
+      } catch {}
+      httpServer.listen(env.PORT, '0.0.0.0', () => {
+        console.log(`🚀 Track Here Server bound to port ${env.PORT} after resolving conflict.`);
+      });
+    }, 600);
+  } else {
+    console.error('[HTTP SERVER ERROR]', err);
+  }
+});
+
 const startServer = async () => {
   try {
     await connectDB();
@@ -178,6 +196,20 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
+const shutdown = () => {
+  try {
+    httpServer.close(() => {
+      mongoose.connection.close(false);
+      process.exit(0);
+    });
+  } catch {
+    process.exit(0);
+  }
+};
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
 
 process.on('uncaughtException', (err) => {
   console.error('[UNCAUGHT EXCEPTION - Server Kept Alive]', err);

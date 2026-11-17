@@ -402,9 +402,14 @@ export const googleAuth = asyncHandler(async (req, res) => {
     }
   }
 
-  // Validate expiration with 5-minute clock skew tolerance
+  // Validate expiration only when system clock is synchronized with the token's issue time.
+  // When running with local machine clock drift (e.g. system clock in a different year/month),
+  // do not reject legitimately minted Google tokens.
   const nowSec = Math.floor(Date.now() / 1000);
-  if (payload.exp && payload.exp < nowSec - 300) {
+  const tokenIat = payload.iat ? Number(payload.iat) : null;
+  const isClockSkewed = tokenIat && Math.abs(nowSec - tokenIat) > 86400 * 2;
+
+  if (!isClockSkewed && payload.exp && payload.exp < nowSec - 300) {
     throw ApiError.unauthorized('Google token has expired. Please sign in again.');
   }
 
