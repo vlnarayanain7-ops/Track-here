@@ -1,5 +1,6 @@
 import { useState, useEffect, Suspense } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import Sidebar from './Sidebar';
 import Header from './Header';
 import MobileTabBar from './MobileTabBar';
 import CommandPalette from '@/components/search/CommandPalette';
@@ -58,8 +59,13 @@ function AppLayoutShell() {
       {/* Server wake-up banner mounted above the app shell */}
       <WakeBanner />
 
-      <div className="shell min-h-0 flex-1 w-full bg-[var(--bg)] flex flex-col text-[var(--text)] antialiased relative">
-        {/* Main Content Flow */}
+      <div className="shell min-h-0 flex-1 w-full bg-[var(--bg)] flex text-[var(--text)] antialiased relative">
+        {/* 1. Desktop Persistent Left Sidebar (216px, >= 768px) */}
+        <div className="hidden md:block w-[216px] h-[100dvh] sticky top-0 shrink-0">
+          <Sidebar />
+        </div>
+
+        {/* 2. Main Content Flow */}
         <div className="flex-1 flex flex-col min-w-0 min-h-[100dvh]">
           {/* Calm Top Bar */}
           <Header

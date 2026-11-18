@@ -66,13 +66,25 @@ export function usePomodoro({ prefs = {}, onSave, onPhaseEnd }) {
     });
   }, [left, state.running, state.phase, state.clientId, prefs.autoBreak, prefs.autoFocus, onSave, onPhaseEnd, dispatch]);
 
-  const start = () => {
+  const start = useCallback(() => {
     const current = Date.now();
     setNow(current);
     dispatch({ type: 'start', id: generateUUID() });
-  };
+  }, [dispatch]);
 
-  const finish = () => {
+  const pause = useCallback(() => {
+    const current = Date.now();
+    setNow(current);
+    dispatch({ type: 'pause' });
+  }, [dispatch]);
+
+  const reset = useCallback(() => {
+    const current = Date.now();
+    setNow(current);
+    dispatch({ type: 'reset' });
+  }, [dispatch]);
+
+  const finish = useCallback(() => {
     // "Finish" in focus, "Skip" in a break
     const t = Date.now();
     setNow(t);
@@ -89,7 +101,7 @@ export function usePomodoro({ prefs = {}, onSave, onPhaseEnd }) {
     } else {
       dispatch({ type: 'next', autoStart: false, id: generateUUID() });
     }
-  };
+  }, [state, onSave, onPhaseEnd, dispatch]);
 
   return {
     state,
@@ -99,15 +111,7 @@ export function usePomodoro({ prefs = {}, onSave, onPhaseEnd }) {
     dispatch,
     start,
     finish,
-    pause: () => {
-      const current = Date.now();
-      setNow(current);
-      dispatch({ type: 'pause' });
-    },
-    reset: () => {
-      const current = Date.now();
-      setNow(current);
-      dispatch({ type: 'reset' });
-    },
+    pause,
+    reset,
   };
 }

@@ -1,13 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Search,
   Plus,
   Flame,
-  Sun as TodayIcon,
-  AlarmClock,
-  ListTodo,
-  FileText,
   Sun,
   Moon,
   Laptop,
@@ -26,14 +22,6 @@ import { useTimer } from '@/hooks/useTimer';
 import { getTheme, setTheme } from '@/lib/theme';
 import { cn, formatTimerDisplay } from '@/lib/utils';
 import { getPendingOutboxCount } from '@/lib/outbox';
-
-const NAV_ITEMS = [
-  { to: '/', label: 'Today', icon: TodayIcon, end: true },
-  { to: '/study', label: 'Focus', icon: AlarmClock },
-  { to: '/plan', label: 'Plan', icon: ListTodo },
-  { to: '/notes', label: 'Notes', icon: FileText },
-  { to: '/progress', label: 'Progress', icon: Flame },
-];
 
 export default function Header({ onOpenCommandPalette, onQuickAdd }) {
   const { user, logout } = useAuth();
@@ -112,10 +100,10 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
         setAvatarMenuOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('pointerdown', handleClickOutside);
     window.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('pointerdown', handleClickOutside);
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
@@ -140,38 +128,12 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
   ];
 
   return (
-    <header className="sticky top-0 z-30 h-16 bg-[var(--bg)] border-b border-[var(--line)] px-4 sm:px-8 flex items-center justify-between gap-4 select-none">
-      {/* Left: Stacked Brand + Shifted Navigation Tabs */}
-      <div className="flex items-center gap-6 sm:gap-8">
-        <Link
-          to="/"
-          className="font-heading font-bold text-[15px] sm:text-[16px] text-[var(--text)] tracking-tight leading-tight flex flex-col shrink-0 hover:opacity-90 transition-opacity"
-        >
-          <span>Track</span>
-          <span>Here</span>
+    <header className="sticky top-0 z-30 h-14 bg-[var(--bg)] border-b border-[var(--line)] px-4 sm:px-8 flex items-center justify-between gap-3 select-none">
+      {/* Brand on mobile (< 768px) where sidebar is hidden */}
+      <div className="md:hidden flex items-center">
+        <Link to="/" className="font-heading font-bold text-[17px] text-[var(--text)] tracking-tight">
+          Track Here
         </Link>
-
-        {/* Primary 5 Navigation Tabs (Desktop >= 768px, Golden 9px curve) */}
-        <nav aria-label="Primary" className="hidden md:flex items-center gap-1.5">
-          {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-2 h-9 px-3 rounded-[9px] text-sm font-medium transition-colors select-none',
-                  isActive
-                    ? 'bg-[var(--primary-soft)] text-[var(--primary)] font-semibold'
-                    : 'text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]'
-                )
-              }
-            >
-              <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
-              <span>{label}</span>
-            </NavLink>
-          ))}
-        </nav>
       </div>
 
       {/* Right-aligned actions */}

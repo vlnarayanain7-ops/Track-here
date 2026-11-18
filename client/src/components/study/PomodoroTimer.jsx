@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { PRESETS } from '@/lib/pomodoro';
 import { TimerRing } from './TimerRing';
 import { usePomodoro } from '@/hooks/usePomodoro';
@@ -54,12 +54,38 @@ export function PomodoroTimer({
   const ms = stopwatch ? t.elapsed : t.left;
   const clock = fmtClock(ms, stopwatch);
 
-  // Sync custom preset updates while stopped
+  // Sync custom preset updates while stopped (only when values actually change to avoid re-render loops)
+  const customStr = JSON.stringify(prefs?.custom);
+  const cfgStr = JSON.stringify(s.cfg);
   useEffect(() => {
     if (s.presetId === 'custom' && !s.running && prefs?.custom) {
-      t.dispatch({ type: 'preset', presetId: 'custom', custom: prefs.custom });
+      const p = prefs.custom;
+      const c = s.cfg;
+      if (!c || p.focus !== c.focus || p.short !== c.short || p.long !== c.long || p.every !== c.every) {
+        t.dispatch({ type: 'preset', presetId: 'custom', custom: p });
+      }
     }
-  }, [prefs?.custom, s.presetId, s.running, t]);
+  }, [prefs?.custom, s.presetId, s.running, customStr, cfgStr]);
+
+  const handleModeChange = (id) => {
+    if (s.phase === id) return;
+    if (s.running) {
+      t.pause();
+    }
+    t.dispatch({ type: 'mode', phase: id });
+  };
+
+  const handlePresetChange = (id) => {
+    if (s.presetId === id) return;
+    if (s.running) {
+      t.pause();
+    }
+    t.dispatch({
+      type: 'preset',
+      presetId: id,
+      custom: prefs?.custom,
+    });
+  };
 
   useEffect(() => {
     onPhaseChange?.(s.phase);
@@ -94,23 +120,29 @@ export function PomodoroTimer({
   }, [s.running]);
 
   // Keyboard shortcuts: Space (start/pause), R (reset), S (finish/skip)
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  });
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+      const curr = tRef.current;
       if (e.code === 'Space') {
         e.preventDefault();
-        s.running ? t.pause() : t.start();
+        curr.state.running ? curr.pause() : curr.start();
       }
       if (e.key === 'r' || e.key === 'R') {
-        t.reset();
+        curr.reset();
       }
       if (e.key === 's' || e.key === 'S') {
-        t.finish();
+        curr.finish();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [s.running, t]);
+  }, []);
 
   const cycle = s.cfg?.every ?? 4;
   const done = s.completedFocus % (cycle || 1);
@@ -130,7 +162,7 @@ export function PomodoroTimer({
 
   return (
     <div className="center">
-      {/* 1. Mode Switch on Top (Disabled while running) */}
+      {/* 1. Mode Switch on Top */}
       {!stopwatch && (
         <div className="seg" role="group" aria-label="Mode">
           {MODES.map(([id, label]) => (
@@ -138,8 +170,7 @@ export function PomodoroTimer({
               key={id}
               type="button"
               aria-pressed={s.phase === id}
-              disabled={s.running}
-              onClick={() => t.dispatch({ type: 'mode', phase: id })}
+              onClick={() => handleModeChange(id)}
             >
               {label}
             </button>
@@ -237,14 +268,7 @@ export function PomodoroTimer({
             type="button"
             className={`chip ${s.presetId === id ? 'on' : ''}`}
             aria-pressed={s.presetId === id}
-            disabled={s.running}
-            onClick={() =>
-              t.dispatch({
-                type: 'preset',
-                presetId: id,
-                custom: prefs?.custom,
-              })
-            }
+            onClick={() => handlePresetChange(id)}
           >
             {p.label}
           </button>
