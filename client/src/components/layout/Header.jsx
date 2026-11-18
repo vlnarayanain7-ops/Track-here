@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import {
   Search,
   Plus,
@@ -8,6 +8,11 @@ import {
   Moon,
   Laptop,
   Settings,
+  Sun as TodayIcon,
+  AlarmClock,
+  ListTodo,
+  FileText,
+  BarChart3,
   LogOut,
   MessageSquarePlus,
   Clock,
@@ -22,6 +27,14 @@ import { useTimer } from '@/hooks/useTimer';
 import { getTheme, setTheme } from '@/lib/theme';
 import { cn, formatTimerDisplay } from '@/lib/utils';
 import { getPendingOutboxCount } from '@/lib/outbox';
+
+const NAV_ITEMS = [
+  { to: '/',         label: 'Today',    Icon: TodayIcon },
+  { to: '/study',    label: 'Focus',    Icon: AlarmClock },
+  { to: '/plan',     label: 'Plan',     Icon: ListTodo },
+  { to: '/notes',    label: 'Notes',    Icon: FileText },
+  { to: '/progress', label: 'Progress', Icon: BarChart3 },
+];
 
 export default function Header({ onOpenCommandPalette, onQuickAdd }) {
   const { user, logout } = useAuth();
@@ -129,11 +142,33 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
 
   return (
     <header className="sticky top-0 z-30 h-14 bg-[var(--bg)] border-b border-[var(--line)] px-4 sm:px-8 flex items-center justify-between gap-3 select-none">
-      {/* Brand on mobile (< 768px) where sidebar is hidden */}
-      <div className="md:hidden flex items-center">
-        <Link to="/" className="font-heading font-bold text-[17px] text-[var(--text)] tracking-tight">
+      {/* Left: Brand + Nav tabs */}
+      <div className="flex items-center gap-6">
+        <Link to="/" className="font-heading font-bold text-[17px] text-[var(--text)] tracking-tight shrink-0">
           Track Here
         </Link>
+
+        {/* Desktop nav tabs (hidden on mobile — MobileTabBar handles it) */}
+        <nav className="hidden md:flex items-center gap-1">
+          {NAV_ITEMS.map(({ to, label, Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/'}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-[9px] text-xs font-semibold transition-colors',
+                  isActive
+                    ? 'bg-[var(--primary-soft)] text-[var(--primary)]'
+                    : 'text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]'
+                )
+              }
+            >
+              <Icon className="w-4 h-4" />
+              <span>{label}</span>
+            </NavLink>
+          ))}
+        </nav>
       </div>
 
       {/* Right-aligned actions */}
