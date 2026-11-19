@@ -16,6 +16,7 @@ export const createRevisionSchema = z.object({
   type: z.enum(['topic', 'note', 'problem']),
   linkedNote: z.string().optional().nullable(),
   linkedProblem: z.string().optional().nullable(),
+  solution: z.string().trim().min(1).max(6000).optional(),
   dueDate: z.string().or(z.date()),
   intervalDays: z.number().min(1).default(1),
 }).strict();

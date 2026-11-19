@@ -49,16 +49,9 @@ function PageFallback() {
 }
 
 // Guest Guard (redirect already logged-in users to home)
-function GuestRoute({ children }) {
+function GuestRoute({ children, waitForSession = false }) {
   const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div role="status" className="h-[100dvh] w-full flex items-center justify-center bg-[var(--bg)] text-[var(--muted)]">
-        <div className="w-8 h-8 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
+  if (waitForSession && isLoading) return <PageFallback />;
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
@@ -118,7 +111,7 @@ export default function App() {
       <Route
         path="/forgot-password"
         element={
-          <GuestRoute>
+          <GuestRoute waitForSession>
             <ForgotPassword />
           </GuestRoute>
         }
@@ -126,7 +119,7 @@ export default function App() {
       <Route
         path="/reset-password"
         element={
-          <GuestRoute>
+          <GuestRoute waitForSession>
             <ForgotPassword />
           </GuestRoute>
         }
@@ -134,7 +127,7 @@ export default function App() {
       <Route
         path="/reset-password/:token"
         element={
-          <GuestRoute>
+          <GuestRoute waitForSession>
             <ResetPassword />
           </GuestRoute>
         }
@@ -145,7 +138,7 @@ export default function App() {
       <Route path="/register" element={<Navigate to="/signup" replace />} />
 
       {/* RequireAuth Protected Scope */}
-      <Route element={<RequireAuth />}>
+      <Route element={<RequireAuth homeSignIn={<SignIn />} />}>
         {/* Profile Completion (for Google signups missing ageBand) */}
         <Route path="/complete-profile" element={<CompleteProfile />} />
 

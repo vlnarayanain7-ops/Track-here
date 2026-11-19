@@ -25,6 +25,7 @@ export function MobileTabBar() {
       {MOBILE_TABS.map(({ to, label, icon: Icon, end }) => (
         <NavLink
           key={to}
+              data-tour={`nav-${to === "/" ? "today" : to.slice(1)}`}
           to={to}
           end={end}
           className={({ isActive }) =>

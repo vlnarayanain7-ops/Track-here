@@ -6,9 +6,11 @@ import { Button } from '../components/ui.jsx';
 import { AuthLayout } from './AuthLayout';
 import toast from 'react-hot-toast';
 
-export function RequireAuth() {
+export function RequireAuth({ homeSignIn }) {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
+
+  if (!isAuthenticated && location.pathname === '/') return homeSignIn;
 
   if (isLoading) {
     return (

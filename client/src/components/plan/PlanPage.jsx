@@ -36,6 +36,7 @@ export default function PlanPage() {
           type="button"
           role="tab"
           aria-selected={currentTab === 'tasks'}
+          data-tour="plan-tasks"
           onClick={() => setTab('tasks')}
           className="tb"
         >
@@ -45,6 +46,7 @@ export default function PlanPage() {
           type="button"
           role="tab"
           aria-selected={currentTab === 'week'}
+          data-tour="plan-week"
           onClick={() => setTab('week')}
           className="tb"
         >
@@ -54,6 +56,7 @@ export default function PlanPage() {
           type="button"
           role="tab"
           aria-selected={currentTab === 'subjects'}
+          data-tour="plan-subjects"
           onClick={() => setTab('subjects')}
           className="tb"
         >
@@ -932,7 +935,7 @@ function SubjectsTab() {
         <span className="note">Subjects you create appear everywhere else.</span>
         <button
           type="button"
-          onClick={() => setShowAddSubject(!showAddSubject)}
+          data-tour="add-subject" onClick={() => setShowAddSubject(!showAddSubject)}
           className="btn g text-sm"
         >
           <Plus className="w-3.5 h-3.5" />
@@ -956,7 +959,7 @@ function SubjectsTab() {
           </button>
           <button
             type="button"
-            onClick={() => setShowAddSubject(false)}
+            data-tour="cancel-subject" onClick={() => setShowAddSubject(false)}
             className="btn g text-xs"
           >
             Cancel

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import * as authApi from '../api/auth';
 import { setupRealtimeSync, disconnectSocket } from '../lib/socket';
@@ -39,38 +39,38 @@ export function AuthProvider({ children }) {
     if (nextId) void retryOutbox().catch(() => {});
   }, [queryClient]);
 
-  const checkAuth = useCallback(async () => {
-    try {
-      const res = await authApi.getMe();
-      await adoptUser(res?.data?.user || res?.user || res);
-    } catch (error) {
-      if (!error.response || error.response.status >= 500) return;
-      // Auto-healing: If access token expired while asleep/screen-off,
-      // attempt silent session rotation using 30-day refresh token:
+  const checking = useRef(null);
+  const changing = useRef(false);
+  const csrfReady = useRef(false);
+
+  const checkAuth = useCallback(() => {
+    if (changing.current || checking.current) return checking.current;
+    checking.current = (async () => {
       try {
-        await authApi.refreshToken();
-        const refreshedRes = await authApi.getMe();
-        await adoptUser(refreshedRes?.data?.user || refreshedRes?.user || refreshedRes);
+        const session = await authApi.getSession();
+        csrfReady.current = true;
+        let restored = session.user;
+        if (!restored && session.canRefresh) {
+          await authApi.refreshToken();
+          restored = (await authApi.getMe()).data.user;
+        }
+        if (!changing.current) await adoptUser(restored);
       } catch (error) {
-        if (error.response?.status === 401 || error.response?.status === 403) await adoptUser(null);
+        if (!changing.current && [401, 403].includes(error.response?.status)) await adoptUser(null);
+      } finally {
+        checking.current = null;
+        setIsLoading(false);
       }
-    } finally {
-      setIsLoading(false);
-    }
+    })();
+    return checking.current;
   }, [adoptUser]);
 
   const initializeCsrf = useCallback(async () => {
-    try {
-      await authApi.getCsrfToken();
-    } catch {
-      // Non-blocking: CSRF cookie will be retrieved on first state-changing mutation if needed
-    }
+    await authApi.getCsrfToken();
+    csrfReady.current = true;
   }, []);
 
-  useEffect(() => {
-    // Parallelize CSRF initialization and Auth check to eliminate sequential roundtrips
-    Promise.all([initializeCsrf(), checkAuth()]);
-  }, [checkAuth, initializeCsrf]);
+  useEffect(() => { void checkAuth(); }, [checkAuth]);
 
   // Wakeup recovery: When phone screen turns on or user returns to tab, restore session seamlessly
   useEffect(() => {
@@ -83,34 +83,36 @@ export function AuthProvider({ children }) {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [checkAuth]);
 
-  const login = async (credentials) => {
-    await initializeCsrf();
-    const res = await authApi.login(credentials);
-    await initializeCsrf();
-    const u = res?.data?.user || res?.user || res;
-    await adoptUser(u);
-    return u;
+  const authenticate = async (request, payload) => {
+    changing.current = true;
+    try {
+      await checking.current;
+      if (!csrfReady.current) await initializeCsrf();
+      let response;
+      try {
+        response = await request(payload);
+      } catch (error) {
+        // An expired cookie or a session change in another tab can invalidate the token.
+        if (error.response?.status !== 403 || !/^CSRF token (missing|invalid)$/i.test(error.response?.data?.message || '')) throw error;
+        await initializeCsrf();
+        response = await request(payload);
+      }
+      const next = response.data.user;
+      await adoptUser(next);
+      return next;
+    } finally {
+      changing.current = false;
+    }
   };
 
-  const register = async (userData) => {
-    await initializeCsrf();
-    const res = await authApi.register(userData);
-    await initializeCsrf();
-    const u = res?.data?.user || res?.user || res;
-    await adoptUser(u);
-    return u;
-  };
-
-  const googleLogin = async (credential) => {
-    await initializeCsrf();
-    const res = await authApi.googleLogin(credential);
-    await initializeCsrf();
-    const u = res?.data?.user || res?.user || res;
-    await adoptUser(u);
-    return u;
-  };
+  const login = credentials => authenticate(authApi.login, credentials);
+  const register = data => authenticate(authApi.register, data);
+  const googleLogin = credential => authenticate(authApi.googleLogin, credential);
 
   const logout = async () => {
+    changing.current = true;
+    await checking.current;
+    csrfReady.current = false;
     pauseOutbox();
     setAccountSession(null);
     await queryClient.cancelQueries();
@@ -128,6 +130,7 @@ export function AuthProvider({ children }) {
       // ignore
     }
     setUser(null);
+    changing.current = false;
   };
 
   const value = {

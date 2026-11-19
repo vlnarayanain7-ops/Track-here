@@ -19,7 +19,7 @@ export function TodaySessions({ sessions = [], subjectsById = {}, onHistory }) {
         <button
           type="button"
           className="btn btn-ghost"
-          onClick={onHistory}
+          data-tour="session-history" onClick={onHistory}
           style={{ cursor: 'pointer' }}
         >
           History

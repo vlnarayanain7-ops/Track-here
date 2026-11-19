@@ -1,7 +1,7 @@
 import { navigateTabs } from '@/lib/tabNavigation';
 import StudyInsights from './StudyInsights';
 import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Plus, Check, Clock, FileText, AlertCircle, Sparkles, Award, FileCheck, Gift, Download, Share2, Trash2, Eye } from 'lucide-react';
 import { useStreakData, useAnalytics } from '@/hooks/useAnalytics';
 import { useProblems, useCreateProblem } from '@/hooks/useProblems';
@@ -188,8 +188,6 @@ export default function ProgressPage() {
           name: practiceTitle.trim(),
           topic: practiceSubject.trim() || 'General',
           status: practiceStatus === 'Solved' ? 'Solved' : 'Attempted',
-          difficulty: 'Medium',
-          platform: 'LeetCode',
         });
         toast.success('Problem logged');
       } else {
@@ -280,6 +278,7 @@ export default function ProgressPage() {
           type="button"
           role="tab"
           aria-selected={tab === 'streak'}
+          data-tour="progress-streak"
           onClick={() => setTab('streak')}
           className={`tb ${tab === 'streak' ? 'on' : ''}`}
         >
@@ -289,6 +288,7 @@ export default function ProgressPage() {
           type="button"
           role="tab"
           aria-selected={tab === 'stats'}
+          data-tour="progress-stats"
           onClick={() => setTab('stats')}
           className={`tb ${tab === 'stats' ? 'on' : ''}`}
         >
@@ -298,6 +298,7 @@ export default function ProgressPage() {
           type="button"
           role="tab"
           aria-selected={tab === 'practice'}
+          data-tour="progress-practice"
           onClick={() => setTab('practice')}
           className={`tb ${tab === 'practice' ? 'on' : ''}`}
         >
@@ -559,9 +560,10 @@ export default function ProgressPage() {
         <div className="space-y-4 animate-fade-in">
           <div className="sec" style={{ marginTop: 0 }}>
             <span className="note">Mock tests and problems you log</span>
+            <Link to="/#error-log" className="btn">Error log</Link>
             <button
               type="button"
-              onClick={() => setLogPracticeOpen(true)}
+              data-tour="log-practice" onClick={() => setLogPracticeOpen(true)}
               className="btn flex items-center gap-1.5 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />

@@ -1,9 +1,9 @@
 import SubjectLabel from '@/components/ui/SubjectLabel';
-import EmptyIllustration from '@/components/brand/EmptyIllustration';
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Play, Plus, Check, Sun, Moon, RotateCcw } from 'lucide-react';
+import './dashboard.css';
 import { useAuth } from '@/hooks/useAuth';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useTasks, useCreateTask, useUpdateTaskStatus } from '@/hooks/useTasks';
@@ -14,6 +14,7 @@ import { SideSheet } from '@/components/SideSheet';
 import { MorningPlan } from '@/components/journal/MorningPlan';
 import { EveningReview } from '@/components/journal/EveningReview';
 import ReviewSheet from '@/components/revisions/ReviewSheet';
+import ErrorLog from './ErrorLog';
 import { journalPrompt } from '@/lib/journalPrompt';
 import { plural } from '@/lib/plural';
 import { cn } from '@/lib/utils';
@@ -242,9 +243,9 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="w-full space-y-6">
+    <div className="today-dashboard">
       {/* 1. Page Header: Greeting + Goal / Days Left subtitle */}
-      <div className="hd">
+      <div className="today-heading">
         <div>
           <h1 className="text-[26px] font-bold font-heading tracking-tight text-[var(--tx)] m-0">
             {greeting}
@@ -256,32 +257,40 @@ export default function DashboardPage() {
       </div>
 
       {/* 2. UP NEXT Card */}
-      <div className="card now flex items-center justify-between gap-4">
-        <div className="min-w-0">
-          <div className="lab">UP NEXT</div>
-          <div className="big truncate">{nextUp.title}</div>
-          <div className="sub truncate">{nextUp.sub}</div>
+      <div className="today-overview">
+      <section className="today-focus">
+        <div className="today-focus-copy">
+          <div className="today-eyebrow">Up next</div>
+          <h2>{nextUp.title}</h2>
+          <p>{nextUp.sub}</p>
         </div>
         <button
           type="button"
           onClick={() => navigate(nextUp.actionUrl)}
-          className="btn p lg shrink-0 flex items-center gap-2 cursor-pointer"
+          className="today-start"
         >
           <Play className="w-3.5 h-3.5 fill-current" />
           <span>Start focus</span>
         </button>
-      </div>
+      </section>
 
       {/* 3. Focus progress bar */}
-      <div className="bar">
-        <span>Today {formattedToday} of {formattedGoal}</span>
-        <div><i style={{ width: `${progressPct}%` }} /></div>
+      <section className="today-goal" aria-label="Daily focus goal">
+        <div className="today-card-label">Focus today <span>{progressPct}%</span></div>
+        <div className="today-goal-value">{formattedToday}<span> / {formattedGoal}</span></div>
+        <div className="today-meter" role="progressbar" aria-label="Daily focus goal" aria-valuenow={progressPct} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${progressPct}%` }} /></div>
+        <Link to="/progress" className="today-progress-link">View activity</Link>
+      </section>
       </div>
 
+      <ErrorLog />
+
       {/* 4. Three Daily Check-ins */}
-      <div className="checks" role="group" aria-label="Daily check-ins">
+      <div className="today-section-title"><h2>Daily check-in</h2></div>
+      <div className="today-checks" role="group" aria-label="Daily check-ins">
         <button
           type="button"
+          data-tour="morning"
           onClick={() => openJournal('morning')}
           className={cn(
             'ck3',
@@ -289,11 +298,13 @@ export default function DashboardPage() {
             timePeriod === 'morning' && 'now'
           )}
         >
+          <span className="today-check-icon morning"><Sun size={21} /></span>
           <span>Morning plan</span>
           <small>{hasMorningPlan ? 'Done' : 'Set your plan'}</small>
         </button>
         <button
           type="button"
+          data-tour="evening"
           onClick={() => openJournal('evening')}
           className={cn(
             'ck3',
@@ -301,33 +312,35 @@ export default function DashboardPage() {
             timePeriod === 'evening' && 'now'
           )}
         >
+          <span className="today-check-icon evening"><Moon size={21} /></span>
           <span>Evening review</span>
           <small>{hasEveningReview ? 'Done' : 'Reflect on today'}</small>
         </button>
         <button
           type="button"
-          onClick={openReview}
+          data-tour="revisions" onClick={openReview}
           className={cn(
             'ck3',
             dueRevisions.length === 0 && 'done',
             timePeriod === 'review' && 'now'
           )}
         >
-          <span>Review</span>
+          <span className="today-check-icon review"><RotateCcw size={21} /></span>
+          <span>Revision queue</span>
           <small>{dueRevisions.length > 0 ? `${dueRevisions.length} due` : 'All caught up'}</small>
         </button>
       </div>
 
       {/* 4. Today List with inline add */}
-      <div className="pt-2">
+      <section className="today-tasks">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-base font-semibold text-[var(--text)] font-heading m-0">
-            Today
+            Tasks <span className="today-count">{openTasks.length} open</span>
           </h2>
           <button
             type="button"
             onClick={() => setShowInlineAdd(true)}
-            className="text-xs font-medium text-[var(--muted)] hover:text-[var(--text)] flex items-center gap-1 transition-colors cursor-pointer py-1 px-2 rounded-md hover:bg-[var(--surface-2)]"
+            className="today-add-task"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add task</span>
@@ -339,6 +352,7 @@ export default function DashboardPage() {
           <div className="mb-3">
             <input
               type="text"
+              aria-label="New task title"
               autoFocus
               value={inlineTaskInput}
               onChange={(e) => setInlineTaskInput(e.target.value)}
@@ -405,7 +419,7 @@ export default function DashboardPage() {
           {/* Honest Empty State if completely empty */}
           {openTasks.length === 0 && completedTasks.length === 0 && !showInlineAdd && (
             <div className="py-8 text-center text-xs text-[var(--muted)]">
-              <EmptyIllustration kind="tasks" className="w-28 h-auto mx-auto mb-3" />No tasks planned for today. Click &quot;Add task&quot; above or start a focus session.
+              No tasks yet. Add a task to get started.
             </div>
           )}
         </div>
@@ -438,7 +452,7 @@ export default function DashboardPage() {
             </button>
           </p>
         )}
-      </div>
+      </section>
 
       {/* Side Sheets */}
       {/* 1. Morning Plan / Evening Review Side Sheet */}

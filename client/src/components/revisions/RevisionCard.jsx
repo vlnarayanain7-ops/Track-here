@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { formatDate, formatRelativeDate } from '@/lib/utils';
 import { useCompleteRevision, useDeleteRevision } from '@/hooks/useRevisions';
 import { Calendar, Trash2, CheckCircle2, RotateCcw, Clock, History, ChevronDown, ChevronUp } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 export default function RevisionCard({ revision, onDelete }) {
   const [showHistory, setShowHistory] = useState(false);
@@ -13,9 +12,8 @@ export default function RevisionCard({ revision, onDelete }) {
   const handleFeedback = async (feedback) => {
     try {
       await completeMutation.mutateAsync({ id: revision._id, feedback });
-      toast.success(feedback === 'Remembered' ? 'Scheduled for next interval!' : 'Interval reset to 1 day');
     } catch {
-      toast.error('Failed to update revision');
+      // The mutation hook displays the error toast.
     }
   };
 
@@ -56,6 +54,7 @@ export default function RevisionCard({ revision, onDelete }) {
           {revision.title}
         </h3>
 
+        {revision.solution && <details className="mt-2 text-sm"><summary>Show solution</summary><p className="whitespace-pre-wrap break-words">{revision.solution}</p></details>}
         {revision.linkedProblem && (
           <p className="text-xs text-[var(--muted)] mt-1 truncate">
             Problem: <span className="text-[var(--text)]">{revision.linkedProblem.name}</span> ({revision.linkedProblem.platform})

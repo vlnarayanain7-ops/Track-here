@@ -6,6 +6,7 @@ import MobileTabBar from './MobileTabBar';
 import CommandPalette from '@/components/search/CommandPalette';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import WakeBanner from '@/components/WakeBanner';
+import ProductTour from '@/components/onboarding/ProductTour';
 import { TimerProvider } from '@/contexts/TimerContext';
 import { cn } from '@/lib/utils';
 
@@ -25,18 +26,21 @@ function AppLayoutShell() {
   const navigate = useNavigate();
   const location = useLocation();
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [tourReplay, setTourReplay] = useState(0);
+  const [tourActive, setTourActive] = useState(false);
 
   // Global Keyboard shortcut for Command Palette (Ctrl+K or Cmd+K)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
+        if (tourActive) return;
         setCommandPaletteOpen((prev) => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [tourActive]);
 
   const handleQuickAdd = (kind = 'task') => {
     if (kind === 'session') {
@@ -66,10 +70,11 @@ function AppLayoutShell() {
           <Header
             onOpenCommandPalette={() => setCommandPaletteOpen(true)}
             onQuickAdd={handleQuickAdd}
+            onStartTour={() => setTourReplay((value) => value + 1)}
           />
 
           {/* Unified Page Content: strictly 960px across all routes */}
-          <main className="flex-1 page w-full max-w-[960px] mx-auto px-4 sm:px-8 py-4 sm:py-6 pb-[calc(72px+env(safe-area-inset-bottom))] md:pb-12 transition-all">
+          <main className={cn("flex-1 page w-full max-w-[960px] mx-auto px-4 sm:px-8 py-4 sm:py-6 pb-[calc(72px+env(safe-area-inset-bottom))] md:pb-12 transition-all", location.pathname === '/' && 'today-page')}>
             <ErrorBoundary>
               <Suspense fallback={<ContentFallback />}>
                 <Outlet />
@@ -79,6 +84,7 @@ function AppLayoutShell() {
         </div>
 
         <SessionCompletion />
+        <ProductTour replay={tourReplay} onActiveChange={setTourActive} />
         {/* 3. Mobile Bottom Tab Bar (< 768px) */}
         <MobileTabBar />
 

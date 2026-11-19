@@ -4,7 +4,6 @@ import { addDays, format, parseISO } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import BrandMark from '@/components/brand/BrandMark';
 import { buildFinalsPlan, dayKey, reschedule } from '@/lib/finalsPlan';
-import FinalsGroup from './FinalsGroup';
 
 const field = 'mt-1 block w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2';
 const displayDay = value => format(parseISO(value), 'EEE, MMM d');
@@ -27,6 +26,7 @@ function Planner({ storageKey, signedIn }) {
   });
   const today = dayKey(new Date());
   const [exam, setExam] = useState('');
+  const [examName, setExamName] = useState('');
   const [topics, setTopics] = useState('');
   const [capacity, setCapacity] = useState(plan?.capacity || 2);
   const [resume, setResume] = useState(today);
@@ -57,7 +57,7 @@ function Planner({ storageKey, signedIn }) {
   function generate(event) {
     event.preventDefault();
     try {
-      save(buildFinalsPlan(today, exam, topics, Number(capacity)));
+      save({ ...buildFinalsPlan(today, exam, topics, Number(capacity)), name: examName.trim() });
       setNewPlan(false);
     } catch (err) { setMessage(err.message); }
   }
@@ -79,6 +79,7 @@ function Planner({ storageKey, signedIn }) {
       save(guestPlan);
     }}>Use this browser’s guest schedule</button>}
     {(!plan || newPlan) && <form onSubmit={generate} className="card grid gap-4 p-5 sm:grid-cols-2 print:hidden">
+      <label className="sm:col-span-2">Exam name (optional)<input className={field} maxLength={100} value={examName} onChange={e => setExamName(e.target.value)} /></label>
       <label>Exam date<input className={field} type="date" required min={dayKey(addDays(new Date(), 1))} max={dayKey(addDays(new Date(), 90))} value={exam} onChange={e => setExam(e.target.value)} /></label>
       <label>Blocks per day<input className={field} type="number" required min="1" max="12" value={capacity} onChange={e => setCapacity(e.target.value)} /></label>
       <label className="sm:col-span-2">Topics, one per line<textarea className={field} rows="4" required maxLength={4000} value={topics} onChange={e => setTopics(e.target.value)} /></label>
@@ -87,7 +88,7 @@ function Planner({ storageKey, signedIn }) {
     </form>}
     <p role="status" className="text-sm print:hidden">{message}</p>
     {plan && <section className="space-y-4">
-      <h2 className="font-heading text-xl font-semibold">Schedule for your {displayDay(plan.exam)} exam</h2>
+      <h2 className="font-heading text-xl font-semibold">{plan.name || 'Exam'} study schedule · {displayDay(plan.exam)}</h2>
       <p>{plan.blocks.filter(block => block.done).length} of {plan.blocks.length} blocks checked off</p>
       {today < plan.exam && <details className="card p-4 print:hidden"><summary className="cursor-pointer font-semibold">Reschedule unfinished blocks</summary>
         <form className="mt-4 grid gap-3 sm:grid-cols-2" onSubmit={e => {
@@ -113,7 +114,5 @@ function Planner({ storageKey, signedIn }) {
         <Link to="/study" className="btn btn-primary">Study with the timer</Link>
         <button className="btn" onClick={() => { setNewPlan(true); window.scrollTo(0, 0); }}>New plan</button></div>
     </section>}
-    {signedIn && <FinalsGroup exam={plan?.exam} />}
-    {!signedIn && plan && <Link to="/signin" state={{ from: { pathname: '/finals-planner' } }} className="btn print:hidden">Sign in for exam-week groups</Link>}
   </main>;
 }

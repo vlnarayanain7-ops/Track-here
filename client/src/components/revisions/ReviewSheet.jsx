@@ -3,7 +3,6 @@ import { useState, useMemo } from 'react';
 import { useRevisions, useCompleteRevision, useCreateRevision, useDeleteRevision } from '@/hooks/useRevisions';
 import { SideSheet } from '@/components/SideSheet';
 import { Plus, Trash2 } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 export default function ReviewSheet({ isOpen, open, onClose }) {
   const isSheetOpen = Boolean(isOpen ?? open);
@@ -53,10 +52,9 @@ export default function ReviewSheet({ isOpen, open, onClose }) {
   const handleFeedback = async (id, feedback) => {
     try {
       await completeMutation.mutateAsync({ id, feedback });
-      toast.success(feedback === 'Remembered' ? 'Next review scheduled' : 'Review reset to 1 day');
       refetch();
     } catch {
-      toast.error('Failed to update revision');
+      // The mutation hook displays the error toast.
     }
   };
 
@@ -147,6 +145,7 @@ export default function ReviewSheet({ isOpen, open, onClose }) {
                   <span className="font-medium text-xs text-[var(--text)] block truncate">
                     {item.title}
                   </span>
+                  {item.solution && <details className="text-xs"><summary>Show solution</summary><p className="whitespace-pre-wrap break-words">{item.solution}</p></details>}
                   <div className="flex items-center gap-2 mt-0.5">
                     {item.type && (
                       <span className="text-[10px] uppercase font-semibold text-[var(--muted)] tracking-wider">

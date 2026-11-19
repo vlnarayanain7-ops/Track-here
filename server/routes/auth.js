@@ -6,6 +6,7 @@ import {
   logout,
   refresh,
   getMe,
+  getSession,
   forgotPassword,
   resetPassword,
   getCsrfToken,
@@ -14,13 +15,14 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
 } from '../controllers/authController.js';
-import auth from '../middleware/auth.js';
+import auth, { authenticateOptional } from '../middleware/auth.js';
 import validate from '../middleware/validate.js';
 import { authLimiter } from '../middleware/rateLimiter.js';
 import csrfProtection from '../middleware/csrf.js';
 
 const router = Router();
 
+router.get('/session', authenticateOptional, getSession);
 router.get('/csrf', getCsrfToken);
 // These endpoints issue authentication cookies, so they also require the
 // double-submit token. The client fetches `/csrf` during app bootstrap.

@@ -35,7 +35,6 @@ import reportsRoutes from './routes/reports.js';
 import rewardsRoutes from './routes/rewards.js';
 import verifyRoutes from './routes/verify.js';
 import adminRoutes from './routes/admin.js';
-import finalsGroupRoutes from './routes/finalsGroup.js';
 import { RewardCounter } from './models/rewards.js';
 import { freePort } from './scripts/free-port.mjs';
 
@@ -145,7 +144,6 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/rewards', rewardsRoutes);
 app.use('/api/verify', verifyRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/finals-group', finalsGroupRoutes);
 
 // ─── 404 & Error Handling ─────────────────────────────────────
 

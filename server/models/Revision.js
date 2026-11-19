@@ -24,6 +24,7 @@ const revisionSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Problem',
     },
+    solution: { type: String, trim: true, maxlength: 6000 },
     dueDate: {
       type: Date,
       required: [true, 'Due date is required'],
@@ -36,7 +37,7 @@ const revisionSchema = new mongoose.Schema(
     },
     feedback: {
       type: String,
-      enum: ['Easy', 'Correct but slow', 'Needed hint', 'Forgot'],
+      enum: ['Easy', 'Correct but slow', 'Needed hint', 'Forgot', 'Remembered', 'Hard'],
     },
     intervalDays: {
       type: Number,

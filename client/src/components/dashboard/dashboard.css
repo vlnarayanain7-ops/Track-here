@@ -1,0 +1,73 @@
+.today-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 12px 0;
+  font-size: 16px;
+}
+.today-dashboard h1, .today-dashboard h2 { font-family: var(--font); }
+.today-heading { padding: 4px 0 12px; }
+.today-heading h1 { font-size: clamp(24px, 3vw, 30px); font-weight: 500; line-height: 1.3; letter-spacing: -.025em; margin: 0 0 8px; }
+.today-heading .sub { color: var(--muted); font-size: 14px; line-height: 1.5; }
+.today-overview { display: grid; grid-template-columns: minmax(0, 1fr) 250px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.today-focus { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 20px; padding: 24px; min-width: 0; }
+.today-focus-copy { min-width: 0; }
+.today-eyebrow { color: var(--muted); font-size: 14px; font-weight: 500; }
+.today-focus h2 { font-size: 20px; font-weight: 500; line-height: 1.4; letter-spacing: -.015em; margin: 8px 0 4px; overflow-wrap: anywhere; }
+.today-focus p { color: var(--muted); font-size: 14px; margin: 0; }
+.today-start { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; border: 1px solid transparent; border-radius: 7px; padding: 0 18px; color: var(--on-primary); background: var(--primary); font-size: 14px; font-weight: 500; cursor: pointer; transition: filter .15s; }
+.today-start:hover { filter: brightness(1.08); }
+.today-goal { padding: 24px; border-left: 1px solid var(--line); display: flex; flex-direction: column; justify-content: center; }
+.today-card-label { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--muted); }
+.today-card-label > span { margin-left: auto; font-size: 13px; font-variant-numeric: tabular-nums; }
+.today-goal-value { font-size: 28px; font-weight: 500; letter-spacing: -.025em; margin: 16px 0; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.today-goal-value span { font-size: 14px; font-weight: 400; color: var(--muted); letter-spacing: 0; }
+.today-meter { height: 4px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
+.today-meter i { display: block; height: 100%; background: var(--primary); border-radius: inherit; transition: width .2s; }
+.today-progress-link { color: var(--primary); font-size: 14px; font-weight: 500; margin-top: 18px; width: fit-content; text-underline-offset: 3px; }
+.today-progress-link:hover { text-decoration: underline; }
+.today-section-title { margin-top: 4px; margin-bottom: -12px; }
+.today-section-title h2 { font-size: 14px; font-weight: 500; color: var(--muted); margin: 0; }
+.today-checks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.today-checks .ck3 { display: grid; grid-template-columns: 22px 1fr; gap: 4px 12px; align-items: center; padding: 18px 16px; text-align: left; color: var(--text); border: 0; border-radius: 0; background: transparent; cursor: pointer; transition: background .15s; }
+.today-checks .ck3 + .ck3 { border-left: 1px solid var(--line); }
+.today-checks .ck3:hover { background: var(--surface-2); }
+.today-checks .ck3 > span:not(.today-check-icon) { font-size: 14px; font-weight: 500; }
+.today-checks .ck3 small { grid-column: 2; color: var(--muted); font-size: 13px; }
+.today-checks .ck3.done small { color: var(--primary); }
+.today-check-icon { display: grid; place-items: center; color: var(--muted); grid-row: span 2; }
+.today-check-icon svg { width: 19px; height: 19px; stroke-width: 1.7; }
+.today-tasks { margin-top: 8px; min-width: 0; }
+.today-tasks > div:first-child { margin-bottom: 12px; }
+.today-tasks h2 { display: flex; align-items: center; gap: 12px; font-size: 18px; font-weight: 500; }
+.today-count { font: 400 13px var(--font); color: var(--muted); }
+.today-add-task { min-height: 40px; border: 1px solid var(--line); background: var(--surface); border-radius: 7px; padding: 0 12px; display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; color: var(--text); cursor: pointer; }
+.today-add-task:hover { background: var(--surface-2); }
+.today-tasks > .divide-y { border-top: 1px solid var(--line); }
+.today-tasks > .divide-y > .group { min-height: 56px; padding-inline: 8px; }
+.today-tasks > .divide-y > .group:hover { background: var(--surface-2); }
+.today-tasks > .divide-y > .group > span.flex-1 { font-size: 16px; }
+.today-tasks > .divide-y > .text-center { font-size: 14px; padding-block: 40px; }
+.today-tasks > p { flex-wrap: wrap; font-size: 13px; margin-top: 16px; }
+.app-header { min-height: 64px; background: var(--bg); }
+.app-header nav a { min-height: 36px; font-size: 14px; padding-inline: 12px; font-weight: 500; border-radius: 6px; }
+.app-header .btn-add { height: 36px; padding-inline: 14px; font-size: 14px; font-weight: 500; border-radius: 6px; }
+.app-header .av { border-radius: 50%; border: 1px solid var(--line); width: 32px; height: 32px; }
+@media (min-width: 1024px) { .page.today-page { max-width: 1040px; padding-top: 36px; } }
+@media (max-width: 1000px) { .app-header nav a { padding-inline: 8px; font-size: 13px; } }
+@media (max-width: 700px) {
+  .today-dashboard { gap: 20px; padding-top: 8px; }
+  .today-overview { grid-template-columns: 1fr; }
+  .today-focus { padding: 20px; }
+  .today-goal { border-left: 0; border-top: 1px solid var(--line); padding: 20px; }
+  .today-goal-value { margin-block: 12px; }
+  .today-checks { grid-template-columns: 1fr; }
+  .today-checks .ck3 { padding: 16px 8px; }
+  .today-checks .ck3 + .ck3 { border-left: 0; border-top: 1px solid var(--line); }
+  .today-checks .ck3 small { grid-column: 3; text-align: right; }
+  .today-checks .ck3 { grid-template-columns: 22px 1fr auto; }
+  .today-check-icon { grid-row: 1; }
+  .today-tasks > .divide-y > .group > span:last-child:not(.flex-1) { max-width: 30%; overflow: hidden; text-overflow: ellipsis; }
+}
+@media (max-width: 380px) { .today-checks .ck3 { grid-template-columns: 22px 1fr; } .today-checks .ck3 small { grid-column: 2; text-align: left; } .today-check-icon { grid-row: span 2; } }
+@media (prefers-reduced-motion: reduce) { .today-dashboard * { transition: none !important; } }

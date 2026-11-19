@@ -252,7 +252,7 @@ export function PomodoroTimer({
         <button
           type="button"
           className="linklike inline"
-          onClick={onOpenSettings}
+          data-tour="timer-settings" onClick={onOpenSettings}
         >
           Timer settings
         </button>

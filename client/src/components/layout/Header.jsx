@@ -21,6 +21,7 @@ import {
   Pause,
   Play,
   Square,
+  Compass,
 } from 'lucide-react';
 import FeedbackModal from '@/components/feedback/FeedbackModal';
 import { useAuth } from '@/hooks/useAuth';
@@ -38,7 +39,7 @@ const NAV_ITEMS = [
   { to: '/progress', label: 'Progress', Icon: BarChart3 },
 ];
 
-export default function Header({ onOpenCommandPalette, onQuickAdd }) {
+export default function Header({ onOpenCommandPalette, onQuickAdd, onStartTour }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -143,7 +144,7 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
   ];
 
   return (
-    <header className="sticky top-0 z-30 h-14 bg-[var(--bg)] border-b border-[var(--line)] px-4 sm:px-8 flex items-center justify-between gap-3 select-none">
+    <header className="app-header sticky top-0 z-30 h-14 bg-[var(--bg)] border-b border-[var(--line)] px-4 sm:px-8 flex items-center justify-between gap-3 select-none">
       {/* Left: Brand + Nav tabs */}
       <div className="flex items-center gap-6">
         <Link to="/" className="font-heading font-bold text-[17px] text-[var(--text)] tracking-tight shrink-0">
@@ -155,6 +156,7 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
           {NAV_ITEMS.map(({ to, label, Icon }) => (
             <NavLink
               key={to}
+              data-tour={`nav-${to === "/" ? "today" : to.slice(1)}`}
               to={to}
               end={to === '/'}
               className={({ isActive }) =>
@@ -231,7 +233,7 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
         {/* Search icon (opens Ctrl K) */}
         <button
           type="button"
-          onClick={onOpenCommandPalette}
+          data-tour="search" onClick={onOpenCommandPalette}
           className="btn-search w-8 h-8 rounded-[9px] hover:bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--text)] transition-colors flex items-center justify-center cursor-pointer"
           aria-label="Search (Ctrl K)"
           title="Search (Ctrl K)"
@@ -271,7 +273,7 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
         <div className="relative" ref={addMenuRef}>
           <button
             type="button"
-            onClick={() => setAddMenuOpen((prev) => !prev)}
+            data-tour="quick-add" onClick={() => setAddMenuOpen((prev) => !prev)}
             aria-haspopup="menu"
             aria-expanded={addMenuOpen}
             className="btn-add h-8 px-3 rounded-[9px] bg-[var(--primary)] text-[var(--on-primary)] hover:opacity-90 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
@@ -288,7 +290,7 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
             >
               {quickAddKinds.map((item) => (
                 <button
-                  key={item.kind}
+                  key={item.kind} data-tour={`quick-${item.kind}`}
                   role="menuitem"
                   className="w-full text-left px-3 py-2 text-xs rounded-[6px] hover:bg-[var(--surface-2)] text-[var(--text)] font-medium transition-colors cursor-pointer"
                   onClick={() => {
@@ -311,7 +313,7 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
             aria-haspopup="menu"
             aria-expanded={avatarMenuOpen}
             className="av w-8 h-8 rounded-[9px] bg-[var(--surface-2)] border border-[var(--line)] text-[var(--text)] font-heading font-bold text-xs flex items-center justify-center cursor-pointer hover:border-[var(--muted)] transition-colors border-0"
-            aria-label="Account menu"
+            data-tour="account" aria-label="Account menu"
           >
             {user?.name ? user.name.slice(0, 2).toUpperCase() : 'LN'}
           </button>
@@ -401,6 +403,18 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
               <div className="py-1">
                 <button
                   type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setAvatarMenuOpen(false);
+                    onStartTour?.();
+                  }}
+                  className="w-full text-left px-3 py-1.5 text-xs rounded-lg hover:bg-[var(--surface-2)] text-[var(--text)] flex items-center gap-2.5 font-medium transition-colors"
+                >
+                  <Compass className="w-4 h-4 text-[var(--muted)]" />
+                  <span>Take a tour</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     setAvatarMenuOpen(false);
                     setFeedbackOpen(true);
@@ -411,7 +425,7 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
                   <span>Send feedback</span>
                 </button>
                 <Link
-                  to="/settings"
+                  data-tour="settings" to="/settings"
                   onClick={() => setAvatarMenuOpen(false)}
                   className="w-full text-left px-3 py-1.5 text-xs rounded-lg hover:bg-[var(--surface-2)] text-[var(--text)] flex items-center gap-2.5 font-medium transition-colors"
                 >

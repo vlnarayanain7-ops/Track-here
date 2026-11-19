@@ -39,7 +39,7 @@ const getCookie = (name) => document.cookie
 api.interceptors.request.use((config) => {
   if (config.accountSession && config.accountSession.epoch !== getAccountSession().epoch) throw new axios.CanceledError('Account changed; sync paused.');
   if (!['get', 'head', 'options'].includes(config.method?.toLowerCase())) {
-    const token = csrfToken || getCookie('csrfToken');
+    const token = getCookie('csrfToken') || csrfToken;
     if (token) config.headers['X-CSRF-Token'] = decodeURIComponent(token);
   }
 
@@ -97,6 +97,7 @@ api.interceptors.response.use(
 
     // Do NOT attempt refresh on public auth endpoints (login, register, refresh, me)
     const isAuthEndpoint =
+      originalRequest?.url?.includes('/auth/session') ||
       originalRequest?.url?.includes('/auth/login') ||
       originalRequest?.url?.includes('/auth/register') ||
       originalRequest?.url?.includes('/auth/google') ||

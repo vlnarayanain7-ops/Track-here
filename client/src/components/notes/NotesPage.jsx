@@ -248,7 +248,7 @@ export default function NotesPage() {
         <h1 className="text-[26px] font-bold font-heading tracking-tight text-[var(--tx)]">Notes</h1>
         <button
           type="button"
-          onClick={handleCreateNote}
+          data-tour="new-note" onClick={handleCreateNote}
           className="btn flex items-center gap-1.5 cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" />

@@ -219,6 +219,17 @@ export const refresh = asyncHandler(async (req, res) => {
   });
 });
 
+// Resolve the session and prime double-submit protection in one round trip.
+export const getSession = asyncHandler(async (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  const user = req.user ? await User.findById(req.user.id) : null;
+  const existing = req.cookies?.csrfToken;
+  const csrfToken = typeof existing === 'string' && /^[A-Za-z0-9_-]{43}$/.test(existing)
+    ? existing : generateCsrfToken();
+  if (csrfToken !== existing) setCsrfCookie(res, csrfToken);
+  res.json({ data: { user, csrfToken, canRefresh: Boolean(req.cookies?.refreshToken) } });
+});
+
 /** GET /api/auth/csrf */
 export const getCsrfToken = asyncHandler(async (req, res) => {
   const csrfToken = generateCsrfToken();
