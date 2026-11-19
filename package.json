@@ -9,9 +9,6 @@
     "postinstall": "npm --prefix client install --include=dev",
     "build": "npm --prefix client install --include=dev && npm --prefix client run build && node -e \"require('fs').cpSync('client/dist', 'dist', {recursive: true}); try { require('fs').unlinkSync('dist/_redirects'); } catch(e){}\"",
     "start": "npm --prefix server start",
-    "test:audit": "node tests/test-audit.mjs && node server/scripts/clean-test-users.mjs",
-    "test:production-audit": "node tests/production-audit.mjs && node server/scripts/clean-test-users.mjs",
-    "clean:test-users": "node server/scripts/clean-test-users.mjs",
     "migrate:sessions:dry": "node server/scripts/migrate-session-durations.mjs",
     "test:pomodoro": "node --test client/src/lib/pomodoro.test.js",
     "test:sessions": "node --test client/src/lib/sessions.test.js",
@@ -19,7 +16,6 @@
     "test:unit": "node --test client/src/lib/*.test.js"
   },
   "devDependencies": {
-    "@playwright/test": "^1.65.0",
     "concurrently": "^9.2.5"
   }
 }

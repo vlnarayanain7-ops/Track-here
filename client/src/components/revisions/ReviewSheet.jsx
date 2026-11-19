@@ -1,3 +1,4 @@
+import { reviewDate } from '@/lib/reviewSchedule';
 import { useState, useMemo } from 'react';
 import { useRevisions, useCompleteRevision, useCreateRevision, useDeleteRevision } from '@/hooks/useRevisions';
 import { SideSheet } from '@/components/SideSheet';
@@ -141,7 +142,7 @@ export default function ReviewSheet({ isOpen, open, onClose }) {
         ) : (
           <div className="divide-y divide-[var(--line)]">
             {items.map((item) => (
-              <div key={item._id} className="py-3 flex items-center justify-between gap-3">
+              <div key={item._id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="min-w-0 pr-2">
                   <span className="font-medium text-xs text-[var(--text)] block truncate">
                     {item.title}
@@ -163,18 +164,20 @@ export default function ReviewSheet({ isOpen, open, onClose }) {
                   <button
                     type="button"
                     className="btn btn-primary text-xs h-7 px-2.5 cursor-pointer"
+                    disabled={completeMutation.isPending}
                     onClick={() => handleFeedback(item._id, 'Remembered')}
                     title="Remembered — increase interval"
                   >
-                    Remembered
+                    Remembered ? {reviewDate(item.intervalDays, 'Remembered')}
                   </button>
                   <button
                     type="button"
                     className="btn btn-ghost text-xs h-7 px-2 cursor-pointer"
+                    disabled={completeMutation.isPending}
                     onClick={() => handleFeedback(item._id, 'Hard')}
                     title="Hard / Forgot — reset to 1 day"
                   >
-                    Hard
+                    Hard ? {reviewDate(item.intervalDays, 'Hard')}
                   </button>
                   <button
                     type="button"

@@ -1,3 +1,5 @@
+import { navigateTabs } from '@/lib/tabNavigation';
+import StudyInsights from './StudyInsights';
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, Check, Clock, FileText, AlertCircle, Sparkles, Award, FileCheck, Gift, Download, Share2, Trash2, Eye } from 'lucide-react';
@@ -12,6 +14,7 @@ import { MonthHeatmap } from '@/components/MonthHeatmap';
 import SideSheet from '@/components/SideSheet';
 import RewardsSheet from '@/components/rewards/RewardsSheet';
 import ReportModal from '@/components/progress/ReportModal';
+import { summarizePeriod } from '@/lib/focusReport';
 import { certificateBlob, shareBlob } from '@/lib/certificate';
 import { listReportsLocal, deleteReportLocal } from '@/lib/localStore';
 import { shareReportCard } from '@/lib/reportCard';
@@ -55,7 +58,7 @@ export default function ProgressPage() {
   // Queries
   const { user } = useAuth();
   const [statsRange, setStatsRange] = useState('week');
-  const { data: streakData, isLoading: streakLoading } = useStreakData();
+  const { data: streakData, isError: streakFailed, refetch: reloadStreak } = useStreakData();
   const { data: analyticsData } = useAnalytics({ range: statsRange });
   const { data: problemsData } = useProblems();
   const { data: mockTestsData } = useMockTests();
@@ -211,28 +214,17 @@ export default function ProgressPage() {
   const has7DayBadge = (rewardsData?.milestones || []).includes(7);
   const has30DayCert = (rewardsData?.milestones || []).includes(30);
 
-  const handleOpenDailyReport = () => {
-    const today = new Date().toISOString().split('T')[0];
-    const todayMins = minutesByDay.get(today) || 0;
-    setReportType('daily');
-    setReportDate(today);
-    setReportMinutes(todayMins);
-    setReportSessions(todayMins > 0 ? Math.max(1, Math.round(todayMins / 30)) : 0);
+  const [period, setPeriod] = useState(null);
+  const openReport = type => {
+    if (!streakData?.today) return toast.error('Study totals are loading. Try again shortly.');
+    const summary = summarizePeriod(type, streakData.today, history);
+    setPeriod(summary);
+    setReportType(type);
+    setReportDate(summary.start);
+    setReportMinutes(summary.minutes);
+    setReportSessions(summary.sessions);
     setReportStreak(currentStreak);
-    setReportTopSubject(null);
-    setReportModalOpen(true);
-  };
-
-  const handleOpenWeeklyReport = () => {
-    const today = new Date().toISOString().split('T')[0];
-    const past7 = last7Days || [];
-    const totalWeeklyMins = past7.reduce((acc, d) => acc + (d.minutes || 0), 0);
-    setReportType('weekly');
-    setReportDate(today);
-    setReportMinutes(totalWeeklyMins);
-    setReportSessions(past7.filter((d) => (d.minutes || 0) > 0).length);
-    setReportStreak(currentStreak);
-    setReportTopSubject(null);
+    setReportTopSubject(summary.topSubject);
     setReportModalOpen(true);
   };
 
@@ -283,7 +275,7 @@ export default function ProgressPage() {
       <h1 className="text-[26px] font-bold font-heading tracking-tight text-[var(--tx)]">Progress</h1>
 
       {/* Tabs: Streak | Stats | Practice */}
-      <div className="tabs" role="tablist">
+      <div className="tabs" role="tablist" onKeyDown={navigateTabs}>
         <button
           type="button"
           role="tab"
@@ -316,7 +308,17 @@ export default function ProgressPage() {
       {/* TAB 1: STREAK (LeetCode style month heatmap) */}
       {tab === 'streak' && (
         <div className="space-y-5 animate-fade-in">
-          {/* Three plain numbers */}
+          {!streakData && (
+            <div className="card p-5" role="status">
+              {streakFailed ? (
+                <>
+                  <p>Your streak history could not be loaded.</p>
+                  <button type="button" className="btn mt-3" onClick={() => reloadStreak()}>Try again</button>
+                </>
+              ) : 'Loading your streak history...'}
+            </div>
+          )}
+          {streakData && <>
           <div className="nums">
             <div>
               <b style={{ color: 'var(--fl)' }}>{currentStreak}</b>
@@ -432,7 +434,7 @@ export default function ProgressPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={handleOpenDailyReport}
+                onClick={() => openReport('daily')}
                 className="btn text-xs h-7 px-2.5 flex items-center gap-1.5 cursor-pointer border border-[var(--line)] hover:border-[var(--primary)]"
                 title="Generate today's shareable focus report"
               >
@@ -441,25 +443,28 @@ export default function ProgressPage() {
               </button>
               <button
                 type="button"
-                onClick={handleOpenWeeklyReport}
+                onClick={() => openReport('weekly')}
                 className="btn text-xs h-7 px-2.5 flex items-center gap-1.5 cursor-pointer border border-[var(--line)] hover:border-[var(--primary)]"
                 title="Generate this week's shareable focus report"
               >
                 <Clock className="w-3.5 h-3.5 text-[var(--primary)]" />
                 <span>This week</span>
               </button>
+              <button type="button" className="btn text-xs" onClick={() => openReport('monthly')}>This month</button>
             </div>
           </div>
 
           {/* LeetCode Month Heatmap */}
           <div className="card overflow-hidden min-w-0">
-            <MonthHeatmap minutesByDay={minutesByDay} />
+            <MonthHeatmap minutesByDay={minutesByDay} today={streakData?.today} />
           </div>
 
           {/* Streak rule note */}
           <p className="note" style={{ marginTop: '12px' }}>
             25+ focused minutes in a day counts toward your streak.
           </p>
+
+          </>}
 
           {/* Saved Reports (device only) */}
           {savedReports.length > 0 && (
@@ -479,7 +484,7 @@ export default function ProgressPage() {
                       <FileText className="w-4 h-4 text-[var(--primary)] shrink-0" />
                       <div className="min-w-0">
                         <div className="text-xs font-medium text-[var(--text)] truncate">
-                          {item.summary?.type === 'weekly' ? 'Weekly Report' : 'Daily Report'} · {item.summary?.date || item.id}
+                          {item.summary?.type === 'monthly' ? 'Monthly Report' : item.summary?.type === 'weekly' ? 'Weekly Report' : 'Daily Report'} · {item.summary?.date || item.id}
                         </div>
                         <div className="text-[11px] text-[var(--muted)]">
                           {formatDuration(item.summary?.minutes || 0)} · {item.summary?.sessions || 0} sessions · {item.summary?.streak || 0}d streak
@@ -492,6 +497,7 @@ export default function ProgressPage() {
                         type="button"
                         onClick={() => {
                           setReportType(item.summary?.type || 'daily');
+                          setPeriod(item.summary?.period || null);
                           setReportDate(item.summary?.date || new Date().toISOString().split('T')[0]);
                           setReportMinutes(item.summary?.minutes || 0);
                           setReportSessions(item.summary?.sessions || 0);
@@ -539,6 +545,7 @@ export default function ProgressPage() {
       {/* TAB 2: STATS */}
       {tab === 'stats' && (
         <div className="animate-fade-in">
+          <StudyInsights user={user} analytics={analyticsData} problems={problemsData?.data?.problems || problemsData?.problems || (Array.isArray(problemsData) ? problemsData : [])} />
           <StatsPanel
             minutesByDay={minutesByDay}
             bySubject={analyticsData?.bySubject || []}
@@ -721,6 +728,7 @@ export default function ProgressPage() {
         open={reportModalOpen}
         onClose={() => setReportModalOpen(false)}
         type={reportType}
+        period={period}
         dateStr={reportDate}
         minutes={reportMinutes}
         sessions={reportSessions}

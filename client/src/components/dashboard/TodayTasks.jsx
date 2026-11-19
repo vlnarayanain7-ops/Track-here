@@ -66,7 +66,7 @@ export default function TodayTasks({ tasks = [], onNewTask }) {
                   'flex items-center justify-between p-3 rounded-xl border transition-all duration-150',
                   isCompleted
                     ? 'bg-stone-50/70 border-stone-200/60 opacity-60'
-                    : 'bg-white border-border hover:border-emerald-200 hover:shadow-2xs'
+                    : 'bg-[var(--surface)] border-border hover:border-emerald-200 hover:shadow-2xs'
                 )}
               >
                 <div className="flex items-center gap-3 min-w-0">

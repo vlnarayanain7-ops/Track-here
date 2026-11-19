@@ -1,3 +1,4 @@
+import ProblemAttempt from '../models/ProblemAttempt.js';
 import User from '../models/User.js';
 import StudySession from '../models/StudySession.js';
 import mongoose from 'mongoose';
@@ -69,14 +70,22 @@ export const getDashboard = asyncHandler(async (req, res) => {
   const timezone = user?.timezone || 'Asia/Kolkata';
   const range = (req.query.range || 'week').toLowerCase();
 
-  const [stats, bySubject] = await Promise.all([
+  const [stats, bySubject, recurringMistakes] = await Promise.all([
     getDashboardStats(req.user.id, timezone),
     computeBySubject(req.user.id, timezone, range, user?.subjects || []),
+    ProblemAttempt.aggregate([
+      { $match: { user: new mongoose.Types.ObjectId(req.user.id), attemptedAt: { $gte: new Date(Date.now() - 90 * 86400000) }, mistakes: { $type: 'string', $ne: '' } } },
+      { $group: { _id: { $toLower: { $trim: { input: '$mistakes' } } }, count: { $sum: 1 }, example: { $first: '$mistakes' } } },
+      { $match: { count: { $gte: 2 }, _id: { $ne: '' } } },
+      { $sort: { count: -1 } }, { $limit: 5 },
+      { $project: { _id: 0, text: '$example', count: 1 } },
+    ]),
   ]);
 
   res.json({
     ...stats,
     bySubject,
+    recurringMistakes,
     dailyStudyGoal: user?.dailyStudyGoal || 240,
   });
 });

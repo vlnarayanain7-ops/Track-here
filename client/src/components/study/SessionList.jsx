@@ -47,7 +47,7 @@ export default function SessionList({
   return (
     <div className="space-y-4 animate-fade-in">
       {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-3 p-4 bg-white rounded-2xl border border-border shadow-2xs">
+      <div className="flex flex-wrap items-center gap-3 p-4 bg-[var(--surface)] rounded-2xl border border-border shadow-2xs">
         <div className="flex items-center gap-2 text-text-muted mr-1">
           <SlidersHorizontal className="w-3.5 h-3.5" />
           <span className="text-[11px] font-semibold uppercase tracking-wider hidden sm:inline">Filters</span>

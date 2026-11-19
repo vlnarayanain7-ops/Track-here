@@ -1,8 +1,8 @@
-const CACHE_NAME = 'th-shell-v1';
+const CACHE_NAME = 'th-shell-v2';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
-  '/favicon.svg',
+  '/icons/brand-mark.svg',
 ];
 
 self.addEventListener('install', (event) => {
@@ -16,7 +16,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((k) => k.startsWith('th-shell-') && k !== CACHE_NAME).map((k) => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
 });
@@ -26,6 +26,7 @@ self.addEventListener('fetch', (event) => {
 
   // Ignore non-GET and API or socket requests
   if (
+    url.origin !== self.location.origin ||
     event.request.method !== 'GET' ||
     url.pathname.startsWith('/api') ||
     url.pathname.startsWith('/socket.io')
@@ -60,7 +61,7 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // If offline and request is an image or script, try index.html fallback or void
+          return Response.error();
         });
     })
   );

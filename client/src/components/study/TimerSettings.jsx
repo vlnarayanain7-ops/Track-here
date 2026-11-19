@@ -1,3 +1,4 @@
+import Dialog from '@/components/ui/Dialog';
 import React, { useState } from 'react';
 import { normalizeCustom } from '@/lib/pomodoro';
 import toast from 'react-hot-toast';
@@ -38,9 +39,8 @@ export function savePrefs(prefs) {
 }
 
 export function TimerSettings({ isOpen, onClose, prefs, onChangePrefs }) {
-  if (!isOpen) return null;
-
   const [localCustom, setLocalCustom] = useState(prefs.custom || DEFAULT_PREFS.custom);
+  if (!isOpen) return null;
 
   const updateToggle = async (key) => {
     if (key === 'notify' && !prefs.notify) {
@@ -87,31 +87,8 @@ export function TimerSettings({ isOpen, onClose, prefs, onChangePrefs }) {
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fade-in"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Timer settings"
-    >
-      <div
-        className="w-full max-w-[420px] bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 shadow-2xl space-y-5 animate-scale-up"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between pb-3 border-b border-[var(--line)]">
-          <h2 className="text-lg font-bold font-heading text-[var(--text)] m-0">
-            Timer settings
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors"
-            aria-label="Close settings"
-          >
-            ✕
-          </button>
-        </div>
-
+    <Dialog open={isOpen} onClose={onClose} title="Timer settings">
+      <div className="space-y-5">
         {/* Custom Presets Section */}
         <div className="space-y-3">
           <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
@@ -282,7 +259,7 @@ export function TimerSettings({ isOpen, onClose, prefs, onChangePrefs }) {
           </button>
         </div>
       </div>
-    </div>
+    </Dialog>
   );
 }
 

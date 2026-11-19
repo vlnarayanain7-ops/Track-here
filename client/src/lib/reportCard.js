@@ -31,9 +31,52 @@ export async function drawReportCard({
   topSubject = null,
   showName = false,
   displayName = '',
+  period = null,
 }) {
   const canvas = Object.assign(document.createElement('canvas'), { width: 1200, height: 630 });
   const ctx = canvas.getContext('2d');
+  if (type === 'weekly' || type === 'monthly') {
+    const label = value => new Date(value + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+    const write = (value, x, y, size, color, weight = 500, maxWidth = 1000) => {
+      ctx.fillStyle = color;
+      ctx.font = `${weight} ${size}px Inter, sans-serif`;
+      ctx.fillText(String(value), x, y, maxWidth);
+    };
+    ctx.fillStyle = '#f6f7ee';
+    ctx.fillRect(0, 0, 1200, 630);
+    ctx.fillStyle = '#173d30';
+    ctx.fillRect(0, 0, 1200, 292);
+    write('TRACK HERE   /   STUDY REPORT', 60, 58, 20, '#bbddbc', 700);
+    write(type === 'weekly' ? 'Weekly focus' : 'Monthly focus', 60, 137, 64, '#ffffff', 700);
+    write(period ? label(period.start) + ' – ' + label(period.end) : label(dateStr), 62, 188, 25, '#dbeddf');
+    if (showName && displayName) write(displayName, 62, 242, 23, '#dbeddf', 500, 500);
+    write('TOTAL FOCUS TIME', 755, 104, 19, '#bbddbc', 700);
+    write(formatMinutes(minutes), 750, 191, 66, '#ffffff', 700, 390);
+    const metrics = [['SESSIONS', sessions], ['CURRENT STREAK', streak + (streak === 1 ? ' day' : ' days')], ['TOP SUBJECT', topSubject || '—']];
+    metrics.forEach(([name, value], i) => {
+      const x = 60 + i * 365;
+      write(name, x, 356, 18, '#476151', 700);
+      write(value, x, 414, 42, '#193c2e', 700, 340);
+    });
+    if (period?.days?.length) {
+      write('Daily focus', 60, 482, 21, '#193c2e', 700);
+      write(period.days.filter(n => n >= 25).length + ' streak days', 903, 482, 20, '#476151');
+      const stride = 1080 / period.days.length;
+      const peak = Math.max(25, ...period.days);
+      period.days.forEach((n, i) => {
+        const h = n > 0 ? Math.max(1, n / peak * 80) : 0;
+        ctx.fillStyle = n >= 25 ? '#26784b' : '#aebcaf';
+        ctx.fillRect(60 + i * stride, 588 - h, stride * .78, h);
+        if (type === 'weekly' || i === 0 || (i + 1) % 7 === 0) {
+          const day = new Date(period.start + 'T12:00:00Z');
+          day.setUTCDate(day.getUTCDate() + i);
+          const options = type === 'weekly' ? { weekday: 'short' } : { day: 'numeric' };
+          write(day.toLocaleDateString(undefined, { ...options, timeZone: 'UTC' }), 60 + i * stride, 613, 17, '#476151');
+        }
+      });
+    }
+    return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+  }
 
   // Background
   ctx.fillStyle = COLORS.bg;

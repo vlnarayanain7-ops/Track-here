@@ -5,7 +5,7 @@ export function useRewardsMe() {
   return useQuery({
     queryKey: ['rewards', 'me'],
     queryFn: async () => {
-      const res = await axios.get('/api/rewards/me');
+      const res = await axios.get('/rewards/me');
       return res.data;
     },
     staleTime: 60_000,
@@ -16,7 +16,7 @@ export function useSubmitProof() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload) => {
-      const res = await axios.post('/api/rewards/proof', payload);
+      const res = await axios.post('/rewards/proof', payload);
       return res.data;
     },
     onSuccess: () => {
@@ -29,7 +29,7 @@ export function useClaimReward() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (address) => {
-      const res = await axios.post('/api/rewards/claim', address);
+      const res = await axios.post('/rewards/claim', address);
       return res.data;
     },
     onSuccess: () => {
@@ -42,7 +42,7 @@ export function useWeeklyReport(start) {
   return useQuery({
     queryKey: ['reports', 'weekly', start],
     queryFn: async () => {
-      const res = await axios.get('/api/reports/weekly', { params: { start } });
+      const res = await axios.get('/reports/weekly', { params: { start } });
       return res.data;
     },
     enabled: Boolean(start),

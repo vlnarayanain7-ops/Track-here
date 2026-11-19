@@ -1,315 +1,100 @@
-import { Link } from 'react-router-dom';
-import {
-  Compass,
-  Timer,
-  CheckSquare,
-  FileText,
-  Code2,
-  RotateCcw,
-  Flame,
-  BarChart3,
-  CalendarCheck,
-  ArrowRight,
-  Shield,
-  Layers,
-  GraduationCap,
-  Zap,
-  Clock,
-  Target,
-} from 'lucide-react';
-import Button from '@/components/ui/Button';
+﻿import { Link } from 'react-router-dom';
+import { Timer, Layers, CalendarCheck, RotateCcw, Code2, Flame, ArrowRight, Check, Atom, Microscope, BookOpen, Settings2, GraduationCap, Target } from 'lucide-react';
+import BrandMark from '@/components/brand/BrandMark';
+import ProductPreview from '@/components/brand/ProductPreview';
+
+const capabilities = [
+  { title: 'Make time for deep focus', description: 'Choose a focus block or stopwatch, take a break, and keep a record of the time you spend studying.', icon: Timer },
+  { title: 'Build a plan that fits you', description: 'Organize your own subjects, chapters, tasks, and weekly study schedule around the goal you are working toward.', icon: Layers },
+  { title: 'Start with an intention', description: 'Set your morning priorities, then use an evening review to see what worked and what to change tomorrow.', icon: CalendarCheck },
+  { title: 'Return to what matters', description: 'Turn notes and topics into a review queue. Your feedback helps schedule the next revision.', icon: RotateCcw },
+  { title: 'Learn from each attempt', description: 'Record practice problems, approaches, and mistakes so your next attempt builds on the last.', icon: Code2 },
+  { title: 'See your consistency grow', description: 'Compare focused time with your goals and explore your study history, subject breakdown, and streak.', icon: Flame },
+];
+const prepProfiles = [
+  { name: 'JEE', desc: 'Physics, chemistry, mathematics', icon: Atom },
+  { name: 'NEET', desc: 'Science and biology', icon: Microscope },
+  { name: 'UPSC', desc: 'General studies and optional subjects', icon: BookOpen },
+  { name: 'GATE', desc: 'Engineering and aptitude', icon: Settings2 },
+  { name: 'Programming', desc: 'Algorithms and problem solving', icon: Code2 },
+  { name: 'Your own goal', desc: 'University, skills, or certifications', icon: GraduationCap },
+];
+const primaryLink = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold bg-[var(--primary)] text-[var(--on-primary)] hover:opacity-90 transition-opacity';
+const secondaryLink = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-medium border border-[var(--line)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors';
 
 export default function LandingPage() {
-  const capabilities = [
-    {
-      title: 'Precision Focus Timer',
-      description:
-        'Server-persisted focus timer with pause, resume, and cross-device recovery. Automatically attributes hours to your subjects and topics.',
-      icon: Timer,
-      color: 'text-emerald-700',
-      bgColor: 'bg-emerald-50 border-emerald-200/80',
-    },
-    {
-      title: 'Universal Subject Architecture',
-      description:
-        'Whether preparing for NEET, JEE, UPSC, GATE, University courses, or Competitive Programming, define your own syllabus, chapters, and topics.',
-      icon: Layers,
-      color: 'text-indigo-700',
-      bgColor: 'bg-indigo-50 border-indigo-200/80',
-    },
-    {
-      title: 'Daily Accountability System',
-      description:
-        'Start with a focused morning preparation plan and close your day with an evening review. Track actual hours against planned targets.',
-      icon: CalendarCheck,
-      color: 'text-emerald-700',
-      bgColor: 'bg-emerald-50 border-emerald-200/80',
-    },
-    {
-      title: 'Spaced Repetition & Revisions',
-      description:
-        'Never forget critical formulas or problem solutions. Automatic spaced interval scheduling ensures timely reviews before concepts fade.',
-      icon: RotateCcw,
-      color: 'text-amber-700',
-      bgColor: 'bg-amber-50 border-amber-200/80',
-    },
-    {
-      title: 'Practice & Mistake Journal',
-      description:
-        'Log practice sessions and problem attempts with time complexity, approaches, and mistakes made to prevent repeating errors.',
-      icon: Code2,
-      color: 'text-rose-700',
-      bgColor: 'bg-rose-50 border-rose-200/80',
-    },
-    {
-      title: 'Consistency Heatmaps & Analytics',
-      description:
-        'Visual consistency calendar with a 25-minute minimum daily focused study requirement. Deep subject-wise and topic-wise distributions.',
-      icon: Flame,
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-50 border-amber-200/80',
-    },
-  ];
-
-  const prepProfiles = [
-    { name: 'JEE', desc: 'Physics, Chemistry, Mathematics', icon: '⚡' },
-    { name: 'NEET', desc: 'Physics, Chemistry, Botany, Zoology', icon: '🔬' },
-    { name: 'UPSC', desc: 'General Studies, CSAT, Optional', icon: '📚' },
-    { name: 'GATE', desc: 'Engineering Math, Core, Aptitude', icon: '⚙️' },
-    { name: 'CP', desc: 'C++, Data Structures, Algorithms', icon: '💻' },
-    { name: 'Custom', desc: 'Semester, Skills, Certifications', icon: '🎯' },
-  ];
-
-  const stats = [
-    { label: 'Active Learners', value: '2,500+', icon: Target },
-    { label: 'Sessions Tracked', value: '85,000+', icon: Clock },
-    { label: 'Hours Focused', value: '120,000+', icon: Zap },
-  ];
-
   return (
-    <div className="min-h-screen bg-background text-text-primary flex flex-col selection:bg-emerald-100 selection:text-emerald-900 relative overflow-hidden">
-      {/* Top Navbar */}
-      <header className="sticky top-0 z-40 h-16 bg-white/90 backdrop-blur-md border-b border-border/80">
-        <div className="max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-700 shadow-2xs">
-              <Compass className="w-4.5 h-4.5" />
-            </div>
-            <div>
-              <span className="font-bold text-base tracking-tight text-text-primary">
-                Track Here
-              </span>
-              <span className="hidden sm:inline-block ml-2 text-[10px] text-emerald-800 font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/60">
-                Productivity OS
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link to="/login">
-              <Button variant="ghost" size="sm" className="text-xs text-text-secondary hover:text-text-primary">
-                Sign In
-              </Button>
-            </Link>
-            <Link to="/register">
-              <Button size="sm" className="text-xs gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs">
-                <span>Get Started</span>
-                <ArrowRight className="w-3 h-3" />
-              </Button>
-            </Link>
-          </div>
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 bg-[var(--surface)] p-3 rounded-lg">Skip to content</a>
+      <header className="sticky top-0 z-40 h-16 bg-[var(--bg)] border-b border-[var(--line)]">
+        <div className="max-w-6xl mx-auto h-full px-4 sm:px-6 flex items-center justify-between gap-3">
+          <Link to="/welcome" className="flex items-center gap-2.5 font-heading font-bold tracking-tight"><BrandMark /><span>Track Here</span></Link>
+          <nav aria-label="Welcome navigation" className="flex items-center gap-2 sm:gap-4">
+            <Link to="/signin" className="inline-flex items-center min-h-11 px-2 text-sm text-[var(--muted)] hover:text-[var(--text)]">Sign in</Link>
+            <Link to="/signup" className={primaryLink}>Get started <ArrowRight className="w-4 h-4 hidden sm:block" aria-hidden="true" /></Link>
+          </nav>
         </div>
       </header>
-
-      {/* ─── HERO SECTION ────────────────────────────────────────── */}
-      <section className="relative py-20 sm:py-28 lg:py-32 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center space-y-7">
-          {/* Status badge */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface/60 border border-border/80 text-xs text-text-secondary backdrop-blur-sm shadow-xs animate-fade-in-down">
-            <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-            <span>Universal Study, Revision & Preparation Platform</span>
+      <main id="main-content">
+        <section className="px-4 sm:px-6 pt-14 sm:pt-20 pb-14">
+          <div className="max-w-3xl mx-auto text-center">
+            <p className="inline-flex items-center gap-2 text-xs font-semibold text-[var(--primary)] bg-[var(--primary-soft)] px-3 py-2 rounded-full"><Target className="w-4 h-4" aria-hidden="true" />Your study day, thoughtfully organized</p>
+            <h1 className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.12] tracking-tight">A clear plan.<br /><span className="text-[var(--primary)]">A little progress, every day.</span></h1>
+            <p className="mt-6 text-base sm:text-lg leading-relaxed text-[var(--muted)] max-w-xl mx-auto">Bring your tasks, focused study, notes, and revisions into one calm workspace. Know what to work on next—and see how far you have come.</p>
+            <div className="mt-8 flex flex-col sm:flex-row justify-center gap-3">
+              <Link to="/signup" className={primaryLink}>Start your study journey <ArrowRight className="w-4 h-4" aria-hidden="true" /></Link>
+              <Link to="/finals-planner" className={secondaryLink}>Try the free finals planner</Link>
+            </div>
+            <p className="mt-5 text-xs text-[var(--muted)]">Your subjects. Your pace. Your next step.</p>
           </div>
-
-          {/* Main headline */}
-          <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-extrabold tracking-tight text-text-primary leading-[1.15] animate-fade-in-up">
-            Structure your preparation.{' '}
-            <span className="text-gradient">Master consistency.</span>
-          </h1>
-
-          {/* Subheadline */}
-          <p className="text-sm sm:text-base text-text-secondary max-w-2xl mx-auto leading-relaxed animate-fade-in-up">
-            The all-in-one productivity operating system built for competitive-exam aspirants,
-            university students, and serious learners. Track focused hours, manage spaced revisions,
-            and monitor syllabus progress — all in one place.
-          </p>
-
-          {/* CTA buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 animate-fade-in-up">
-            <Link to="/register" className="w-full sm:w-auto">
-              <Button size="lg" className="w-full sm:w-auto text-sm gap-2 shadow-glow-accent">
-                <span>Start Tracking Free</span>
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-            <Link to="/login" className="w-full sm:w-auto">
-              <Button variant="outline" size="lg" className="w-full sm:w-auto text-sm">
-                Sign In to Your Workspace
-              </Button>
-            </Link>
+          <ProductPreview />
+        </section>
+        <section id="your-study-day" className="scroll-mt-20 border-y border-[var(--line)] bg-[var(--surface)] py-14 sm:py-20 px-4 sm:px-6">
+          <div className="max-w-5xl mx-auto">
+            <div className="max-w-xl"><p className="text-xs font-semibold tracking-widest text-[var(--primary)] uppercase">One connected study day</p><h2 className="text-2xl sm:text-3xl font-semibold mt-3">Turn an intention into something learned.</h2></div>
+            <ol className="mt-9 grid md:grid-cols-3 gap-8">
+              {[
+                ['01', 'Choose your next step', 'Plan a task, pick a subject, and give your study time a clear purpose.'],
+                ['02', 'Make space to focus', 'Work through a focused session. Keep the timer close while you move through your workspace.'],
+                ['03', 'Keep what you learned', 'Capture a note, schedule a revision, and reflect on the progress you made.'],
+              ].map(([number, title, text]) => (
+                <li key={number} className="border-t border-[var(--line)] pt-5"><span className="text-sm font-mono text-[var(--primary)]">{number}</span><h3 className="text-lg font-semibold mt-3">{title}</h3><p className="text-sm text-[var(--muted)] leading-relaxed mt-2">{text}</p></li>
+              ))}
+            </ol>
           </div>
-
-          {/* Trust indicators */}
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-text-muted pt-2">
-            <span className="flex items-center gap-1.5">
-              <Shield className="w-3.5 h-3.5 text-success" />
-              Isolated user data
-            </span>
-            <span className="hidden sm:inline text-border">·</span>
-            <span>Zero ad tracking</span>
-            <span className="hidden sm:inline text-border">·</span>
-            <span>Spaced repetition engine</span>
-            <span className="hidden sm:inline text-border">·</span>
-            <span>Real-time analytics</span>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── SOCIAL PROOF STATS ──────────────────────────────────── */}
-      <section className="py-10 px-4 sm:px-6 border-y border-border/40 bg-surface/20">
-        <div className="max-w-4xl mx-auto">
-          <div className="grid grid-cols-3 gap-4 sm:gap-6">
-            {stats.map((s, idx) => {
-              const Icon = s.icon;
-              return (
-                <div key={idx} className="text-center">
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <Icon className="w-4 h-4 text-accent hidden sm:block" />
-                    <span className="text-xl sm:text-2xl font-bold font-mono text-text-primary tracking-tight">
-                      {s.value}
-                    </span>
-                  </div>
-                  <span className="text-[11px] text-text-muted font-medium uppercase tracking-wider">
-                    {s.label}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── TARGET AUDIENCE / SUPPORTED PREPS ───────────────────── */}
-      <section className="py-14 sm:py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-8">
-            <h2 className="text-xs uppercase font-mono tracking-widest text-accent font-bold mb-2">
-              Built for every learning journey
-            </h2>
-            <p className="text-xs text-text-muted max-w-md mx-auto">
-              Configure your own subjects, chapters, and goals — Track Here adapts to your prep type.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {prepProfiles.map((p, idx) => (
-              <div
-                key={idx}
-                className={`p-3.5 rounded-xl bg-card border text-center transition-all duration-200 hover:bg-surface hover:-translate-y-0.5 hover:shadow-card cursor-default ${p.color}`}
-              >
-                <span className="text-2xl mb-2 block">{p.icon}</span>
-                <span className="text-xs font-semibold text-text-primary block">
-                  {p.name}
-                </span>
-                <span className="text-[10px] text-text-muted mt-1 block leading-tight">
-                  {p.desc}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── KEY CAPABILITIES GRID ───────────────────────────────── */}
-      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 relative">
-        <div className="max-w-6xl mx-auto space-y-12">
-          <div className="text-center space-y-3">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-text-primary">
-              Engineered for <span className="text-gradient">disciplined study</span>
-            </h2>
-            <p className="text-xs sm:text-sm text-text-muted max-w-xl mx-auto leading-relaxed">
-              Track Here is not a content library or coaching provider. It is your personal preparation
-              management system.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-            {capabilities.map((cap, idx) => {
-              const Icon = cap.icon;
-              return (
-                <div
-                  key={idx}
-                  className="group p-5 sm:p-6 rounded-2xl bg-card border border-border hover:border-border-light transition-all duration-300 flex flex-col hover:-translate-y-1 hover:shadow-elevated"
-                >
-                  <div className="space-y-3">
-                    <div
-                      className={`w-11 h-11 rounded-xl flex items-center justify-center border ${cap.bgColor} transition-shadow duration-300 group-hover:${cap.glowColor}`}
-                    >
-                      <Icon className={`w-5 h-5 ${cap.color}`} />
-                    </div>
-                    <h3 className="text-sm font-semibold text-text-primary tracking-tight">
-                      {cap.title}
-                    </h3>
-                    <p className="text-xs text-text-secondary leading-relaxed">
-                      {cap.description}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── CTA BANNER ──────────────────────────────────────────── */}
-      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 relative">
-        <div className="max-w-3xl mx-auto text-center relative">
-          {/* Glow background */}
-          <div className="relative p-8 sm:p-12 rounded-2xl bg-card border border-border shadow-card">
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary mb-3">
-              Ready to elevate your study habits?
-            </h2>
-            <p className="text-xs sm:text-sm text-text-muted max-w-md mx-auto mb-6">
-              Configure your preparation track in two minutes and start your first focused session.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link to="/register">
-                <Button size="lg" className="text-sm gap-2 bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs">
-                  <span>Create Your Free Account</span>
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </Link>
+        </section>
+        <section className="py-14 sm:py-20 px-4 sm:px-6">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center max-w-xl mx-auto"><h2 className="text-2xl sm:text-3xl font-semibold">A place for the whole process.</h2><p className="text-sm sm:text-base text-[var(--muted)] mt-3">From the first task to your next review, keep the useful details together.</p></div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-10 mt-10">
+              {capabilities.map(({ title, description, icon: Icon }) => (
+                <div key={title}><Icon className="w-6 h-6 text-[var(--primary)] mb-4" strokeWidth={1.7} aria-hidden="true" /><h3 className="text-base font-semibold">{title}</h3><p className="text-sm leading-relaxed text-[var(--muted)] mt-2">{description}</p></div>
+              ))}
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* ─── FOOTER ──────────────────────────────────────────────── */}
-      <footer className="py-8 px-4 sm:px-6 border-t border-border/80 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-700">
-                <Compass className="w-3.5 h-3.5" />
-              </div>
-              <span className="text-xs font-semibold text-text-primary">Track Here</span>
-            </div>
-            <p className="text-xs text-text-muted text-center">
-              &copy; {new Date().getFullYear()} Track Here. Universal Study Operating System. Built for focused learners.
-            </p>
-            <div className="flex items-center gap-4 text-xs text-text-muted">
-              <Link to="/login" className="hover:text-text-primary transition-colors">Sign In</Link>
-              <Link to="/register" className="hover:text-text-primary transition-colors">Register</Link>
+        </section>
+        <section className="px-4 sm:px-6 pb-14 sm:pb-20">
+          <div className="max-w-5xl mx-auto border-t border-[var(--line)] pt-10">
+            <h2 className="text-xl font-semibold">Whatever you are preparing for.</h2><p className="text-sm text-[var(--muted)] mt-2">Start with your subjects and shape the workspace around your goal.</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mt-7">
+              {prepProfiles.map(({ name, desc, icon: Icon }) => (
+                <div key={name} className="rounded-xl p-4 bg-[var(--surface)] border border-[var(--line)]"><Icon className="w-5 h-5 text-[var(--primary)] mb-3" aria-hidden="true" /><h3 className="text-sm font-semibold">{name}</h3><p className="text-xs leading-relaxed text-[var(--muted)] mt-1">{desc}</p></div>
+              ))}
             </div>
           </div>
+        </section>
+        <section className="px-4 sm:px-6 pb-16">
+          <div className="max-w-5xl mx-auto rounded-2xl bg-[var(--primary-soft)] p-7 sm:p-12 flex flex-col md:flex-row items-start md:items-center justify-between gap-7">
+            <div><p className="flex items-center gap-2 text-sm text-[var(--primary)] mb-3"><Check className="w-4 h-4" aria-hidden="true" />Start with one achievable step</p><h2 className="text-2xl sm:text-3xl font-semibold">Your next focused day starts here.</h2><p className="text-sm text-[var(--muted)] mt-3">Create your workspace, add a subject, and begin your first session.</p></div>
+            <Link to="/signup" className={primaryLink + ' shrink-0'}>Create your account <ArrowRight className="w-4 h-4" aria-hidden="true" /></Link>
+          </div>
+        </section>
+      </main>
+      <footer className="border-t border-[var(--line)] bg-[var(--surface)] py-7 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-5">
+          <Link to="/welcome" className="flex items-center gap-2 font-heading font-semibold text-sm"><BrandMark className="w-7 h-7" />Track Here</Link>
+          <p className="text-xs text-[var(--muted)]">© {new Date().getFullYear()} Track Here. A little progress, every day.</p>
+          <nav aria-label="Legal" className="flex gap-5 text-xs text-[var(--muted)]"><Link className="hover:text-[var(--text)]" to="/privacy">Privacy</Link><Link className="hover:text-[var(--text)]" to="/terms">Terms</Link></nav>
         </div>
       </footer>
     </div>

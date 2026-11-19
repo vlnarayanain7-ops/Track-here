@@ -40,7 +40,7 @@ export default function RecentSessions({ sessions = [] }) {
           sessions.map((session) => (
             <div
               key={session._id}
-              className="flex items-center justify-between p-3 rounded-xl bg-white border border-border hover:border-emerald-200 hover:shadow-2xs transition-all"
+              className="flex items-center justify-between p-3 rounded-xl bg-[var(--surface)] border border-border hover:border-emerald-200 hover:shadow-2xs transition-all"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1">

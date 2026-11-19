@@ -38,16 +38,38 @@ export async function getStreakInfo(userId) {
   const startDate = subDays(now, dayOfWeek + (53 - 1) * 7);
 
   const userObjId = new mongoose.Types.ObjectId(userId);
-  const minDateStr = format(subDays(startDate, 30), 'yyyy-MM-dd');
-  const rows = await DailyTotal.find({
-    user: userObjId,
-    date: { $gte: minDateStr },
-  }).select('date minutes').lean();
-
-  const map = {};
-  for (const r of rows) {
-    map[r.date] = r.minutes;
+  // Recent sessions are editable. Recompute their totals rather than relying
+  // on an increment that may have failed after the session was inserted.
+  // Historical compaction retained daily summaries beyond 180 days.
+  const cutoff = format(subDays(now, 180), 'yyyy-MM-dd');
+  const [archive, groups] = await Promise.all([
+    DailyTotal.find({ user: userObjId, date: { $lte: cutoff } }).select('date minutes sessions bySubject').lean(),
+    StudySession.aggregate([
+      { $match: { user: userObjId, 'timerState.status': { $nin: ['running', 'paused'] } } },
+      { $project: {
+        date: { $dateToString: { format: '%Y-%m-%d', timezone, date: { $ifNull: ['$startedAt', '$startTime', '$date'] } } },
+        seconds: { $cond: [{ $gt: ['$durationSec', 0] }, '$durationSec', { $multiply: [{ $ifNull: ['$focusDuration', '$duration', 0] }, 60] }] },
+        subject: { $ifNull: ['$category', 'Focus'] },
+      } },
+      { $match: { seconds: { $gt: 0 }, date: { $lte: todayStr } } },
+      { $group: { _id: { date: '$date', subject: '$subject' }, seconds: { $sum: '$seconds' }, sessions: { $sum: 1 } } },
+    ]),
+  ]);
+  const days = new Map();
+  for (const group of groups) {
+    const { date, subject } = group._id;
+    const day = days.get(date) || { seconds: 0, sessions: 0, bySubject: Object.create(null) };
+    day.seconds += group.seconds;
+    day.sessions += group.sessions;
+    day.bySubject[subject] = group.seconds / 60;
+    days.set(date, day);
   }
+  for (const row of archive) {
+    if (!days.has(row.date) || row.sessions > days.get(row.date).sessions) {
+      days.set(row.date, { seconds: row.minutes * 60, sessions: row.sessions, bySubject: row.bySubject });
+    }
+  }
+  const map = Object.fromEntries([...days].map(([date, day]) => [date, Math.floor(day.seconds / 60)]));
 
   // Build the 53-week history array
   const history = [];
@@ -59,6 +81,8 @@ export async function getStreakInfo(userId) {
     history.push({
       date: dateStr,
       minutes,
+      sessions: days.get(dateStr)?.sessions || 0,
+      bySubject: days.get(dateStr)?.bySubject || {},
     });
   }
 
@@ -77,9 +101,11 @@ export async function getStreakInfo(userId) {
   let graceUsed = 0;
   const activeStreakDays = [];
 
-  for (let i = checkOffset; i < 400; i++) {
+  const earliest = Object.keys(map).sort()[0] || todayStr;
+  for (let i = checkOffset; ; i++) {
     const d = subDays(now, i);
     const dateStr = format(d, 'yyyy-MM-dd');
+    if (dateStr < earliest) break;
     const minutes = map[dateStr] || 0;
 
     if (minutes >= MINIMUM_ACTIVE_MINUTES) {
@@ -183,6 +209,7 @@ export async function getStreakInfo(userId) {
   }
 
   return {
+    today: todayStr,
     currentStreak,
     longestStreak,
     activeDaysThisYear,

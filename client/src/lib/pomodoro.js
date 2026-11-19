@@ -13,7 +13,7 @@ export const phaseMinutes = (cfg, phase) => cfg[phase === 'focus' ? 'focus' : ph
 
 export const initialState = (presetId = 'classic', custom) => ({
   presetId, custom: custom ?? null, cfg: configFor(presetId, custom), phase: 'focus',
-  running: false, startedAt: null, accMs: 0, completedFocus: 0, firstStartedAt: null, clientId: null, subjectId: null,
+  running: false, startedAt: null, accMs: 0, completedFocus: 0, firstStartedAt: null, clientId: null, subjectId: null, taskId: null, taskTitle: null,
 });
 export const elapsedMs = (s, now) => {
   const currentRun = s.running && s.startedAt ? Math.max(0, now - s.startedAt) : 0;
@@ -34,9 +34,10 @@ export function reduce(s, a, now = Date.now()) {
     case 'start': return s.running ? s : { ...s, running: true, startedAt: now, firstStartedAt: s.firstStartedAt ?? now, clientId: s.clientId ?? a.id };
     case 'pause': return s.running ? { ...s, running: false, accMs: s.accMs + (now - s.startedAt), startedAt: null } : s;
     case 'reset': return { ...s, running: false, startedAt: null, accMs: 0, firstStartedAt: null, clientId: null };
-    case 'preset': return s.running ? s : { ...initialState(a.presetId, a.custom ?? s.custom), subjectId: s.subjectId };       // only while stopped
+    case 'preset': return s.running ? s : { ...initialState(a.presetId, a.custom ?? s.custom), subjectId: s.subjectId, taskId: s.taskId, taskTitle: s.taskTitle };       // only while stopped
     case 'mode':   return s.running || s.presetId === 'stopwatch' ? s : { ...s, phase: a.phase, accMs: 0, firstStartedAt: null, clientId: null };
-    case 'subject': return { ...s, subjectId: a.subjectId };
+    case 'subject': return s.running || s.accMs > 0 ? s : { ...s, subjectId: a.subjectId };
+    case 'context': return s.running || s.accMs > 0 ? s : { ...s, subjectId: a.subjectId ?? s.subjectId, taskId: a.taskId || null, taskTitle: a.taskTitle || null };
     case 'next': {                                                       // the caller has ALREADY saved the focus time
       const completed = s.phase === 'focus' ? s.completedFocus + 1 : s.phase === 'long' ? 0 : s.completedFocus;
       const phase = s.presetId === 'stopwatch' ? 'focus' : nextPhaseOf(s, completed);
@@ -50,6 +51,6 @@ export function reduce(s, a, now = Date.now()) {
 export function focusSnapshot(s, now, { completed }) {
   const planned = plannedMs(s), elapsed = elapsedMs(s, now);
   const ms = planned ? Math.min(elapsed, planned) : elapsed;           // never save more than the planned length
-  return { clientId: s.clientId, startedAt: new Date(s.firstStartedAt ?? now - ms).toISOString(), durationSec: Math.round(ms / 1000), source: 'timer', subjectId: s.subjectId, completed };
+  return { clientId: s.clientId, startedAt: new Date(s.firstStartedAt ?? now - ms).toISOString(), durationSec: Math.round(ms / 1000), source: 'timer', subjectId: s.subjectId, taskId: s.taskId, taskTitle: s.taskTitle, completed };
 }
 export const MIN_SAVE_SEC = 60;

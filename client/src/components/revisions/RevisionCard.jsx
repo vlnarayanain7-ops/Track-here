@@ -1,3 +1,4 @@
+import { reviewDate } from '@/lib/reviewSchedule';
 import { useState } from 'react';
 import { formatDate, formatRelativeDate } from '@/lib/utils';
 import { useCompleteRevision, useDeleteRevision } from '@/hooks/useRevisions';
@@ -91,7 +92,7 @@ export default function RevisionCard({ revision, onDelete }) {
             title="Remembered (Advance to next interval: 1d -> 3d -> 7d -> 14d -> 30d)"
           >
             <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-            <span>Remembered</span>
+            <span>Remembered ? {reviewDate(revision.intervalDays, 'Remembered')}</span>
           </button>
 
           <button
@@ -102,7 +103,7 @@ export default function RevisionCard({ revision, onDelete }) {
             title="Hard / Forgot (Reset review interval back to 1 day)"
           >
             <RotateCcw className="w-3.5 h-3.5 text-[var(--muted)] shrink-0" />
-            <span>Hard</span>
+            <span>Hard ? {reviewDate(revision.intervalDays, 'Hard')}</span>
           </button>
         </div>
 

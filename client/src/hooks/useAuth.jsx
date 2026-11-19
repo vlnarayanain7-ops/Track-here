@@ -3,6 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import * as authApi from '../api/auth';
 import { setupRealtimeSync, disconnectSocket } from '../lib/socket';
 import { clearQueryCache } from '../lib/queryClient';
+import { setAccountSession, getAccountSession } from '../lib/accountSession';
+import { pauseOutbox, retryOutbox } from '../lib/outbox';
 import { clearReportsLocal } from '../lib/localStore';
 
 const AuthContext = createContext(null);
@@ -24,24 +26,38 @@ export function AuthProvider({ children }) {
     }
   }, [user, queryClient]);
 
+  const adoptUser = useCallback(async (next) => {
+    const nextId = next?._id || next?.id || null;
+    if (getAccountSession().ownerId !== nextId) {
+      pauseOutbox();
+      setAccountSession(null);
+      await queryClient.cancelQueries();
+      await clearQueryCache();
+      setAccountSession(nextId);
+    }
+    setUser(next);
+    if (nextId) void retryOutbox().catch(() => {});
+  }, [queryClient]);
+
   const checkAuth = useCallback(async () => {
     try {
       const res = await authApi.getMe();
-      setUser(res?.data?.user || res?.user || res);
-    } catch {
+      await adoptUser(res?.data?.user || res?.user || res);
+    } catch (error) {
+      if (!error.response || error.response.status >= 500) return;
       // Auto-healing: If access token expired while asleep/screen-off,
       // attempt silent session rotation using 30-day refresh token:
       try {
         await authApi.refreshToken();
         const refreshedRes = await authApi.getMe();
-        setUser(refreshedRes?.data?.user || refreshedRes?.user || refreshedRes);
-      } catch {
-        setUser(null);
+        await adoptUser(refreshedRes?.data?.user || refreshedRes?.user || refreshedRes);
+      } catch (error) {
+        if (error.response?.status === 401 || error.response?.status === 403) await adoptUser(null);
       }
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [adoptUser]);
 
   const initializeCsrf = useCallback(async () => {
     try {
@@ -72,7 +88,7 @@ export function AuthProvider({ children }) {
     const res = await authApi.login(credentials);
     await initializeCsrf();
     const u = res?.data?.user || res?.user || res;
-    setUser(u);
+    await adoptUser(u);
     return u;
   };
 
@@ -81,7 +97,7 @@ export function AuthProvider({ children }) {
     const res = await authApi.register(userData);
     await initializeCsrf();
     const u = res?.data?.user || res?.user || res;
-    setUser(u);
+    await adoptUser(u);
     return u;
   };
 
@@ -90,11 +106,14 @@ export function AuthProvider({ children }) {
     const res = await authApi.googleLogin(credential);
     await initializeCsrf();
     const u = res?.data?.user || res?.user || res;
-    setUser(u);
+    await adoptUser(u);
     return u;
   };
 
   const logout = async () => {
+    pauseOutbox();
+    setAccountSession(null);
+    await queryClient.cancelQueries();
     try {
       disconnectSocket();
       await authApi.logout();

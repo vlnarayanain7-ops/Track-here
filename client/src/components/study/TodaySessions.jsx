@@ -1,3 +1,5 @@
+import { subjectColor } from '@/lib/subjectColor';
+import EmptyIllustration from '@/components/brand/EmptyIllustration';
 // src/components/study/TodaySessions.jsx: header with History at the right edge, one compact row per session
 import React from 'react';
 import { fmtSessionDuration } from '@/lib/sessions.js';
@@ -25,17 +27,13 @@ export function TodaySessions({ sessions = [], subjectsById = {}, onHistory }) {
       </div>
 
       {sessions.length === 0 ? (
-        <p className="note py-2">No sessions yet today. Press Start to begin.</p>
+        <p className="note py-2"><EmptyIllustration kind="focus" className="w-28 h-auto mx-auto mb-3" />No sessions yet today. Press Start to begin.</p>
       ) : (
         sessions.map((s) => {
           const sid = s.subjectId || s.category || s.subject;
           const subject = subjectsById[sid];
           const color = subject?.color || '1';
-          const dotBg = color.startsWith('#')
-            ? color
-            : color.startsWith('c')
-            ? `var(--${color}, var(--primary))`
-            : `var(--c-${color}, var(--primary))`;
+          const dotBg = subjectColor(color);
 
           return (
             <div

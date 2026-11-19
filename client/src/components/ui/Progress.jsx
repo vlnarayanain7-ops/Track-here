@@ -26,7 +26,7 @@ export default function Progress({
           <span className="font-semibold text-text-primary">{Math.round(percentage)}%</span>
         </div>
       )}
-      <div className={cn('w-full rounded-full bg-stone-200/80 overflow-hidden', heights[size])}>
+      <div className={cn('w-full rounded-full bg-[var(--line)] overflow-hidden', heights[size])}>
         <div
           className={cn(
             'h-full rounded-full transition-all duration-700 ease-out shadow-2xs',

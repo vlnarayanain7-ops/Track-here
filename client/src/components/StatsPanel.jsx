@@ -1,3 +1,4 @@
+import { subjectColor } from '@/lib/subjectColor';
 import { useMemo, useState } from 'react';
 import { buckets } from '@/lib/statsBuckets';
 import { fmtDuration } from '@/lib/format';
@@ -95,9 +96,7 @@ export function StatsPanel({ minutesByDay, bySubject = [], weekStartsOn = 1, onR
                     display: 'block',
                     height: 4,
                     borderRadius: 2,
-                    background: s.color?.startsWith('var(') || s.color?.startsWith('#')
-                      ? s.color
-                      : `var(--c-${s.color || 'slate'})`,
+                    background: subjectColor(s.color),
                     width: `${Math.min(
                       100,
                       Math.max(2, (s.minutes / subjectMax) * 100)

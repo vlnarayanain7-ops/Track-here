@@ -1,9 +1,14 @@
+import { isValidElement } from 'react';
+import EmptyIllustration from '@/components/brand/EmptyIllustration';
 import { cn } from '@/lib/utils';
 import Button from './Button';
 
 export default function EmptyState({
   icon: Icon,
   title,
+  text,
+  action,
+  illustration,
   description,
   actionLabel,
   onAction,
@@ -13,17 +18,18 @@ export default function EmptyState({
 }) {
   return (
     <div className={cn('flex flex-col items-center justify-center py-12 px-4 text-center select-none', className)}>
-      {Icon && (
+      {illustration && <EmptyIllustration kind={illustration} className="w-32 h-auto mb-4" />}
+      {isValidElement(Icon) ? Icon : Icon && (
         <div className="mb-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-700 shadow-2xs">
+          <div className="w-12 h-12 rounded-2xl bg-[var(--primary-soft)] border border-[var(--line)] flex items-center justify-center text-[var(--primary)] shadow-2xs">
             <Icon className="h-6 w-6 stroke-[1.75]" />
           </div>
         </div>
       )}
       {title && <h3 className="text-sm font-semibold text-text-primary tracking-tight mb-1">{title}</h3>}
-      {description && (
+      {(description || text) && (
         <p className="text-xs text-text-muted max-w-sm mb-4 leading-relaxed">
-          {description}
+          {description || text}
         </p>
       )}
       {actionLabel && onAction && (
@@ -31,6 +37,7 @@ export default function EmptyState({
           {actionLabel}
         </Button>
       )}
+      {action}
       {children}
     </div>
   );

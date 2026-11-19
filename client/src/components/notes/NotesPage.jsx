@@ -1,3 +1,7 @@
+import SubjectLabel from '@/components/ui/SubjectLabel';
+import EmptyIllustration from '@/components/brand/EmptyIllustration';
+import { readNoteDraft, saveNoteDraft, queueNoteDraft } from '@/lib/noteDrafts';
+import DOMPurify from 'dompurify';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -26,6 +30,9 @@ export default function NotesPage() {
   const [isSaved, setIsSaved] = useState(true);
   const [saveError, setSaveError] = useState(null);
   const saveTimeoutRef = useRef(null);
+  const pendingDrafts = useRef(new Map());
+  const currentNoteRef = useRef(null);
+  const ownerId = String(user._id || user.id);
   const textareaRef = useRef(null);
   const titleInputRef = useRef(null);
 
@@ -68,9 +75,13 @@ export default function NotesPage() {
   useEffect(() => {
     if (activeNote) {
       setActiveNoteId(activeNote._id);
-      setTitle(activeNote.title || '');
-      setBody(activeNote.contentMarkdown || activeNote.contentHtml || '');
-      setFolder(activeNote.folder || 'General');
+      currentNoteRef.current = activeNote._id;
+      const draft = readNoteDraft(ownerId, activeNote);
+      setTitle(draft?.title ?? activeNote.title ?? '');
+      const legacy = new DOMParser().parseFromString(DOMPurify.sanitize(activeNote.contentHtml || ''), 'text/html').body.textContent;
+      setBody(draft?.contentMarkdown ?? (activeNote.contentMarkdown || legacy || ''));
+      setFolder(draft?.folder ?? activeNote.folder ?? 'General');
+      if (draft) queueNoteDraft(ownerId, activeNote._id, draft).catch(() => setSaveError('Draft retained. Retry saving when storage is available.'));
       setIsSaved(true);
       setSaveError(null);
     } else {
@@ -80,52 +91,39 @@ export default function NotesPage() {
     }
   }, [activeNote?._id]);
 
-  // Autosave with 800ms debounce
+  // Draft synchronously before debounce; queue writes use one stable key per note.
+  useEffect(() => () => {
+    clearTimeout(saveTimeoutRef.current);
+    for (const [id, draft] of pendingDrafts.current) void queueNoteDraft(ownerId, id, draft).catch(() => {});
+  }, [ownerId]);
+
   const triggerAutosave = (newTitle, newBody, newFolder = folder, immediate = false) => {
+    if (!activeNote?._id) return;
+    const id = activeNote._id;
     setIsSaved(false);
     setSaveError(null);
-
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-
-    const doSave = async () => {
-      try {
-        if (activeNote?._id) {
-          await updateNoteMutation.mutateAsync({
-            id: activeNote._id,
-            data: {
-              title: newTitle || 'Untitled note',
-              folder: newFolder || 'General',
-              contentMarkdown: newBody,
-              contentHtml: newBody,
-            },
-          });
-        } else if (newTitle?.trim() || newBody?.trim()) {
-          const res = await createNoteMutation.mutateAsync({
-            title: newTitle.trim() || 'Untitled note',
-            folder: newFolder || selectedSubject || 'General',
-            contentMarkdown: newBody,
-            contentHtml: newBody,
-          });
-          const created = res?.data?.note || res?.note || res;
-          if (created?._id) {
-            setActiveNoteId(created._id);
+    let draft;
+    try {
+      draft = saveNoteDraft(ownerId, id, { title: newTitle || 'Untitled note', folder: newFolder || 'General', contentMarkdown: newBody, contentHtml: '' });
+      pendingDrafts.current.set(id, draft);
+    } catch {
+      setSaveError('Device storage is full. Copy your text before leaving this page.');
+      return;
+    }
+    clearTimeout(saveTimeoutRef.current);
+    const flush = async () => {
+      for (const [noteId, pending] of pendingDrafts.current) {
+        try {
+          await queueNoteDraft(ownerId, noteId, pending);
+          if (pendingDrafts.current.get(noteId) === pending) {
+            pendingDrafts.current.delete(noteId);
+            if (currentNoteRef.current === noteId) setIsSaved(true);
           }
-          refetch();
-        }
-        setIsSaved(true);
-        setSaveError(null);
-      } catch (err) {
-        setIsSaved(false);
-        setSaveError(err.response?.data?.message || err.message || 'Failed to save note');
-        toast.error('Failed to save note');
+        } catch { if (currentNoteRef.current === noteId) setSaveError('Draft is retained on this device. Retry saving.'); }
       }
     };
-
-    if (immediate) {
-      doSave();
-    } else {
-      saveTimeoutRef.current = setTimeout(doSave, 800);
-    }
+    if (immediate) void flush();
+    else saveTimeoutRef.current = setTimeout(flush, 800);
   };
 
   const handleTitleChange = (e) => {
@@ -167,10 +165,11 @@ export default function NotesPage() {
   };
 
   const handleCreateNote = async () => {
-    const targetFolder = selectedSubject || 'General';
+    if (createNoteMutation.isPending) return;
+    const targetFolder = searchParams.get('subject') || selectedSubject || 'General';
     try {
       const res = await createNoteMutation.mutateAsync({
-        title: 'Untitled note',
+        title: searchParams.get('title') || 'Untitled note',
         folder: targetFolder,
         contentMarkdown: '',
         contentHtml: '',
@@ -198,6 +197,8 @@ export default function NotesPage() {
       handleCreateNote();
       const nextParams = new URLSearchParams(searchParams);
       nextParams.delete('action');
+      nextParams.delete('title');
+      nextParams.delete('subject');
       setSearchParams(nextParams, { replace: true });
     }
   }, [searchParams]);
@@ -241,7 +242,7 @@ export default function NotesPage() {
   };
 
   return (
-    <div className="max-w-[960px] mx-auto px-4 sm:px-8 py-6">
+    <div className="w-full">
       {/* Page Header */}
       <div className="sec mt-0 mb-4">
         <h1 className="text-[26px] font-bold font-heading tracking-tight text-[var(--tx)]">Notes</h1>
@@ -277,7 +278,7 @@ export default function NotesPage() {
 
           {/* Notes list */}
           {notes.length === 0 ? (
-            <p className="note py-6 text-center text-xs">No notes in this subject yet</p>
+            <p className="note py-6 text-center text-xs"><EmptyIllustration kind="notes" className="w-28 h-auto mx-auto mb-3" />No notes in this subject yet</p>
           ) : (
             <div className="nl">
               {notes.map((note) => {
@@ -322,7 +323,7 @@ export default function NotesPage() {
               Notes
             </button>
             <span data-testid="mobile-saved-indicator" className="text-[11px] text-[var(--mu)]">
-              {isSaved ? 'Saved' : 'Saving...'}
+              {isSaved ? 'Saved on device' : 'Saving...'}
             </span>
           </div>
 
@@ -344,6 +345,7 @@ export default function NotesPage() {
             </select>
           </div>
 
+          <SubjectLabel name={folder} color={user?.subjects?.find(s => s.name === folder)?.color} />
           {/* Top controls: Pin, Delete, Saved Indicator */}
           <div className="flex items-center justify-between gap-2">
             <input
@@ -357,7 +359,7 @@ export default function NotesPage() {
             />
             <div className="flex items-center gap-2 shrink-0">
               <span data-testid="desktop-saved-indicator" className="text-xs text-[var(--mu)] hidden min-[761px]:inline">
-                {isSaved ? 'Saved' : 'Saving...'}
+                {isSaved ? 'Saved on device' : 'Saving...'}
               </span>
               {activeNote && (
                 <>

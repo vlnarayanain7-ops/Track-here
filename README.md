@@ -2,7 +2,7 @@
 
 **Track Here** is a personal productivity, accountability, and learning platform designed specifically for students mastering **C++**, **Data Structures & Algorithms (DSA)**, **Competitive Programming (CP)**, and related technical subjects.
 
-Built with a minimalist, ChatGPT-inspired dark aesthetic (`#0B0B0B`), it provides a high-focus environment that helps students study consistently, measure real focused hours, manage tasks, take rich technical notes, journal competitive programming attempts, retain concepts via spaced repetition, and maintain accountability morning and evening.
+Built with a calm green design with light and dark themes, it provides a high-focus environment that helps students study consistently, measure real focused hours, manage tasks, take rich technical notes, journal competitive programming attempts, retain concepts via spaced repetition, and maintain accountability morning and evening.
 
 ---
 
@@ -219,7 +219,7 @@ Track Here/
 ## 4. Getting Started Locally
 
 ### Prerequisites
-- Node.js (v18.0.0 or higher)
+- Node.js 22 or higher
 - npm (v9.0.0 or higher)
 - A MongoDB database (MongoDB Atlas or local `mongodb://127.0.0.1:27017/trackhere`)
 
@@ -340,3 +340,29 @@ mongodump --uri="$MONGODB_URI" --gzip --archive="backups/trackhere-$(date +%F).g
 # Restore into a NEW empty database to test it:
 mongorestore --uri="$MONGODB_URI_RESTORE" --gzip --archive="backups/trackhere-$(date +%F).gz"
 ```
+
+
+## Workspace reliability and design update
+
+The five primary views remain Today, Focus, Plan, Notes, and Progress. Today tasks carry their subject and task identity into Focus. One app-level Pomodoro engine now owns the screen timer, header controls, persistence, and completion callbacks across page navigation. Timer snapshots are isolated by account. A completed focus block is durably queued before the timer advances; the completion panel can complete its linked task, create a learning note, or schedule a revision.
+
+The cloud button distinguishes syncing, offline, and pending device saves. The IndexedDB queue stores an owner ID, retries transient errors with backoff, pauses authentication failures, and retains validation failures for retry/export. The backend checks `X-Account-Id` against the authenticated user before accepting queued writes. Deploy the frontend and backend changes together. Old queue records without an owner are preserved but deliberately not automatically assigned to an account.
+
+Notes synchronously retain account-specific local drafts and coalesce queued updates by note. Markdown is the canonical text format for the Notes workspace; stale HTML is cleared on edit. Keep browser data until the cloud button confirms pending writes have synced. Local draft persistence does not provide conflict merging between devices.
+
+Shared buttons, cards, badges, empty states, skeletons, dialogs and sheets live in `client/src/components/ui`. The legacy `ui.jsx` entry re-exports the same components. Native modal dialogs provide keyboard focus containment and restore focus on close. Plan includes a mobile agenda and planned/recorded totals. Progress includes daily goals, subject gaps, and matching repeated mistake notes from the last 90 days. Revision buttons preview their next date using the same interval function as the backend.
+
+Landing previews under `client/public/previews` are screenshots of the real UI with demo API data, not real user records. Brand and empty-state illustrations are code-native SVG assets. The service worker caches same-origin shell assets only and uses the actual brand asset in its install list.
+
+### Verification
+
+```sh
+npm run test:unit
+npm run test:server
+npm --prefix client run build
+npm run test:e2e
+```
+
+`test:e2e` uses Playwright Chromium and a local production preview with deterministic API fixtures. It checks browser behavior without contacting a production database; it is not a live-backend integration suite. Install a Playwright browser if absent (`npx playwright install chromium`). Server tests mock the account-existence lookup and verify the real authentication middleware with test tokens. CI runs these checks on pushes and pull requests. Broken references to removed audit/cleanup scripts and the obsolete scheduled compaction workflow have been replaced with this suite.
+
+The active timer is recovered in the same browser/account; this change does not implement live timer takeover between devices. Existing server timer endpoints remain available for older clients.

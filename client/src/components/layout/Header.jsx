@@ -1,3 +1,5 @@
+import BrandMark from '@/components/brand/BrandMark';
+import SyncStatus from './SyncStatus';
 import { useState, useRef, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import {
@@ -145,7 +147,7 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
       {/* Left: Brand + Nav tabs */}
       <div className="flex items-center gap-6">
         <Link to="/" className="font-heading font-bold text-[17px] text-[var(--text)] tracking-tight shrink-0">
-          Track Here
+          <span className="flex items-center gap-2"><BrandMark className="h-7 w-7" />Track Here</span>
         </Link>
 
         {/* Desktop nav tabs (hidden on mobile — MobileTabBar handles it) */}
@@ -225,6 +227,7 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
           </div>
         )}
 
+        <SyncStatus />
         {/* Search icon (opens Ctrl K) */}
         <button
           type="button"
@@ -331,12 +334,12 @@ export default function Header({ onOpenCommandPalette, onQuickAdd }) {
                     className={cn(
                       'w-2 h-2 rounded-full shrink-0',
                       !isOnline || pendingSync > 0
-                        ? 'bg-[var(--flame)] animate-pulse'
+                        ? 'bg-[var(--warn)] animate-pulse'
                         : 'bg-emerald-500'
                     )}
                   />
                   <span className="font-medium text-[var(--text)]">
-                    {!isOnline || pendingSync > 0 ? 'Offline: changes will sync' : 'Offline ready'}
+                    {!isOnline ? 'Offline ? saved on device' : pendingSync > 0 ? 'Saved on device ? check sync status' : 'All changes synced'}
                   </span>
                 </div>
                 {pendingSync > 0 && (

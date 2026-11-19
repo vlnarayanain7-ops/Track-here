@@ -1,50 +1,10 @@
-import { useEffect, useId, useRef } from 'react';
-
-/**
- * @typedef {'blue'|'green'|'amber'|'rose'|'violet'|'cyan'|'orange'|'slate'} ColorKey
- */
-
-export function Button({
-  variant = 'secondary',
-  size = 'md',
-  loading = false,
-  icon = null,
-  children,
-  className = '',
-  disabled,
-  ...props
-}) {
-  const cls = [
-    'btn',
-    variant === 'primary' && 'btn-primary',
-    variant === 'ghost' && 'btn-ghost',
-    variant === 'danger' && 'btn-danger',
-    size === 'lg' && 'btn-lg',
-    className,
-  ]
-    .filter(Boolean)
-    .join(' ');
-
-  return (
-    <button
-      {...props}
-      className={cls}
-      disabled={disabled || loading}
-      aria-busy={loading}
-    >
-      {icon}
-      {loading ? 'Working…' : children}
-    </button>
-  );
-}
-
-export function Card({ children, style, className = '', ...props }) {
-  return (
-    <section className={`card ${className}`.trim()} style={style} {...props}>
-      {children}
-    </section>
-  );
-}
+import { useId } from 'react';
+export { default as Button } from './ui/Button';
+export { default as Card } from './ui/Card';
+export { default as Badge } from './ui/Badge';
+export { default as EmptyState } from './ui/EmptyState';
+export { default as Skeleton } from './ui/Skeleton';
+export { default as Modal } from './ui/Dialog';
 
 export function Field({ label, hint, error, id: customId, className = '', ...props }) {
   const generatedId = useId();
@@ -66,88 +26,6 @@ export function Field({ label, hint, error, id: customId, className = '', ...pro
         </small>
       )}
     </label>
-  );
-}
-
-export function Badge({ color = 'slate', children, style, className = '', ...props }) {
-  return (
-    <span
-      className={`badge ${className}`.trim()}
-      style={{
-        color: `var(--c-${color})`,
-        background: `var(--c-${color}-bg)`,
-        ...style,
-      }}
-      {...props}
-    >
-      {children}
-    </span>
-  );
-}
-
-export function EmptyState({ icon, title, text, action, className = '' }) {
-  return (
-    <div className={`empty ${className}`.trim()}>
-      {icon}
-      <h3>{title}</h3>
-      {text && <p style={{ margin: 0, maxWidth: 420 }}>{text}</p>}
-      {action}
-    </div>
-  );
-}
-
-export function Skeleton({ w = '100%', h = 14, style, className = '' }) {
-  return (
-    <div
-      className={`skeleton ${className}`.trim()}
-      style={{ width: w, height: h, ...style }}
-      aria-hidden="true"
-    />
-  );
-}
-
-export function Modal({ open, onClose, title, children, className = '' }) {
-  const ref = useRef(null);
-
-  useEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return;
-    if (open && !dialog.open) {
-      dialog.showModal();
-    } else if (!open && dialog.open) {
-      dialog.close();
-    }
-  }, [open]);
-
-  return (
-    <dialog
-      ref={ref}
-      className={`modal ${className}`.trim()}
-      onClose={onClose}
-      aria-labelledby="modal-title"
-    >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 16,
-        }}
-      >
-        <h2 id="modal-title" style={{ fontSize: 20 }}>
-          {title}
-        </h2>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          aria-label="Close"
-          onClick={onClose}
-        >
-          ✕
-        </button>
-      </div>
-      {children}
-    </dialog>
   );
 }
 

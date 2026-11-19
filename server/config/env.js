@@ -3,7 +3,12 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Prefer a server-local file when one is supplied, while still supporting the
+// repository-level `.env` used by the root development commands. Previously
+// `npm run dev:server` ignored the root file entirely, so a fresh checkout
+// could fail before the API started despite having its configuration present.
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 // Fail fast: strictly require core environment variables
 const required = ['MONGODB_URI', 'JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET', 'CLIENT_URL'];

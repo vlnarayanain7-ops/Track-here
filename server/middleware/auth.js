@@ -29,6 +29,9 @@ const auth = async (req, res, next) => {
       throw ApiError.unauthorized('Account no longer exists. Please sign in again.');
     }
 
+    if (req.headers['x-account-id'] && req.headers['x-account-id'] !== String(decoded.userId)) {
+      throw ApiError.forbidden('Account changed. Sign in to the account that owns these saved changes.');
+    }
     req.user = { id: decoded.userId };
     next();
   } catch (error) {

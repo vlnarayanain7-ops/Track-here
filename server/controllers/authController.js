@@ -184,29 +184,10 @@ export const refresh = asyncHandler(async (req, res) => {
     { returnDocument: 'after' }
   );
   if (!session) {
-    // A previously used token indicates replay, but allow a 30s grace window for concurrent requests on wakeup
+    // A used refresh token is a replay attempt. Revoke its whole family so a
+    // copied token cannot keep a session alive alongside its owner.
     const reusedSession = await RefreshSession.findOne({ tokenHash });
     if (reusedSession) {
-      const revokedAgo = now.getTime() - new Date(reusedSession.revokedAt).getTime();
-      if (revokedAgo < 30000) {
-        const activeFamilySession = await RefreshSession.findOne({
-          user: reusedSession.user,
-          familyId: reusedSession.familyId,
-          revokedAt: null,
-          expiresAt: { $gt: now },
-        });
-        if (activeFamilySession) {
-          const accessToken = generateAccessToken(activeFamilySession.user.toString());
-          setAuthCookies(res, accessToken, oldRefreshToken);
-          const csrfToken = generateCsrfToken();
-          setCsrfCookie(res, csrfToken);
-          return res.json({
-            success: true,
-            message: 'Token refreshed (grace window)',
-            data: { csrfToken },
-          });
-        }
-      }
       await RefreshSession.updateMany({ user: reusedSession.user, familyId: reusedSession.familyId }, { $set: { revokedAt: now } });
     }
     throw ApiError.unauthorized('Invalid refresh token');

@@ -1,3 +1,6 @@
+import { useTimer } from '@/hooks/useTimer';
+import { getTask } from '@/api/tasks';
+import { useQuery } from '@tanstack/react-query';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -40,7 +43,17 @@ export default function StudyPage() {
   }, [subjects]);
 
   // Pomodoro preferences from localStorage ('th-pomo-prefs')
-  const [prefs, setPrefs] = useState(loadPrefs);
+  const timer = useTimer();
+  const { prefs, setPrefs } = timer;
+  const taskId = searchParams.get('task');
+  const { data: taskResponse } = useQuery({ queryKey: ['task', taskId], queryFn: () => getTask(taskId), enabled: !!taskId });
+  const task = taskResponse?.data?.task || taskResponse?.task || (taskResponse?._id ? taskResponse : null);
+  useEffect(() => {
+    if (taskId && !task) return;
+    const requested = searchParams.get('subject') || task?.subject;
+    const subject = subjects.find(s => s.name === requested || s.id === requested);
+    if (taskId || requested) timer.dispatch({ type: 'context', taskId: task?._id, taskTitle: task?.title, subjectId: subject?.id || requested });
+  }, [taskId, task?._id, searchParams, subjects, timer.dispatch]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -77,80 +90,6 @@ export default function StudyPage() {
     });
   }, [sessions]);
 
-  // Heartbeat: every 60 seconds, only while focus phase is running and tab is visible
-  useEffect(() => {
-    let heartbeatTimer = null;
-    heartbeatTimer = setInterval(async () => {
-      if (
-        currentPhase === 'focus' &&
-        typeof document !== 'undefined' &&
-        document.visibilityState === 'visible'
-      ) {
-        try {
-          await api.post('/study-sessions/timer/heartbeat');
-        } catch {
-          // offline/background safe
-        }
-      }
-    }, 60000);
-
-    return () => {
-      if (heartbeatTimer) clearInterval(heartbeatTimer);
-    };
-  }, [currentPhase]);
-
-  // STEP 15.3: Session saving rules
-  const handleSaveFocusBlock = useCallback(
-    async (snapshot) => {
-      const durSec = snapshot.durationSec;
-      if (!durSec || durSec < 60) {
-        toast('Session too short to save (under 1 minute)', { icon: '⏱️' });
-        return;
-      }
-
-      const focusMins = Math.round(durSec / 60);
-      const sessionDate = snapshot.startedAt ? new Date(snapshot.startedAt) : new Date();
-      const topicName = defaultSessionName(sessionDate, snapshot.subjectId);
-
-      const payload = {
-        topic: topicName,
-        category: snapshot.subjectId || 'Focus',
-        durationSec: durSec,
-        focusDuration: focusMins,
-        duration: focusMins,
-        date: sessionDate.toISOString(),
-        startedAt: sessionDate.toISOString(),
-        source: 'timer',
-        clientId: snapshot.clientId || generateClientId('pomo'),
-        completed: Boolean(snapshot.completed),
-      };
-
-      try {
-        await createStudySession(payload);
-        toast.success(`Focus block saved automatically (${focusMins}m)`);
-      } catch (err) {
-        // Enqueue to offline outbox if offline or server unreachable
-        try {
-          await enqueueOutbox({
-            endpoint: '/study-sessions',
-            method: 'POST',
-            payload,
-          });
-          toast.success(`Saved automatically on this device (${focusMins}m)`);
-        } catch {
-          toast.error('Could not save focus session');
-        }
-      }
-
-      // Invalidate queries so streak, heatmap and history update immediately
-      qc.invalidateQueries({ queryKey: ['studySessions'] });
-      qc.invalidateQueries({ queryKey: ['analytics'] });
-      qc.invalidateQueries({ queryKey: ['streakData'] });
-      refetch();
-    },
-    [qc, refetch]
-  );
-
   // Rename session from History
   const handleRenameSession = async (id, newTopic) => {
     try {
@@ -177,12 +116,12 @@ export default function StudyPage() {
   };
 
   return (
-    <div className="max-w-[960px] mx-auto px-4 sm:px-8 py-6">
+    <div className="w-full">
+      {timer.state.taskTitle && <div className="card mb-4 p-4"><span className="text-xs text-[var(--muted)]">Working on</span><p className="font-semibold">{timer.state.taskTitle}</p><button type="button" className="btn btn-ghost" disabled={timer.state.running || timer.state.accMs > 0} onClick={() => { timer.dispatch({ type: 'context' }); navigate('/study', { replace: true }); }}>Unlink task</button></div>}
       {/* Pomodoro Timer Engine & UI */}
       <PomodoroTimer
         subjects={subjects}
         prefs={prefs}
-        onSave={handleSaveFocusBlock}
         onOpenSettings={() => setSettingsOpen(true)}
         onPhaseChange={setCurrentPhase}
       />

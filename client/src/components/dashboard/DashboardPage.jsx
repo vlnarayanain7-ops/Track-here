@@ -1,3 +1,5 @@
+import SubjectLabel from '@/components/ui/SubjectLabel';
+import EmptyIllustration from '@/components/brand/EmptyIllustration';
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -156,8 +158,8 @@ export default function DashboardPage() {
   }, [goalMinutes]);
 
   // Revisions Due
-  const revisionsList = revisionsData?.data?.revisions || revisionsData?.revisions || [];
-  const dueRevisions = revisionsList.filter((r) => r.status === 'pending' || !r.completed);
+  const revisionsList = Array.isArray(revisionsData) ? revisionsData : revisionsData?.data?.revisions || revisionsData?.revisions || [];
+  const dueRevisions = revisionsList.filter(r => r.status !== 'completed' && (!r.dueDate || new Date(r.dueDate) <= new Date(new Date().setHours(23, 59, 59, 999))));
 
   // Goal & days left subtitle calculation
   const goal = user?.preparationType || user?.examName;
@@ -370,8 +372,7 @@ export default function DashboardPage() {
 
               {t.subject && (
                 <span className="text-[12px] text-[var(--muted)] shrink-0 flex items-center gap-1.5 font-medium">
-                  <span className="w-2 h-2 rounded-full bg-[var(--primary)]" />
-                  {t.subject}
+                  <SubjectLabel name={t.subject} color={user?.subjects?.find(s => s.name === t.subject)?.color} />
                 </span>
               )}
             </div>
@@ -404,7 +405,7 @@ export default function DashboardPage() {
           {/* Honest Empty State if completely empty */}
           {openTasks.length === 0 && completedTasks.length === 0 && !showInlineAdd && (
             <div className="py-8 text-center text-xs text-[var(--muted)]">
-              No tasks planned for today. Click &quot;Add task&quot; above or start a focus session.
+              <EmptyIllustration kind="tasks" className="w-28 h-auto mx-auto mb-3" />No tasks planned for today. Click &quot;Add task&quot; above or start a focus session.
             </div>
           )}
         </div>

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import mongoose from 'mongoose';
 import User from '../models/User.js';
+import FinalsMembership from '../models/FinalsMembership.js';
 import StudySession from '../models/StudySession.js';
 import Task from '../models/Task.js';
 import Note from '../models/Note.js';
@@ -609,6 +610,7 @@ export const deleteAccount = asyncHandler(async (req, res) => {
 
   // Delete all user data in parallel
   await Promise.all([
+    FinalsMembership.deleteOne({ _id: userId }),
     StudySession.deleteMany({ user: userId }),
     Task.deleteMany({ user: userId }),
     Note.deleteMany({ user: userId }),

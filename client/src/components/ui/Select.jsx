@@ -15,11 +15,11 @@ const Select = forwardRef(
           <select
             ref={ref}
             className={cn(
-              'flex h-9 w-full rounded-xl border border-border bg-white px-3 py-1.5 text-xs text-text-primary shadow-2xs',
+              'flex h-9 w-full rounded-xl border border-border bg-[var(--surface)] px-3 py-1.5 text-xs text-text-primary shadow-2xs',
               'appearance-none cursor-pointer pr-8',
               'transition-all duration-150',
               'focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20',
-              'disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-stone-50',
+              'disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-[var(--surface-2)]',
               error && 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20 text-rose-900',
               className
             )}

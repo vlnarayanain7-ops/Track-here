@@ -1,15 +1,15 @@
 import { cn } from '@/lib/utils';
 
 const badgeVariants = {
-  default: 'bg-stone-100 text-stone-700 border-stone-200',
-  success: 'bg-emerald-50 text-emerald-800 border-emerald-200/80 font-medium',
-  warning: 'bg-amber-50 text-amber-800 border-amber-200/80 font-medium',
-  destructive: 'bg-rose-50 text-rose-800 border-rose-200/80 font-medium',
-  danger: 'bg-rose-50 text-rose-800 border-rose-200/80 font-medium',
-  outline: 'bg-white text-stone-700 border-stone-200',
-  accent: 'bg-emerald-50 text-emerald-800 border-emerald-200/80 font-medium',
-  purple: 'bg-indigo-50 text-indigo-800 border-indigo-200/80 font-medium',
-  elevated: 'bg-white text-stone-800 border-stone-200 shadow-2xs',
+  default: 'bg-[var(--surface-2)] text-[var(--muted)] border-[var(--line)]',
+  success: 'bg-[var(--primary-soft)] text-[var(--primary)] border-[var(--line)] font-medium',
+  warning: 'bg-[var(--warn-soft)] text-[var(--warn)] border-[var(--line)]',
+  destructive: 'bg-[var(--danger-soft)] text-[var(--danger)] border-[var(--line)]',
+  danger: 'bg-[var(--danger-soft)] text-[var(--danger)] border-[var(--line)]',
+  outline: 'bg-[var(--surface)] text-[var(--text)] border-[var(--line)]',
+  accent: 'bg-[var(--primary-soft)] text-[var(--primary)] border-[var(--line)] font-medium',
+  purple: 'bg-[var(--primary-soft)] text-[var(--primary)] border-[var(--line)] font-medium',
+  elevated: 'bg-[var(--surface)] text-[var(--text)] border-[var(--line)] shadow-2xs',
 };
 
 const badgeSizes = {
@@ -20,6 +20,8 @@ const badgeSizes = {
 
 export default function Badge({
   className,
+  color,
+  style,
   variant = 'default',
   size = 'sm',
   dot = false,
@@ -35,6 +37,7 @@ export default function Badge({
         badgeSizes[size] || badgeSizes.sm,
         className
       )}
+      style={{ ...(color ? { color: `var(--c-${color})`, background: `var(--c-${color}-bg)` } : {}), ...style }}
       {...props}
     >
       {dot && (

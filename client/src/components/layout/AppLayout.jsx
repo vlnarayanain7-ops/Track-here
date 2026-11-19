@@ -1,3 +1,4 @@
+import SessionCompletion from '@/components/study/SessionCompletion';
 import { useState, useEffect, Suspense } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import Header from './Header';
@@ -77,6 +78,7 @@ function AppLayoutShell() {
           </main>
         </div>
 
+        <SessionCompletion />
         {/* 3. Mobile Bottom Tab Bar (< 768px) */}
         <MobileTabBar />
 

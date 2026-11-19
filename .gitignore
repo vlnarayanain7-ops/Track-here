@@ -1,7 +1,5 @@
 # Node modules
 node_modules/
-client/node_modules/
-server/node_modules/
 
 # Build artifacts
 dist/
@@ -23,15 +21,25 @@ server/.env.*
 Thumbs.db
 .vscode/
 .idea/
-.github/
+
 # Logs and Backups
-push.bat
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+*.bak
+push.bat
 backups/
+
+# Test artifacts
 screenshots/
 test-results/
 playwright-report/
+e2e/
+tests/
+.qa-artifacts/
+server/test/
+
+# AI-generated docs
+TRACK_HERE_COMPLETE_IMPLEMENTATION_CHRONICLE.md

@@ -1,8 +1,9 @@
 // src/hooks/usePomodoro.js
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { reduce, initialState, remainingMs, elapsedMs, focusSnapshot, MIN_SAVE_SEC } from '../lib/pomodoro';
+import { reduce, initialState, remainingMs, elapsedMs, focusSnapshot, MIN_SAVE_SEC, PRESETS, configFor } from '../lib/pomodoro';
 
-const KEY = 'th-pomo';
+import { getAccountSession } from '../lib/accountSession';
+const storageKey = () => `th-pomo:${getAccountSession().ownerId}`;
 
 const generateUUID = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -13,8 +14,11 @@ const generateUUID = () => {
 
 const load = () => {
   try {
-    const raw = localStorage.getItem(KEY);
-    return raw ? JSON.parse(raw) : initialState();
+    const raw = localStorage.getItem(storageKey());
+    if (!raw) return initialState();
+    const value = JSON.parse(raw);
+    if (!value || !PRESETS[value.presetId] || !['focus', 'short', 'long'].includes(value.phase)) return initialState();
+    return { ...initialState(value.presetId, value.custom), ...value, cfg: configFor(value.presetId, value.custom), accMs: Math.max(0, Number(value.accMs) || 0) };
   } catch {
     return initialState();
   }
@@ -23,6 +27,8 @@ const load = () => {
 export function usePomodoro({ prefs = {}, onSave, onPhaseEnd }) {
   const [state, setState] = useState(load);
   const [now, setNow] = useState(Date.now);
+  const finishing = useRef(false);
+  const [saving, setSaving] = useState(false);
   const handled = useRef(null); // never finish the same block twice
 
   const dispatch = useCallback((a) => {
@@ -33,7 +39,7 @@ export function usePomodoro({ prefs = {}, onSave, onPhaseEnd }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem(KEY, JSON.stringify(state));
+      localStorage.setItem(storageKey(), JSON.stringify(state));
     } catch {
       // ignore quota issues
     }
@@ -48,23 +54,37 @@ export function usePomodoro({ prefs = {}, onSave, onPhaseEnd }) {
 
   const left = remainingMs(state, now);
 
-  useEffect(() => {
-    if (!state.running || left === null || left > 0) return;
+  const complete = useCallback(async (automatic = false) => {
+    if (finishing.current) return;
     const key = `${state.clientId}:${state.phase}`;
-    if (handled.current === key) return;
-    handled.current = key;
-
-    const current = Date.now();
-    if (state.phase === 'focus') {
-      onSave?.(focusSnapshot(state, current, { completed: true }));
+    if ((automatic || (state.phase === 'focus' && state.clientId)) && handled.current === key) return;
+    if (state.phase === 'focus' && !state.firstStartedAt) return;
+    finishing.current = true;
+    setSaving(true);
+    try {
+      const current = Date.now();
+      if (state.phase === 'focus' && state.firstStartedAt) {
+        const snap = focusSnapshot(state, current, { completed: automatic });
+        if (snap.durationSec >= MIN_SAVE_SEC) await onSave?.(snap);
+        else onPhaseEnd?.('too-short');
+      }
+      handled.current = key;
+      if (automatic) onPhaseEnd?.(state.phase);
+      dispatch(state.presetId === 'stopwatch' ? { type: 'reset' } : {
+        type: 'next', autoStart: automatic && (state.phase === 'focus' ? Boolean(prefs.autoBreak) : Boolean(prefs.autoFocus)), id: generateUUID(),
+      });
+    } catch {
+      // Retain the snapshot and pause so a failed durable save can be retried.
+      dispatch({ type: 'pause' });
+    } finally {
+      finishing.current = false;
+      setSaving(false);
     }
-    onPhaseEnd?.(state.phase); // chime, notification, toast
-    dispatch({
-      type: 'next',
-      autoStart: state.phase === 'focus' ? Boolean(prefs.autoBreak) : Boolean(prefs.autoFocus),
-      id: generateUUID(),
-    });
-  }, [left, state.running, state.phase, state.clientId, prefs.autoBreak, prefs.autoFocus, onSave, onPhaseEnd, dispatch]);
+  }, [state, onSave, onPhaseEnd, prefs.autoBreak, prefs.autoFocus, dispatch]);
+
+  useEffect(() => {
+    if (state.running && left !== null && left <= 0) void complete(true);
+  }, [left, state.running, complete]);
 
   const start = useCallback(() => {
     const current = Date.now();
@@ -84,27 +104,11 @@ export function usePomodoro({ prefs = {}, onSave, onPhaseEnd }) {
     dispatch({ type: 'reset' });
   }, [dispatch]);
 
-  const finish = useCallback(() => {
-    // "Finish" in focus, "Skip" in a break
-    const t = Date.now();
-    setNow(t);
-    if (state.phase === 'focus' && state.firstStartedAt) {
-      const snap = focusSnapshot(state, t, { completed: false });
-      if (snap.durationSec >= MIN_SAVE_SEC) {
-        onSave?.(snap);
-      } else {
-        onPhaseEnd?.('too-short');
-      }
-    }
-    if (state.presetId === 'stopwatch') {
-      dispatch({ type: 'reset' });
-    } else {
-      dispatch({ type: 'next', autoStart: false, id: generateUUID() });
-    }
-  }, [state, onSave, onPhaseEnd, dispatch]);
+  const finish = useCallback(() => complete(false), [complete]);
 
   return {
     state,
+    saving,
     now,
     left,
     elapsed: elapsedMs(state, now),

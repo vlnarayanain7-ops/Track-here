@@ -1,3 +1,4 @@
+import Task from '../models/Task.js';
 import { z } from 'zod';
 import StudySession from '../models/StudySession.js';
 import asyncHandler from '../utils/asyncHandler.js';
@@ -100,6 +101,9 @@ export const getSessions = asyncHandler(async (req, res) => {
  * POST /api/study-sessions
  */
 export const createSession = asyncHandler(async (req, res) => {
+  if (req.body.linkedTask && !await Task.exists({ _id: req.body.linkedTask, user: req.user.id })) {
+    throw ApiError.notFound('Linked task not found');
+  }
   if (req.body.clientId) {
     const existing = await StudySession.findOne({ user: req.user.id, clientId: req.body.clientId });
     if (existing) {
@@ -213,47 +217,16 @@ export const deleteSession = asyncHandler(async (req, res) => {
 export const startTimer = asyncHandler(async (req, res) => {
   const now = new Date();
 
-  // Safely close any previous running or paused timer sessions, preserving any accumulated study time
-  const danglingSessions = await StudySession.find({
+  // A timer is a single active resource per user. Do not silently complete an
+  // existing timer when a double-click or another device races to start one:
+  // that both loses time and lets two successful starts report different state.
+  const activeSession = await StudySession.findOne({
     user: req.user.id,
     isTimerSession: true,
     'timerState.status': { $in: ['running', 'paused'] },
   });
-
-  for (const s of danglingSessions) {
-    const started = s.timerState?.startedAt || s.startTime || s.createdAt;
-    let accumulated = s.timerState?.accumulatedDuration || 0;
-    if (s.timerState?.status === 'running' && started) {
-      const elapsed = Math.max(0, Math.floor((now - started) / 1000) - (s.timerState?.totalPausedDuration || 0));
-      // A timer running over 6 hours is closed at 6 hours
-      accumulated = Math.min(elapsed, 6 * 3600);
-    }
-    const mins = Math.max(s.focusDuration || 0, Math.round(accumulated / 60));
-    const heartbeatsCount = s.heartbeats?.length || 0;
-    const heartbeatOk = accumulated <= 60 ? (heartbeatsCount >= 1) : (heartbeatsCount * 60 >= 0.9 * accumulated);
-
-    await StudySession.updateOne(
-      { _id: s._id },
-      {
-        $set: {
-          activeTimerKey: null,
-          'timerState.status': 'completed',
-          'timerState.accumulatedDuration': accumulated,
-          endTime: now,
-          focusDuration: mins,
-          durationSec: accumulated,
-          source: 'timer',
-          heartbeatOk,
-          startedAt: started,
-          subjectName: s.category || 'Focus',
-        },
-      }
-    );
-    s.focusDuration = mins;
-    s.durationSec = accumulated;
-    s.source = 'timer';
-    s.heartbeatOk = heartbeatOk;
-    await applySession(req.user, s);
+  if (activeSession) {
+    throw ApiError.conflict('A timer is already active. Resume, finish, or cancel it before starting another.');
   }
 
   const category = req.body.category || 'Focus';

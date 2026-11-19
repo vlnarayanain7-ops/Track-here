@@ -28,18 +28,19 @@ export default function Switch({ checked, onChange, label, description, disabled
         type="button"
         role="switch"
         aria-checked={checked}
+        aria-label={label || description || "Toggle setting"}
         disabled={disabled}
         tabIndex={0}
         className={cn(
-          'relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors duration-200 pointer-events-none items-center',
+          'relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors duration-200 items-center',
           checked
-            ? 'bg-emerald-600 shadow-2xs'
-            : 'bg-stone-200 border border-stone-300'
+            ? 'bg-[var(--primary)] shadow-2xs'
+            : 'bg-[var(--line)] border border-[var(--line)]'
         )}
       >
         <span
           className={cn(
-            'inline-block h-4 w-4 rounded-full bg-white shadow-xs transition-transform duration-200',
+            'inline-block h-4 w-4 rounded-full bg-[var(--surface)] shadow-xs transition-transform duration-200',
             checked ? 'translate-x-[18px]' : 'translate-x-0.5'
           )}
         />

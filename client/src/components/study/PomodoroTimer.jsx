@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { PRESETS } from '@/lib/pomodoro';
 import { TimerRing } from './TimerRing';
-import { usePomodoro } from '@/hooks/usePomodoro';
+import { useTimer } from '@/hooks/useTimer';
 import { chime } from '@/lib/chime';
 
 const MODES = [
@@ -28,25 +28,7 @@ export function PomodoroTimer({
   onOpenSettings,
   onPhaseChange,
 }) {
-  const t = usePomodoro({
-    prefs,
-    onSave,
-    onPhaseEnd: (ph) => {
-      if (prefs?.sound) chime();
-      if (
-        prefs?.notify &&
-        typeof Notification !== 'undefined' &&
-        Notification.permission === 'granted' &&
-        ph !== 'too-short'
-      ) {
-        new Notification(
-          ph === 'focus'
-            ? 'Focus block done. Time for a break.'
-            : 'Break over. Ready to focus?'
-        );
-      }
-    },
-  });
+  const t = useTimer();
 
   const { state: s } = t;
   const stopwatch = s.presetId === 'stopwatch';
@@ -58,7 +40,7 @@ export function PomodoroTimer({
   const customStr = JSON.stringify(prefs?.custom);
   const cfgStr = JSON.stringify(s.cfg);
   useEffect(() => {
-    if (s.presetId === 'custom' && !s.running && prefs?.custom) {
+    if (s.presetId === 'custom' && !s.running && !s.accMs && !t.saving && prefs?.custom) {
       const p = prefs.custom;
       const c = s.cfg;
       if (!c || p.focus !== c.focus || p.short !== c.short || p.long !== c.long || p.every !== c.every) {
@@ -69,17 +51,13 @@ export function PomodoroTimer({
 
   const handleModeChange = (id) => {
     if (s.phase === id) return;
-    if (s.running) {
-      t.pause();
-    }
+    if (s.running || s.accMs > 0 || t.saving) return;
     t.dispatch({ type: 'mode', phase: id });
   };
 
   const handlePresetChange = (id) => {
     if (s.presetId === id) return;
-    if (s.running) {
-      t.pause();
-    }
+    if (s.running || s.accMs > 0 || t.saving) return;
     t.dispatch({
       type: 'preset',
       presetId: id,
@@ -90,18 +68,6 @@ export function PomodoroTimer({
   useEffect(() => {
     onPhaseChange?.(s.phase);
   }, [s.phase, onPhaseChange]);
-
-  // Tab Title
-  useEffect(() => {
-    if (s.running) {
-      document.title = `${clock} · ${brk ? 'Break' : 'Focus'} · Track Here`;
-    } else {
-      document.title = 'Focus · Track Here';
-    }
-    return () => {
-      document.title = 'Track Here';
-    };
-  }, [clock, s.running, brk]);
 
   // Keep screen awake while running
   useEffect(() => {
@@ -127,14 +93,14 @@ export function PomodoroTimer({
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+      if (/INPUT|TEXTAREA|SELECT|BUTTON|A/.test(e.target.tagName) || e.target.isContentEditable || document.querySelector('dialog[open]') || e.ctrlKey || e.metaKey || e.altKey) return;
       const curr = tRef.current;
       if (e.code === 'Space') {
         e.preventDefault();
         curr.state.running ? curr.pause() : curr.start();
       }
       if (e.key === 'r' || e.key === 'R') {
-        curr.reset();
+        if (!curr.saving && (!curr.state.firstStartedAt || window.confirm('Discard this unfinished focus block?'))) curr.reset();
       }
       if (e.key === 's' || e.key === 'S') {
         curr.finish();
@@ -169,6 +135,7 @@ export function PomodoroTimer({
             <button
               key={id}
               type="button"
+              disabled={s.running || s.accMs > 0 || t.saving}
               aria-pressed={s.phase === id}
               onClick={() => handleModeChange(id)}
             >
@@ -189,6 +156,7 @@ export function PomodoroTimer({
                 key={sid}
                 type="button"
                 className={`chip ${isSelected ? 'on' : ''}`}
+                disabled={s.running || s.accMs > 0 || t.saving}
                 aria-pressed={isSelected}
                 onClick={() =>
                   t.dispatch({
@@ -231,7 +199,8 @@ export function PomodoroTimer({
         <button
           type="button"
           className="btn btn-lg"
-          onClick={t.reset}
+          disabled={t.saving}
+          onClick={() => { if (!s.firstStartedAt || window.confirm('Discard this unfinished focus block?')) t.reset(); }}
           title="Reset timer (Press R)"
         >
           Reset
@@ -253,10 +222,11 @@ export function PomodoroTimer({
         <button
           type="button"
           className="btn btn-lg"
+          disabled={t.saving || (!brk && !s.firstStartedAt)}
           onClick={t.finish}
           title={brk ? 'Skip break (Press S)' : 'Finish session (Press S)'}
         >
-          {brk ? 'Skip break' : 'Finish'}
+          {t.saving ? 'Saving?' : brk ? 'Skip break' : 'Finish'}
         </button>
       </div>
 
@@ -267,6 +237,7 @@ export function PomodoroTimer({
             key={id}
             type="button"
             className={`chip ${s.presetId === id ? 'on' : ''}`}
+            disabled={s.running || s.accMs > 0 || t.saving}
             aria-pressed={s.presetId === id}
             onClick={() => handlePresetChange(id)}
           >

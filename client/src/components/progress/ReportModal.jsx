@@ -16,6 +16,7 @@ export default function ReportModal({
   topSubject = null,
   userName = '',
   onSaved,
+  period,
 }) {
   const [showName, setShowName] = useState(false);
   const [displayName, setDisplayName] = useState(userName || '');
@@ -28,6 +29,9 @@ export default function ReportModal({
   useEffect(() => {
     if (!open) return;
     let active = true;
+    let objectUrl;
+    setSaved(false);
+    setBlob(null);
 
     async function generate() {
       setGenerating(true);
@@ -35,6 +39,7 @@ export default function ReportModal({
         const b = await drawReportCard({
           type,
           dateStr,
+          period,
           minutes,
           sessions,
           streak,
@@ -44,7 +49,8 @@ export default function ReportModal({
         });
         if (active) {
           setBlob(b);
-          setPreviewUrl(URL.createObjectURL(b));
+          objectUrl = URL.createObjectURL(b);
+          setPreviewUrl(objectUrl);
         }
       } catch (err) {
         console.error('Failed to draw report card:', err);
@@ -56,8 +62,9 @@ export default function ReportModal({
     generate();
     return () => {
       active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [open, type, dateStr, minutes, sessions, streak, topSubject, showName, displayName]);
+  }, [open, type, dateStr, minutes, sessions, streak, topSubject, showName, displayName, period]);
 
   if (!open) return null;
 
@@ -68,6 +75,7 @@ export default function ReportModal({
       const summary = {
         type,
         date: dateStr,
+        period,
         minutes,
         sessions,
         streak,
@@ -80,7 +88,7 @@ export default function ReportModal({
       // 2. If daily and online, write tiny summary row to server (auto deleted after 2 days by TTL)
       if (type === 'daily') {
         try {
-          await axios.post('/api/reports/daily', {
+          await axios.post('/reports/daily', {
             date: dateStr,
             summary: {
               minutes,
@@ -111,7 +119,7 @@ export default function ReportModal({
   const handleShare = async () => {
     if (!blob) return;
     const filename = `track-here-${type}-report-${dateStr}.png`;
-    await shareReportCard(blob, filename, `Track Here ${type === 'weekly' ? 'Weekly' : 'Daily'} Report`);
+    await shareReportCard(blob, filename, `Track Here ${type} report`);
   };
 
   return (
@@ -122,7 +130,7 @@ export default function ReportModal({
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-[var(--primary)]" />
             <h2 className="text-base font-bold font-heading text-[var(--text)]">
-              {type === 'weekly' ? 'This Week’s Report' : 'Today’s Report'}
+              {type === 'monthly' ? 'Monthly focus report' : type === 'weekly' ? 'Weekly focus report' : 'Daily focus report'}
             </h2>
           </div>
           <button

@@ -28,7 +28,7 @@ export default function SessionCard({ session, onEdit, onDelete }) {
   };
 
   return (
-    <div className="group rounded-2xl border border-border bg-white p-5 hover:border-emerald-300 hover:shadow-xs transition-all duration-200 space-y-3">
+    <div className="group rounded-2xl border border-border bg-[var(--surface)] p-5 hover:border-emerald-300 hover:shadow-xs transition-all duration-200 space-y-3">
       {/* Header row */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">

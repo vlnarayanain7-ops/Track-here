@@ -19,6 +19,7 @@ const RevisionsPage = lazy(() => import('@/components/revisions/RevisionsPage'))
 
 // Lazy-Loaded Public & Auth Pages
 const LandingPage = lazy(() => import('@/components/landing/LandingPage'));
+const FinalsPlanner = lazy(() => import('@/components/landing/FinalsPlanner'));
 const OnboardingFlow = lazy(() => import('@/components/onboarding/OnboardingFlow'));
 const SignIn = lazy(() => import('./auth/SignIn').then((m) => ({ default: m.SignIn })));
 const SignUp = lazy(() => import('./auth/SignUp').then((m) => ({ default: m.SignUp })));
@@ -83,6 +84,7 @@ export default function App() {
       {/* Public Legal & Verification Pages */}
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/finals-planner" element={<FinalsPlanner />} />
       <Route path="/rewards-rules" element={<RewardsRulesPage />} />
       <Route path="/verify/:serial" element={<VerifyCertificatePage />} />
       <Route path="/admin" element={<AdminPage />} />

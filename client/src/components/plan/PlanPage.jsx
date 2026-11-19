@@ -1,5 +1,8 @@
+import Dialog from '@/components/ui/Dialog';
+import { subjectColor } from '@/lib/subjectColor';
+import { navigateTabs } from '@/lib/tabNavigation';
 import { useState, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from '@/hooks/useTasks';
 import { useTimetableSlots, useCreateTimetableSlot, useDeleteTimetableSlot } from '@/hooks/useTimetable';
@@ -21,11 +24,14 @@ export default function PlanPage() {
   };
 
   return (
-    <div className="max-w-[1040px] mx-auto px-4 sm:px-8 py-6">
-      <h1 className="text-[26px] font-bold font-heading tracking-tight text-[var(--tx)]">Plan</h1>
+    <div className="w-full">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-[26px] font-bold font-heading tracking-tight text-[var(--tx)]">Plan</h1>
+        <Link className="btn" to="/finals-planner">Finals planner</Link>
+      </div>
 
       {/* Tabs: Tasks | Week | Subjects */}
-      <div className="tabs" role="tablist">
+      <div className="tabs" role="tablist" onKeyDown={navigateTabs}>
         <button
           type="button"
           role="tab"
@@ -91,7 +97,7 @@ function TasksTab() {
   const subjectMap = useMemo(() => {
     const map = {};
     userSubjects.forEach((s) => {
-      map[s.name] = s.color || 'var(--pr)';
+      map[s.name] = subjectColor(s.color);
     });
     return map;
   }, [userSubjects]);
@@ -404,7 +410,7 @@ function WeekTab() {
   const subjectColorMap = useMemo(() => {
     const map = {};
     userSubjects.forEach((s) => {
-      map[s.name] = s.color || 'var(--pr)';
+      map[s.name] = subjectColor(s.color);
     });
     return map;
   }, [userSubjects]);
@@ -539,8 +545,23 @@ function WeekTab() {
   };
 
   return (
-    <div className="overflow-x-auto pb-4">
-      <div className="min-w-[680px]">
+    <div className="pb-4">
+      <div className="card p-4 mb-4 flex flex-wrap gap-x-8 gap-y-2" aria-label="Weekly planned versus completed study">
+        <span><b>{Math.round(slots.reduce((sum, slot) => sum + Math.max(0, parseHour(slot.endTime) - parseHour(slot.startTime)) * 60, 0))}m</b> planned this week</span>
+        <span><b>{Math.round(weekSessions.reduce((sum, session) => sum + session.durationMins, 0))}m</b> recorded this week</span>
+      </div>
+      <div className="md:hidden space-y-4" aria-label="Weekly agenda">
+        {DAYS.map((day, index) => {
+          const planned = slots.filter(slot => slot.dayOfWeek === (index + 1) % 7).sort((a, b) => a.startTime.localeCompare(b.startTime));
+          const actual = weekSessions.filter(session => session.day === index);
+          return <section key={day} className="card p-4"><div className="flex items-center justify-between mb-2"><h2 className="font-semibold">{day}{index === currentDayOfWeek ? ' ? Today' : ''}</h2><button className="btn btn-ghost" onClick={() => handleCellClick(index, 9)} aria-label={`Add block for ${day}`}>+ Add</button></div>
+            {planned.length === 0 && <p className="text-sm text-[var(--muted)]">No blocks planned.</p>}
+            {planned.map(slot => <div key={slot._id} className="py-2 border-t border-[var(--line)] flex items-center justify-between gap-2"><div><b className="text-sm">{slot.subject}</b><p className="text-sm text-[var(--muted)]">{slot.startTime}?{slot.endTime}</p></div><button className="btn btn-ghost" onClick={e => handleDeleteSlot(slot._id, e)} aria-label={`Remove ${slot.subject} block`}>Remove</button></div>)}
+            <p className="text-sm text-[var(--primary)] mt-2">{Math.round(actual.reduce((sum, session) => sum + session.durationMins, 0))}m completed</p>
+          </section>;
+        })}
+      </div>
+      <div className="hidden md:block min-w-[680px]">
         {/* Info header & Show all hours toggle link */}
         <div className="flex items-center justify-between text-xs text-[var(--mu)] mb-2">
           <span>
@@ -699,11 +720,8 @@ function WeekTab() {
 
       {/* Add Slot Modal */}
       {slotModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="bg-[var(--sf)] border border-[var(--ln)] rounded-xl max-w-sm w-full p-5 shadow-2xl space-y-4">
-            <h3 className="text-base font-semibold text-[var(--tx)]">
-              Add Block for {DAYS[modalDay]}
-            </h3>
+        <Dialog open={slotModal} onClose={() => setSlotModal(false)} title={`Add block for ${DAYS[modalDay]}`} size="sm">
+<div className="space-y-4">
             <form onSubmit={handleSaveSlot} className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-[var(--mu)] mb-1">Subject</label>
@@ -761,7 +779,7 @@ function WeekTab() {
               </div>
             </form>
           </div>
-        </div>
+        </Dialog>
       )}
     </div>
   );
@@ -957,7 +975,7 @@ function SubjectsTab() {
             ).length;
             const pct = chapters.length > 0 ? Math.round((completedCount / chapters.length) * 100) : 0;
             const isExpanded = expandedSubject === s.name;
-            const colorDot = s.color || 'var(--pr)';
+            const colorDot = subjectColor(s.color);
 
             return (
               <div key={s.name} className="py-3">

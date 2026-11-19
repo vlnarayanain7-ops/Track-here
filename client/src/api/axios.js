@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getAccountSession } from '../lib/accountSession';
 import toast from 'react-hot-toast';
 
 const getBaseUrl = () => {
@@ -36,6 +37,7 @@ const getCookie = (name) => document.cookie
   ?.split('=').slice(1).join('');
 
 api.interceptors.request.use((config) => {
+  if (config.accountSession && config.accountSession.epoch !== getAccountSession().epoch) throw new axios.CanceledError('Account changed; sync paused.');
   if (!['get', 'head', 'options'].includes(config.method?.toLowerCase())) {
     const token = csrfToken || getCookie('csrfToken');
     if (token) config.headers['X-CSRF-Token'] = decodeURIComponent(token);
@@ -130,7 +132,7 @@ api.interceptors.response.use(
 
     // Auto-retry transient connection blips or 503 startup status once after 600ms
     if (
-      !originalRequest?._retryCount &&
+      originalRequest && !axios.isCancel(error) && !originalRequest?._retryCount &&
       (!error.response || error.response.status === 503 || error.code === 'ERR_NETWORK')
     ) {
       originalRequest._retryCount = 1;

@@ -9,8 +9,6 @@ try {
   // Ignore in restricted environments
 }
 
-let mongod = null;
-
 /**
  * Seeds a default developer user in development mode so logins succeed immediately.
  */
@@ -101,41 +99,7 @@ const connectDB = async () => {
   } catch (error) {
     console.error(`MongoDB connection failed: ${error.message}`);
 
-    if (env.NODE_ENV === 'development') {
-      try {
-        console.log('Checking for local MongoDB service on 127.0.0.1:27017...');
-        const localConn = await mongoose.connect('mongodb://127.0.0.1:27017/trackhere', {
-          serverSelectionTimeoutMS: 2000,
-        });
-        console.log(`✅ Real Local MongoDB connected successfully: ${localConn.connection.host} (${localConn.connection.name})`);
-        if (process.env.SEED_DEFAULT_USER === 'true') {
-          await seedDefaultUser();
-        }
-        return localConn;
-      } catch (localErr) {
-        console.warn('Local MongoDB service on 27017 not available, falling back to in-memory MongoDB...');
-      }
-
-      try {
-        console.warn('DEVELOPMENT ONLY: starting an in-memory MongoDB fallback. Data will be lost when this process stops.');
-        const { MongoMemoryServer } = await import('mongodb-memory-server');
-        mongod = await MongoMemoryServer.create({
-          instance: { launchTimeout: 30000 },
-        });
-        const uri = mongod.getUri();
-        const conn = await mongoose.connect(uri);
-        console.log(`✅ In-Memory MongoDB connected: ${conn.connection.host} (${uri})`);
-        console.warn('DEVELOPMENT ONLY: this is not an Atlas persistence verification.');
-        if (process.env.SEED_DEFAULT_USER === 'true') {
-          await seedDefaultUser();
-        }
-        return conn;
-      } catch (memError) {
-        console.error('Failed to start in-memory MongoDB:', memError.message);
-      }
-    }
-
-    console.error(`FATAL: MongoDB connection failed and no fallback is permitted in ${env.NODE_ENV} mode. The API will not start. (${error.message})`);
+    console.error('The API requires its configured database to preserve study history across restarts.');
     process.exit(1);
   }
 

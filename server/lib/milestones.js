@@ -6,7 +6,7 @@ import { addDays, todayIn, currentRun, REWARD_MINUTES, MILESTONE_MINUTES } from 
 const safeKey = (n) => String(n || 'none').replace(/[.$]/g, '_').slice(0, 40);
 
 export async function applySession(user, session) { // call ONCE for each newly created session (skip duplicates)
-  const tz = user?.timezone || 'Asia/Kolkata';
+  const tz = user?.timezone || (await User.findById(user._id || user.id).select('timezone').lean())?.timezone || 'Asia/Kolkata';
   const startedAt = session.startedAt || session.startTime || session.date || new Date();
   const date = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(startedAt);
   const minutes = Math.round((session.durationSec || (session.focusDuration * 60)) / 60);

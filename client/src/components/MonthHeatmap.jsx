@@ -42,10 +42,10 @@ export function buildMonths(minutesByDay, weekStartsOn = 1, count = 12, now = ne
   return months;
 }
 
-export function MonthHeatmap({ minutesByDay, weekStartsOn = 1 }) {
-  const months = useMemo(() => buildMonths(minutesByDay, weekStartsOn), [minutesByDay, weekStartsOn]);
+export function MonthHeatmap({ minutesByDay, weekStartsOn = 1, today = ymd(new Date()) }) {
+  const months = useMemo(() => buildMonths(minutesByDay, weekStartsOn, 12, new Date(today + 'T12:00:00')), [minutesByDay, weekStartsOn, today]);
   const scroller = useRef(null);
-  const todayKey = ymd(new Date());
+  const todayKey = today;
 
   useLayoutEffect(() => {
     const el = scroller.current;
@@ -93,7 +93,7 @@ export function MonthHeatmap({ minutesByDay, weekStartsOn = 1 }) {
                       style={{
                         gridColumn: c.col + 1,
                         gridRow: c.row + 1,
-                        background: `var(--heat-${level(c.minutes)})`,
+                        background: c.minutes > 0 && c.minutes < 25 ? 'var(--line)' : `var(--heat-${level(c.minutes)})`,
                       }}
                     />
                   ))}
@@ -105,8 +105,8 @@ export function MonthHeatmap({ minutesByDay, weekStartsOn = 1 }) {
         </div>
       </div>
       <div className="leg">
-        <span>Less</span>
-        {[0, 1, 2, 3, 4, 5].map((l) => (
+        <span>Green starts at 25 min</span>
+        {[2, 3, 4, 5].map((l) => (
           <i key={l} style={{ background: `var(--heat-${l})` }} />
         ))}
         <span>More</span>
