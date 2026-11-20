@@ -363,6 +363,18 @@ npm --prefix client run build
 npm run test:e2e
 ```
 
-`test:e2e` uses Playwright Chromium and a local production preview with deterministic API fixtures. It checks browser behavior without contacting a production database; it is not a live-backend integration suite. Install a Playwright browser if absent (`npx playwright install chromium`). Server tests mock the account-existence lookup and verify the real authentication middleware with test tokens. CI runs these checks on pushes and pull requests. Broken references to removed audit/cleanup scripts and the obsolete scheduled compaction workflow have been replaced with this suite.
+`test:e2e` uses Playwright Chromium and a local production preview with deterministic API fixtures. It checks browser behavior without contacting a production database; it is not a live-backend integration suite. Install a Playwright browser if absent (`npx playwright install chromium`). The browser check covers password-reset payloads and service failures, mobile signup, subjects, timer recovery, offline saves and reconnection, and signing back in. `test:server` exercises mail configuration and Brevo submission with a mocked provider; it does not send email. No CI workflow is currently included.
 
 The active timer is recovered in the same browser/account; this change does not implement live timer takeover between devices. Existing server timer endpoints remain available for older clients.
+
+### Launch configuration
+
+Run `npm run check:launch` with Node 24 to check local configuration without printing secrets. Local settings do not prove that hosted settings match.
+
+- In Render, set `CLIENT_URL=https://track-here.beta-001.workers.dev`, `BREVO_API_KEY`, and `MAIL_FROM_EMAIL`. The sender must be verified in Brevo. Redeploy the API after changing configuration. The live API reported an old Vercel client URL during the November 20, 2026 review.
+- In the frontend build environment, set `VITE_SENTRY_DSN` and optionally `VITE_SENTRY_ENVIRONMENT=production`. Rebuild and redeploy the frontend; adding a runtime Worker secret after building does not configure Vite's client bundle. Error boundaries forward caught rendering failures to Sentry.
+- Deploy both frontend and backend fixes. Password recovery now submits JSON objects and obtains a CSRF token; failed requests remain retryable instead of showing a false confirmation. Missing production mail configuration returns a generic service-unavailable response before looking up the email address. Provider failures are logged by status without exposing recipient details.
+- Confirm delivery using an existing test account, follow its reset link on the Workers domain, and sign in with the new password. An HTTP success response alone does not establish inbox delivery. Check Brevo transactional logs and Render logs if delivery fails.
+- Verify an error event in the intended Sentry project after deployment. A configured DSN alone does not establish event delivery.
+
+Social previews use `client/public/social-preview.png` (1200 × 630) and the Workers URL in `client/index.html`. Update those URLs if the public domain changes. New students see a first-session guide until a saved session exists.

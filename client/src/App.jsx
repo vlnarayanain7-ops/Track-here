@@ -56,11 +56,12 @@ function PageFallback() {
 
 // Guest Guard (redirect already logged-in users to home)
 function GuestRoute({ children, waitForSession = false }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const location = useLocation();
   if (waitForSession && isLoading) return <PageFallback />;
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={location.pathname === '/signup' && !user?.onboardingCompleted ? '/onboarding' : '/'} replace />;
   }
 
   return children;

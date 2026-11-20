@@ -12,7 +12,7 @@ import {
   setCsrfCookie,
   clearAuthCookies,
 } from '../utils/tokens.js';
-import { sendMail } from '../services/mailer.js';
+import { sendMail, mailConfigured } from '../services/mailer.js';
 import crypto from 'crypto';
 import env from '../config/env.js';
 
@@ -258,6 +258,11 @@ const sha = (t) => crypto.createHash('sha256').update(t).digest('hex');
  * POST /api/auth/forgot-password
  */
 export const forgotPassword = asyncHandler(async (req, res) => {
+  // Check before looking up the account so this never reveals account existence.
+  if (process.env.NODE_ENV === 'production' && !mailConfigured()) {
+    console.error('mail_not_configured: set BREVO_API_KEY and MAIL_FROM_EMAIL');
+    return res.status(503).json({ success: false, message: 'Password reset email is temporarily unavailable. Please try again later.' });
+  }
   const email = (req.body?.email || '').toLowerCase().trim();
   const user = await User.findOne({ email }).select('_id email');
 
@@ -278,8 +283,9 @@ export const forgotPassword = asyncHandler(async (req, res) => {
 
     const baseUrl = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
     const link = `${baseUrl}/reset-password/${token}`;
-    // Fire email asynchronously with safety logging so slow SMTP never blocks or aborts the HTTP response
-    sendMail({
+    // Await the bounded provider request so the delivery attempt is not abandoned.
+    // Keep the same public response on provider failure to avoid account enumeration.
+    await sendMail({
       to: user.email,
       subject: 'Reset your Track Here password',
       text: `Open this link within 30 minutes:\n${link}\n\nIf you did not ask for this, ignore this email.`,

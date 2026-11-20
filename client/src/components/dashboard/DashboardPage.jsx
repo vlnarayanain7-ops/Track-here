@@ -1,4 +1,5 @@
 import SubjectLabel from '@/components/ui/SubjectLabel';
+import FirstSessionGuide from './FirstSessionGuide';
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -261,6 +262,7 @@ export default function DashboardPage() {
         </nav>
       </div>
 
+      <FirstSessionGuide />
       {/* 2. UP NEXT Card */}
 
       <div className="today-overview">

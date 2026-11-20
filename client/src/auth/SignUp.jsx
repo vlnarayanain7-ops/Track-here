@@ -62,7 +62,7 @@ export function SignUp() {
       let serverMsg = error.response?.data?.message;
       if (!serverMsg) {
         if (error.response?.status === 500 || !error.response) {
-          serverMsg = 'Cannot connect to backend server (500). Please ensure "npm run dev" is running.';
+          serverMsg = 'We could not connect right now. Check your internet connection and try again in a moment.';
         } else {
           serverMsg = error.message || 'Registration failed.';
         }

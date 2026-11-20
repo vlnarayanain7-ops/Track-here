@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertCircle, RefreshCw, Home } from 'lucide-react';
 import Button from './Button';
+import { captureException } from '@sentry/react';
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -13,6 +14,7 @@ export class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
+    captureException(error, { extra: { componentStack: errorInfo.componentStack } });
     console.error('Track Here UI Error Boundary caught an error:', error, errorInfo);
   }
 

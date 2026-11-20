@@ -9,19 +9,27 @@ export function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
 
   async function submit(e) {
     e.preventDefault();
-    if (!email.trim()) return;
+    setError('');
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+      setError('Enter a valid email address.');
+      return;
+    }
 
     setBusy(true);
     try {
-      await authApi.forgotPassword(email.trim());
-    } catch {
-      // Intentionally silent: security rule requires identical response
+      await authApi.getCsrfToken();
+      await authApi.forgotPassword({ email: email.trim() });
+      setSubmitted(true);
+    } catch (err) {
+      setError(err.response?.status === 429
+        ? 'Too many attempts. Please wait a few minutes before trying again.'
+        : 'We could not request a reset email right now. Please try again in a moment.');
     } finally {
       setBusy(false);
-      setSubmitted(true);
     }
   }
 
@@ -49,6 +57,7 @@ export function ForgotPassword() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="scholar@example.com"
             required
+            error={error}
           />
 
           <Button variant="primary" size="lg" loading={busy} type="submit" className="w-full mt-2">
@@ -91,7 +100,8 @@ export function ResetPassword() {
 
     setBusy(true);
     try {
-      await authApi.resetPassword(token, password);
+      await authApi.getCsrfToken();
+      await authApi.resetPassword(token, { password });
       toast.success('Password updated successfully! Please sign in.');
       navigate('/signin', { replace: true });
     } catch (error) {

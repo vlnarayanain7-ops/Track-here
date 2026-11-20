@@ -13,9 +13,13 @@
     "test:pomodoro": "node --test client/src/lib/pomodoro.test.js",
     "test:sessions": "node --test client/src/lib/sessions.test.js",
     "test:history": "node --test client/src/lib/history.test.js",
-    "test:unit": "node --test client/src/lib/*.test.js"
+    "test:unit": "node --test client/src/lib/*.test.js",
+    "test:server": "node --test server/services/*.test.js",
+    "test:e2e": "node scripts/launch-browser-check.mjs",
+    "check:launch": "node scripts/check-launch.mjs"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.0",
     "concurrently": "^9.2.5"
   }
 }
