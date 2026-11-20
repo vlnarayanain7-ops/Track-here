@@ -213,6 +213,7 @@ export async function getStreakInfo(userId) {
     currentStreak,
     longestStreak,
     activeDaysThisYear,
+    gardenDays: Object.values(map).filter(minutes => minutes >= MINIMUM_ACTIVE_MINUTES).length,
     isActiveToday,
     nextMilestone,
     history,

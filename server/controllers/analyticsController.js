@@ -1,10 +1,12 @@
 import ProblemAttempt from '../models/ProblemAttempt.js';
 import User from '../models/User.js';
+import Task from '../models/Task.js';
+import Revision from '../models/Revision.js';
 import StudySession from '../models/StudySession.js';
 import mongoose from 'mongoose';
 import asyncHandler from '../utils/asyncHandler.js';
 import { subDays, startOfMonth, startOfYear, format } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz';
+import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import {
   getDashboardStats,
   getStudyTimeStats,
@@ -14,6 +16,21 @@ import {
 } from '../services/analyticsService.js';
 import { getStreakInfo } from '../services/streakService.js';
 import { parseDateRange } from '../utils/dateRange.js';
+
+export const getMission = asyncHandler(async (req, res) => {
+  const user = req.user.id;
+  const profile = await User.findById(user).select('timezone').lean();
+  const zone = profile?.timezone || 'Asia/Kolkata';
+  const now = new Date();
+  const day = format(toZonedTime(now, zone), 'yyyy-MM-dd');
+  const today = { $gte: fromZonedTime(day + 'T00:00:00', zone), $lte: now };
+  const [taskDone, reviewDone, task] = await Promise.all([
+    Task.exists({ user, completedAt: today, status: 'Completed' }),
+    Revision.exists({ user, 'history.date': today }),
+    Task.findOne({ user, status: { $in: ['Todo', 'In Progress'] } }).sort({ dueDate: 1 }).select('title').lean(),
+  ]);
+  res.json({ taskDone: Boolean(taskDone), reviewDone: Boolean(reviewDone), task });
+});
 
 /**
  * Helper to compute by-subject breakdown for a given range (week | month | year)

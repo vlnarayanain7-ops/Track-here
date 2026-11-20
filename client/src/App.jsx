@@ -10,6 +10,12 @@ import { RequireAuth, RequireProfile, CompleteProfile } from './auth/RequireProf
 
 // Lazy-Loaded Application Modules
 const DashboardPage = lazy(() => import('@/components/dashboard/DashboardPage'));
+const Discover = lazy(() => import('@/components/discover/Discover'));
+const PublicTools = lazy(() => import('@/components/discover/PublicTools'));
+const Roadmaps = lazy(() => import('@/components/discover/Roadmaps'));
+const Circles = lazy(() => import('@/components/discover/Circles'));
+const Personal = lazy(() => import('@/components/discover/Personal'));
+const Challenges = lazy(() => import('@/components/Challenges'));
 const StudyPage = lazy(() => import('@/components/study/StudyPage'));
 const PlanPage = lazy(() => import('@/components/plan/PlanPage'));
 const NotesPage = lazy(() => import('@/components/notes/NotesPage'));
@@ -67,6 +73,11 @@ function AccountabilityRedirect() {
   const tab = search.get('tab');
   return <Navigate to={tab === 'evening' ? '/?journal=evening' : '/?journal=morning'} replace />;
 }
+function DashboardEntry() {
+  const invite = sessionStorage.getItem('pendingChallenge');
+  if (invite && /^\/(?:challenges|circles)\/[a-f0-9-]{36}$/.test(invite)) return <Navigate to={invite} replace />;
+  return <DashboardPage />;
+}
 
 export default function App() {
   const { user, checkAuth } = useAuth();
@@ -77,6 +88,9 @@ export default function App() {
       {/* Public Legal & Verification Pages */}
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/explore" element={<Discover />} />
+      <Route path="/tools" element={<PublicTools />} />
+      <Route path="/roadmaps" element={<Roadmaps />} />
       <Route path="/finals-planner" element={<FinalsPlanner />} />
       <Route path="/rewards-rules" element={<RewardsRulesPage />} />
       <Route path="/verify/:serial" element={<VerifyCertificatePage />} />
@@ -155,7 +169,10 @@ export default function App() {
               </RequireTerms>
             }
           >
-            <Route index element={<DashboardPage />} />
+            <Route index element={<DashboardEntry />} />
+            {['mission', 'garden', 'achievements'].map(page => <Route key={page} path={page} element={<Personal page={page} />} />)}
+            <Route path="circles/:id?" element={<Circles />} />
+            <Route path="challenges/:id?" element={<Challenges />} />
             <Route path="study" element={<StudyPage />} />
             <Route path="plan" element={<PlanPage />} />
             <Route path="notes" element={<NotesPage />} />

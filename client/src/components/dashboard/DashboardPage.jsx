@@ -2,7 +2,7 @@ import SubjectLabel from '@/components/ui/SubjectLabel';
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Play, Plus, Check, Sun, Moon, RotateCcw } from 'lucide-react';
+import { Play, Plus, Check, Sun, Moon, RotateCcw, Sprout, Medal } from 'lucide-react';
 import './dashboard.css';
 import { useAuth } from '@/hooks/useAuth';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -254,9 +254,15 @@ export default function DashboardPage() {
             {headerSubtitle}
           </p>
         </div>
+        <nav aria-label="Study shortcuts" className="today-shortcuts">
+          <Link to="/garden"><Sprout size={17} aria-hidden="true" />Study garden</Link>
+          <Link to="/achievements"><Medal size={17} aria-hidden="true" />Badges</Link>
+          <Link to="/explore">Explore</Link>
+        </nav>
       </div>
 
       {/* 2. UP NEXT Card */}
+
       <div className="today-overview">
       <section className="today-focus">
         <div className="today-focus-copy">

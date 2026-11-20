@@ -2,6 +2,9 @@ import React, { useEffect, useRef } from 'react';
 import { PRESETS } from '@/lib/pomodoro';
 import { TimerRing } from './TimerRing';
 import { useTimer } from '@/hooks/useTimer';
+import { useAuth } from '@/hooks/useAuth';
+import { useStreakData } from '@/hooks/useAnalytics';
+import Garden from '@/components/discover/Garden';
 import { chime } from '@/lib/chime';
 
 const MODES = [
@@ -29,6 +32,8 @@ export function PomodoroTimer({
   onPhaseChange,
 }) {
   const t = useTimer();
+  const { user } = useAuth();
+  const { data: streak } = useStreakData();
 
   const { state: s } = t;
   const stopwatch = s.presetId === 'stopwatch';
@@ -183,7 +188,9 @@ export function PomodoroTimer({
         clock={clock}
         progress={progress}
         tone={brk ? 'break' : 'focus'}
-      />
+      >
+        {!brk && user && <Garden key={user._id || user.id} compact user={user} streak={streak}/>}
+      </TimerRing>
 
       {/* 4. Cycle Dots */}
       {!stopwatch && (

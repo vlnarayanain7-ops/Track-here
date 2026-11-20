@@ -1,4 +1,4 @@
-﻿import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Timer, Layers, CalendarCheck, RotateCcw, Code2, Flame, ArrowRight, Check, Atom, Microscope, BookOpen, Settings2, GraduationCap, Target } from 'lucide-react';
 import BrandMark from '@/components/brand/BrandMark';
 import ProductPreview from '@/components/brand/ProductPreview';
@@ -94,7 +94,7 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-5">
           <Link to="/welcome" className="flex items-center gap-2 font-heading font-semibold text-sm"><BrandMark className="w-7 h-7" />Track Here</Link>
           <p className="text-xs text-[var(--muted)]">© {new Date().getFullYear()} Track Here. A little progress, every day.</p>
-          <nav aria-label="Legal" className="flex gap-5 text-xs text-[var(--muted)]"><Link className="hover:text-[var(--text)]" to="/privacy">Privacy</Link><Link className="hover:text-[var(--text)]" to="/terms">Terms</Link></nav>
+          <Link to="/explore" className="font-semibold">Explore study features</Link><nav aria-label="Legal" className="flex gap-5 text-xs text-[var(--muted)]"><Link className="hover:text-[var(--text)]" to="/privacy">Privacy</Link><Link className="hover:text-[var(--text)]" to="/terms">Terms</Link></nav>
         </div>
       </footer>
     </div>

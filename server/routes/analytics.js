@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   getDashboard,
+  getMission,
   getStudyTime,
   getCategories,
   getWeeklySummary,
@@ -18,6 +19,7 @@ router.use(csrfProtection);
 
 router.get('/', getDashboard);
 router.get('/dashboard', getDashboard);
+router.get('/mission', getMission);
 router.get('/study-time', getStudyTime);
 router.get('/categories', getCategories);
 router.get('/weekly-summary', getWeeklySummary);

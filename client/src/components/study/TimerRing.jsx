@@ -1,13 +1,13 @@
 import React from 'react';
 
-export function TimerRing({ label, clock, progress = 0, tone = 'focus' }) {
+export function TimerRing({ label, clock, progress = 0, tone = 'focus', children }) {
   const clamped = Math.min(1, Math.max(0, progress));
   const strokeDashoffset = Math.round(679 * (1 - clamped));
   const arcColor = tone === 'break' ? 'var(--c1, #2563EB)' : 'var(--primary, #216E39)';
 
   return (
     <div
-      className="ring"
+      className={children ? 'ring ring-with-garden' : 'ring'}
       style={{
         position: 'relative',
         width: 'min(240px, 70vw)',
@@ -47,7 +47,7 @@ export function TimerRing({ label, clock, progress = 0, tone = 'focus' }) {
         className="time"
         style={{
           position: 'absolute',
-          inset: 0,
+          inset: children ? '0 0 30%' : 0,
           display: 'grid',
           placeContent: 'center',
           textAlign: 'center',
@@ -73,6 +73,7 @@ export function TimerRing({ label, clock, progress = 0, tone = 'focus' }) {
           {label}
         </span>
       </div>
+      {children}
     </div>
   );
 }

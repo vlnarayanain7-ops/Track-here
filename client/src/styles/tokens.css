@@ -250,7 +250,7 @@
   outline: none;
   box-shadow: none !important;
 }
-.timer-ring svg, .ring svg {
+.timer-ring > svg, .ring > svg {
   width: 100%;
   height: 100%;
 }

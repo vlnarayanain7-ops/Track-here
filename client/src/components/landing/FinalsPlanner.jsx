@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { addDays, format, parseISO } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import BrandMark from '@/components/brand/BrandMark';
@@ -21,16 +21,19 @@ export default function FinalsPlanner() {
 }
 
 function Planner({ storageKey, signedIn }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const draft = location.state?.draft;
   const [plan, setPlan] = useState(() => {
     try { return JSON.parse(localStorage.getItem(storageKey)); } catch { return null; }
   });
   const today = dayKey(new Date());
-  const [exam, setExam] = useState('');
-  const [examName, setExamName] = useState('');
-  const [topics, setTopics] = useState('');
-  const [capacity, setCapacity] = useState(plan?.capacity || 2);
+  const [exam, setExam] = useState(draft?.exam || '');
+  const [examName, setExamName] = useState(draft?.name || '');
+  const [topics, setTopics] = useState(draft?.topics || '');
+  const [capacity, setCapacity] = useState(draft?.capacity || plan?.capacity || 2);
   const [resume, setResume] = useState(today);
-  const [newPlan, setNewPlan] = useState(false);
+  const [newPlan, setNewPlan] = useState(Boolean(draft));
   const [message, setMessage] = useState('');
   const [guestPlan] = useState(() => {
     if (!signedIn) return null;
@@ -59,6 +62,7 @@ function Planner({ storageKey, signedIn }) {
     try {
       save({ ...buildFinalsPlan(today, exam, topics, Number(capacity)), name: examName.trim() });
       setNewPlan(false);
+      if (draft) navigate(location.pathname, { replace: true, state: null });
     } catch (err) { setMessage(err.message); }
   }
 
@@ -71,7 +75,7 @@ function Planner({ storageKey, signedIn }) {
   if (rows.has(null)) dates.push(null);
 
   return <main className="mx-auto max-w-3xl space-y-6 px-5 py-9 text-[var(--text)]">
-    <Link to={signedIn ? '/plan' : '/welcome'} className="inline-flex items-center gap-2 font-semibold"><BrandMark />Track Here</Link>
+    <nav className="flex flex-wrap items-center justify-between gap-3 print:hidden"><Link to={signedIn ? '/plan' : '/welcome'} className="inline-flex items-center gap-2 font-semibold"><BrandMark />Track Here</Link><div className="flex gap-4 text-sm"><Link to="/tools">Study tools</Link><Link to="/roadmaps">Roadmaps</Link></div></nav>
     <header><h1 className="text-3xl font-heading font-bold">College finals study planner</h1>
       <p className="mt-2 text-[var(--muted)]">Plan 25-minute study blocks, check off topics, and move unfinished work before exam day. Your schedule saves in this browser.</p></header>
     {!plan && guestPlan && <button className="btn" onClick={() => {
@@ -84,7 +88,7 @@ function Planner({ storageKey, signedIn }) {
       <label>Blocks per day<input className={field} type="number" required min="1" max="12" value={capacity} onChange={e => setCapacity(e.target.value)} /></label>
       <label className="sm:col-span-2">Topics, one per line<textarea className={field} rows="4" required maxLength={4000} value={topics} onChange={e => setTopics(e.target.value)} /></label>
       <button className="btn btn-primary" disabled={!topics.trim()}>{plan ? 'Replace saved schedule' : 'Build my schedule'}</button>
-      {plan && <button type="button" className="btn" onClick={() => setNewPlan(false)}>Keep current schedule</button>}
+      {plan && <button type="button" className="btn" onClick={() => { setNewPlan(false); if (draft) navigate(location.pathname, { replace: true, state: null }); }}>Keep current schedule</button>}
     </form>}
     <p role="status" className="text-sm print:hidden">{message}</p>
     {plan && <section className="space-y-4">

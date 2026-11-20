@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import FriendChallenge from '../models/FriendChallenge.js';
+import StudyCircle from '../models/StudyCircle.js';
 import mongoose from 'mongoose';
 import User from '../models/User.js';
 import FinalsMembership from '../models/FinalsMembership.js';
@@ -615,6 +617,9 @@ export const deleteAccount = asyncHandler(async (req, res) => {
     FinalsMembership.deleteOne({ _id: userId }),
     StudySession.deleteMany({ user: userId }),
     Task.deleteMany({ user: userId }),
+    FriendChallenge.updateMany({ members: userId }, { $pull: { members: userId, cheers: userId } }),
+    StudyCircle.updateMany({ 'members.user': userId }, { $pull: { members: { user: userId } } }),
+    StudyCircle.updateMany({ 'members.checkIns.cheers': userId }, { $pull: { 'members.$[].checkIns.$[].cheers': userId } }),
     Note.deleteMany({ user: userId }),
     Problem.deleteMany({ user: userId }),
     ProblemAttempt.deleteMany({ user: userId }),

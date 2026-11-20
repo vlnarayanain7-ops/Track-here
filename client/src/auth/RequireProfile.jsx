@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import * as userApi from '../api/users';
@@ -9,6 +9,11 @@ import toast from 'react-hot-toast';
 export function RequireAuth({ homeSignIn }) {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
+  useEffect(() => {
+    if (!isAuthenticated && /^\/(?:challenges|circles)\/[a-f0-9-]{36}$/.test(location.pathname)) {
+      sessionStorage.setItem('pendingChallenge', location.pathname);
+    }
+  }, [isAuthenticated, location.pathname]);
 
   if (!isAuthenticated && location.pathname === '/') return homeSignIn;
 

@@ -190,14 +190,15 @@ export async function drawReportCard({
   return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
 }
 
-export async function shareReportCard(blob, filename, title = 'Track Here Focus Report') {
+export async function shareReportCard(blob, filename, title = 'Track Here Focus Report', text) {
   const file = new File([blob], filename, { type: 'image/png' });
   if (navigator.canShare?.({ files: [file] })) {
     try {
-      await navigator.share({ files: [file], title });
+      await navigator.share({ files: [file], title, ...(text ? { text } : {}) });
       return;
     } catch (e) {
-      if (e.name !== 'AbortError') console.warn('Share rejected:', e);
+      if (e.name === 'AbortError') return;
+      console.warn('Share rejected:', e);
     }
   }
 

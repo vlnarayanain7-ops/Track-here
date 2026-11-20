@@ -17,6 +17,7 @@ export default function ReportModal({
   userName = '',
   onSaved,
   period,
+  inviteUrl,
 }) {
   const [showName, setShowName] = useState(false);
   const [displayName, setDisplayName] = useState(userName || '');
@@ -119,7 +120,7 @@ export default function ReportModal({
   const handleShare = async () => {
     if (!blob) return;
     const filename = `track-here-${type}-report-${dateStr}.png`;
-    await shareReportCard(blob, filename, `Track Here ${type} report`);
+    await shareReportCard(blob, filename, `Track Here ${type} report`, inviteUrl ? 'Join my study challenge: ' + inviteUrl : undefined);
   };
 
   return (
@@ -156,6 +157,8 @@ export default function ReportModal({
         </div>
 
         {/* Display name toggle */}
+        {inviteUrl && <label className="block text-sm">Challenge link to share with your card
+          <input readOnly className="input w-full mt-1" value={inviteUrl} onFocus={e => e.target.select()}/></label>}
         <div className="p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] space-y-2">
           <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium text-[var(--text)] select-none">
             <input
