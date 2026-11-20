@@ -76,7 +76,7 @@ export function CompleteProfile() {
       await userApi.updateProfile({ ageBand: age });
       await checkAuth();
       toast.success('Profile complete! Welcome to Track Here.');
-      navigate('/', { replace: true });
+      navigate(user?.onboardingCompleted ? '/' : '/onboarding', { replace: true });
     } catch (error) {
       setErr(error.response?.data?.message || 'Failed to update profile.');
     } finally {

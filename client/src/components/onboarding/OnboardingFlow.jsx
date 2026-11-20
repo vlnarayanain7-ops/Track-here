@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import api from '@/api/axios';
 import { Target, Layers, Clock, ArrowRight, ArrowLeft, Check, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
+import './onboarding.css';
 
 const GOAL_PRESETS = [
   {
@@ -45,7 +46,7 @@ const PALETTE_COLORS = ['blue', 'cyan', 'violet', 'green', 'amber', 'rose', 'ora
 const TARGET_HOURS_CHOICES = [
   { hours: 2, label: '2 hours / day', sub: 'Casual rhythm' },
   { hours: 3, label: '3 hours / day', sub: 'Consistent learner' },
-  { hours: 4, label: '4 hours / day', sub: 'Recommended standard' },
+  { hours: 4, label: '4 hours / day', sub: 'Four hours of focus' },
   { hours: 6, label: '6 hours / day', sub: 'Intensive exam sprint' },
 ];
 
@@ -57,7 +58,7 @@ export default function OnboardingFlow() {
   const [loading, setLoading] = useState(false);
 
   // Step 1: Goal
-  const [selectedPreset, setSelectedPreset] = useState('Coding interviews');
+  const [selectedPreset, setSelectedPreset] = useState('');
   const [customGoalName, setCustomGoalName] = useState('');
   const [targetDate, setTargetDate] = useState('');
 
@@ -129,7 +130,7 @@ export default function OnboardingFlow() {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full bg-[var(--bg)] text-[var(--tx)] flex flex-col justify-between p-4 sm:p-6 md:p-10 select-none">
+    <div className="onboarding min-h-[100dvh] w-full bg-[var(--bg)] text-[var(--tx)] flex flex-col justify-between p-4 sm:p-6 md:p-10 select-none">
       {/* Top Bar */}
       <header className="max-w-xl mx-auto w-full flex items-center justify-between pb-6 border-b border-[var(--ln)]">
         <div className="flex items-center gap-2.5 font-heading font-bold text-lg text-[var(--tx)]">
@@ -155,14 +156,14 @@ export default function OnboardingFlow() {
 
       {/* Main Form Area */}
       <main className="max-w-xl mx-auto w-full my-auto py-8">
-        {/* Progress Bar */}
-        <div className="h-1.5 w-full bg-[var(--ln)] rounded-full overflow-hidden mb-8">
-          <div
-            className="h-full bg-[var(--pr)] transition-all duration-300"
-            style={{ width: `${(step / 3) * 100}%` }}
-          />
-        </div>
-
+        <ol aria-label="Setup progress" className="grid grid-cols-3 gap-2 mb-6">
+          {['Study goal', 'Subjects', 'Daily target'].map((label, index) => (
+            <li key={label} aria-current={step === index + 1 ? 'step' : undefined}
+              className={`border-t-4 pt-2 text-sm font-semibold ${index < step ? 'border-[var(--pr)] text-[var(--tx)]' : 'border-[var(--ln)] text-[var(--mu)]'}`}>
+              {label}
+            </li>
+          ))}
+        </ol>
         {/* Step 1: What are you preparing for? */}
         {step === 1 && (
           <div className="card space-y-6 animate-fade-in shadow-xs">
@@ -172,7 +173,7 @@ export default function OnboardingFlow() {
               </div>
               <h1 className="text-2xl font-heading font-bold text-[var(--tx)]">What are you preparing for?</h1>
               <p className="text-sm text-[var(--mu)] mt-1">
-                Choose a preset or enter your custom goal. We will suggest aligned subjects next.
+                Choose a goal to see subject suggestions.
               </p>
             </div>
 
@@ -182,7 +183,7 @@ export default function OnboardingFlow() {
                 const isSelected = selectedPreset === p.name;
                 return (
                   <button
-                    key={p.name}
+                    aria-pressed={isSelected} key={p.name}
                     type="button"
                     onClick={() => setSelectedPreset(p.name)}
                     className={`h-11 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${
@@ -229,7 +230,13 @@ export default function OnboardingFlow() {
             <div className="flex justify-end pt-4 border-t border-[var(--ln)]">
               <button
                 type="button"
-                onClick={() => setStep(2)}
+                onClick={() => {
+                  if (!selectedPreset || (selectedPreset === 'Something else' && !customGoalName.trim())) {
+                    toast.error('Choose or enter a study goal to continue.');
+                    return;
+                  }
+                  setStep(2);
+                }}
                 className="btn p lg w-full sm:w-auto"
               >
                 <span>Continue to Subjects</span>
@@ -246,9 +253,9 @@ export default function OnboardingFlow() {
               <div className="w-10 h-10 rounded-xl bg-[var(--soft)] text-[var(--pr)] flex items-center justify-center mb-3">
                 <Layers className="w-5 h-5 stroke-[2.2]" />
               </div>
-              <h1 className="text-2xl font-heading font-bold text-[var(--tx)]">Suggested subjects</h1>
+              <h1 className="text-2xl font-heading font-bold text-[var(--tx)]">Which subjects will you study?</h1>
               <p className="text-sm text-[var(--mu)] mt-1">
-                Tap the subjects you want to include for <span className="font-semibold text-[var(--tx)]">{effectiveGoalName}</span>. Nothing is added automatically.
+                Tap the subjects you want to include for <span className="font-semibold text-[var(--tx)]">{effectiveGoalName}</span>.
               </p>
             </div>
 
@@ -261,7 +268,7 @@ export default function OnboardingFlow() {
                     const isSelected = selectedSubjects.some((s) => s.name.toLowerCase() === name.toLowerCase());
                     return (
                       <button
-                        key={name}
+                        aria-pressed={isSelected} key={name}
                         type="button"
                         onClick={() => handleToggleSuggested(name)}
                         className={`chip text-xs h-8 px-3 rounded-full flex items-center gap-1.5 transition-all cursor-pointer ${
@@ -355,7 +362,7 @@ export default function OnboardingFlow() {
               <div className="w-10 h-10 rounded-xl bg-[var(--soft)] text-[var(--pr)] flex items-center justify-center mb-3">
                 <Clock className="w-5 h-5 stroke-[2.2]" />
               </div>
-              <h1 className="text-2xl font-heading font-bold text-[var(--tx)]">Set your daily study target</h1>
+              <h1 className="text-2xl font-heading font-bold text-[var(--tx)]">How much time can you study each day?</h1>
               <p className="text-sm text-[var(--mu)] mt-1">
                 A daily focus target keeps your momentum steady. You can adjust it in Settings anytime.
               </p>
@@ -366,7 +373,7 @@ export default function OnboardingFlow() {
                 const isSelected = dailyTargetHours === choice.hours;
                 return (
                   <button
-                    key={choice.hours}
+                    aria-pressed={isSelected} key={choice.hours}
                     type="button"
                     onClick={() => setDailyTargetHours(choice.hours)}
                     className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
@@ -410,10 +417,7 @@ export default function OnboardingFlow() {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="max-w-xl mx-auto w-full text-center text-xs text-[var(--mu)] pt-6 border-t border-[var(--ln)]">
-        Study consistency built calmly · Track Here
-      </footer>
+
     </div>
   );
 }
