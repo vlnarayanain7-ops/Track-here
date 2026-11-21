@@ -147,8 +147,8 @@ export default function Header({ onOpenCommandPalette, onQuickAdd, onStartTour }
     <header className="app-header sticky top-0 z-30 h-14 bg-[var(--bg)] border-b border-[var(--line)] px-4 sm:px-8 flex items-center justify-between gap-3 select-none">
       {/* Left: Brand + Nav tabs */}
       <div className="flex items-center gap-6">
-        <Link to="/" className="font-heading font-bold text-[17px] text-[var(--text)] tracking-tight shrink-0">
-          <span className="flex items-center gap-2"><BrandMark className="h-7 w-7" />Track Here</span>
+        <Link to="/" aria-label="Track Here home" className="font-heading font-bold text-[17px] text-[var(--text)] tracking-tight shrink-0">
+          <span className="flex items-center gap-2"><BrandMark className="h-7 w-7" /><span className="hidden min-[480px]:inline">Track Here</span></span>
         </Link>
 
         {/* Desktop nav tabs (hidden on mobile — MobileTabBar handles it) */}
@@ -245,7 +245,7 @@ export default function Header({ onOpenCommandPalette, onQuickAdd, onStartTour }
         <Link
           to="/progress"
           className={cn(
-            'flex items-center gap-1.5 h-8 px-2.5 rounded-[9px] text-xs font-bold transition-all cursor-pointer select-none',
+            'hidden sm:flex items-center gap-1.5 h-8 px-2.5 rounded-[9px] text-xs font-bold transition-all cursor-pointer select-none',
             streakState === 'idle'
               ? 'text-[var(--muted)] hover:bg-[var(--surface-2)]'
               : 'text-[#F59E0B] hover:brightness-110',

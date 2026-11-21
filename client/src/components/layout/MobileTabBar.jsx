@@ -19,7 +19,7 @@ const MOBILE_TABS = [
 export function MobileTabBar() {
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 z-30 h-14 bg-[var(--bg)] border-t border-[var(--line)] flex items-center justify-around px-2 pb-[env(safe-area-inset-bottom)] select-none"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-40 h-[calc(64px+env(safe-area-inset-bottom))] bg-[var(--surface)] border-t border-[var(--line)] flex items-center justify-around px-2 pb-[env(safe-area-inset-bottom)] select-none"
       aria-label="Mobile Navigation"
     >
       {MOBILE_TABS.map(({ to, label, icon: Icon, end }) => (
@@ -30,7 +30,7 @@ export function MobileTabBar() {
           end={end}
           className={({ isActive }) =>
             cn(
-              'flex-1 h-full flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors',
+              'touch-manipulation flex-1 min-w-0 h-full flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors',
               isActive
                 ? 'text-[var(--primary)] font-semibold'
                 : 'text-[var(--muted)] hover:text-[var(--text)]'
@@ -39,11 +39,11 @@ export function MobileTabBar() {
         >
           {({ isActive }) => (
             <>
-              <Icon
-                className={cn('w-4.5 h-4.5', isActive ? 'stroke-[var(--primary)]' : 'stroke-current')}
+              <span className={cn("grid h-7 w-12 place-items-center rounded-full", isActive && "bg-[var(--primary-soft)]")}><Icon
+                className={cn('w-5 h-5', isActive ? 'stroke-[var(--primary)]' : 'stroke-current')}
                 aria-hidden="true"
               />
-              <span className="leading-none">{label}</span>
+              </span><span className="leading-none">{label}</span>
             </>
           )}
         </NavLink>

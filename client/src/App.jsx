@@ -2,8 +2,8 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
-// Layouts (eager for instant shell render)
-import AppLayout from '@/components/layout/AppLayout';
+// Load the signed-in workspace after the session is established.
+const AppLayout = lazy(() => import('@/components/layout/AppLayout'));
 
 // Auth Guards (eager lightweight checks)
 import { RequireAuth, RequireProfile, CompleteProfile } from './auth/RequireProfile';

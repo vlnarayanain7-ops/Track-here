@@ -1,14 +1,15 @@
 import SessionCompletion from '@/components/study/SessionCompletion';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import Header from './Header';
 import MobileTabBar from './MobileTabBar';
-import CommandPalette from '@/components/search/CommandPalette';
+
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
-import WakeBanner from '@/components/WakeBanner';
 import ProductTour from '@/components/onboarding/ProductTour';
 import { TimerProvider } from '@/contexts/TimerContext';
 import { cn } from '@/lib/utils';
+
+const CommandPalette = lazy(() => import('@/components/search/CommandPalette'));
 
 function ContentFallback() {
   return (
@@ -60,8 +61,6 @@ function AppLayoutShell() {
 
   return (
     <div className="min-h-[100dvh] w-full flex flex-col bg-[var(--bg)] text-[var(--text)]">
-      {/* Server wake-up banner mounted above the app shell */}
-      <WakeBanner />
 
       <div className="shell min-h-0 flex-1 w-full bg-[var(--bg)] flex flex-col text-[var(--text)] antialiased relative">
         {/* Main Content Flow */}
@@ -74,8 +73,8 @@ function AppLayoutShell() {
           />
 
           {/* Unified Page Content: strictly 960px across all routes */}
-          <main className={cn("flex-1 page w-full max-w-[960px] mx-auto px-4 sm:px-8 py-4 sm:py-6 pb-[calc(72px+env(safe-area-inset-bottom))] md:pb-12 transition-all", location.pathname === '/' && 'today-page')}>
-            <ErrorBoundary>
+          <main className={cn("flex-1 page w-full max-w-[960px] mx-auto px-4 sm:px-8 py-4 sm:py-6 pb-[calc(82px+env(safe-area-inset-bottom))] md:pb-12", location.pathname === '/' && 'today-page')}>
+            <ErrorBoundary key={location.pathname}>
               <Suspense fallback={<ContentFallback />}>
                 <Outlet />
               </Suspense>
@@ -89,10 +88,11 @@ function AppLayoutShell() {
         <MobileTabBar />
 
         {/* Global Command Palette */}
-        <CommandPalette
-          isOpen={commandPaletteOpen}
-          onClose={() => setCommandPaletteOpen(false)}
-        />
+        {commandPaletteOpen && (
+          <Suspense fallback={null}>
+            <CommandPalette isOpen onClose={() => setCommandPaletteOpen(false)} />
+          </Suspense>
+        )}
       </div>
     </div>
   );

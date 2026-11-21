@@ -21,10 +21,11 @@ const base = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch({ headless: true });
 await mkdir('.qa-artifacts', { recursive: true });
 try {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, deviceScaleFactor: 1, serviceWorkers: 'block' });
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1, serviceWorkers: 'block' });
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
+  let slowRead;
   let loggedIn = false;
   let offline = false;
   let resetFails = false;
@@ -45,6 +46,7 @@ try {
     let status = 200;
     const body = () => request.postDataJSON();
     const endpoint = url.pathname.slice(4);
+    if (endpoint === '/study-sessions' && request.method() === 'GET') await slowRead;
     if (endpoint === '/auth/session') data = { user: loggedIn ? user : null, canRefresh: false, csrfToken: 'test-csrf' };
     else if (endpoint === '/auth/csrf') data = { csrfToken: 'test-csrf' };
     else if (['/auth/register', '/auth/login'].includes(endpoint)) { loggedIn = true; data = { user }; }
@@ -96,6 +98,23 @@ try {
   await expect(page).toHaveURL(/\/onboarding$/);
   await page.getByRole('button', { name: 'Skip for now' }).click();
   await page.getByRole('button', { name: 'End tour' }).click();
+  const mobileNav = page.getByRole('navigation', { name: 'Mobile Navigation' });
+  let releaseSlowRead;
+  slowRead = new Promise(resolve => { releaseSlowRead = resolve; });
+  try {
+    for (const [name, pathname] of [['Focus', '/study'], ['Notes', '/notes'], ['Plan', '/plan'], ['Progress', '/progress'], ['Today', '/']]) {
+      const tab = mobileNav.getByRole('link', { name, exact: true });
+      await tab.tap();
+      await expect(tab).toHaveAttribute('aria-current', 'page');
+      await expect(page).toHaveURL(base + pathname);
+      await expect(page.getByRole('status', { name: 'Loading view' })).toHaveCount(0);
+      await expect(page.getByText('Something went wrong in this section')).toHaveCount(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    }
+  } finally {
+    releaseSlowRead();
+    slowRead = undefined;
+  }
   await page.getByRole('link', { name: 'Add your first subject' }).click();
   await page.getByRole('button', { name: 'Add subject', exact: true }).click();
   await page.getByPlaceholder('Subject name (e.g. Algorithms)').fill('Physics');
@@ -140,6 +159,7 @@ try {
   await page.getByLabel('Email', { exact: true }).fill(user.email);
   await page.locator('input[autocomplete="current-password"]').fill('LaunchTest123!');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page).not.toHaveURL(/\/signin$/);
   await page.goto(`${base}/study`);
   await expect(page.getByText(sessions[0].topic, { exact: true }).first()).toBeVisible();
   expect(sessions).toHaveLength(1);

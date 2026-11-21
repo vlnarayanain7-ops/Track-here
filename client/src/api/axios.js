@@ -24,13 +24,6 @@ const api = axios.create({
 });
 
 let csrfToken = null;
-let activeSlowRequestsCount = 0;
-let wakingHandler = null;
-
-export const setWakingHandler = (fn) => {
-  wakingHandler = fn;
-};
-
 const getCookie = (name) => document.cookie
   .split('; ')
   .find((cookie) => cookie.startsWith(`${name}=`))
@@ -43,32 +36,8 @@ api.interceptors.request.use((config) => {
     if (token) config.headers['X-CSRF-Token'] = decodeURIComponent(token);
   }
 
-  // Cold-start detection timer (4000ms)
-  config._coldStartTimer = setTimeout(() => {
-    activeSlowRequestsCount++;
-    if (activeSlowRequestsCount === 1) {
-      if (typeof wakingHandler === 'function') {
-        wakingHandler(true);
-      }
-    }
-  }, 4000);
-
   return config;
 });
-
-function handleRequestDone(config) {
-  if (config?._coldStartTimer) {
-    clearTimeout(config._coldStartTimer);
-  }
-  if (activeSlowRequestsCount > 0) {
-    activeSlowRequestsCount--;
-    if (activeSlowRequestsCount === 0) {
-      if (typeof wakingHandler === 'function') {
-        wakingHandler(false);
-      }
-    }
-  }
-}
 
 let isRefreshing = false;
 let failedQueue = [];
@@ -86,13 +55,11 @@ const processQueue = (error, token = null) => {
 
 api.interceptors.response.use(
   (response) => {
-    handleRequestDone(response.config);
     const returnedCsrfToken = response.data?.data?.csrfToken;
     if (returnedCsrfToken) csrfToken = returnedCsrfToken;
     return response;
   },
   async (error) => {
-    handleRequestDone(error.config);
     const originalRequest = error.config;
 
     // Do NOT attempt refresh on public auth endpoints (login, register, refresh, me)
