@@ -164,7 +164,7 @@ export const updateProblem = asyncHandler(async (req, res) => {
   const problem = await Problem.findOneAndUpdate(
     { _id: req.params.id, user: req.user.id },
     { $set: req.body },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   );
 
   if (!problem) {

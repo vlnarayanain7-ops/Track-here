@@ -1,32 +1,24 @@
+import ApiError from '../utils/ApiError.js';
 import env from './env.js';
 
 export const allowedOrigins = [
   env.CLIENT_URL,
   'https://track-here.vercel.app',
+  'https://track-here.beta-001.workers.dev',
   ...(env.CLIENT_URLS ? env.CLIENT_URLS.split(',').map((s) => s.trim()) : []),
   ...(env.NODE_ENV === 'development'
     ? ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173']
     : []),
 ].filter(Boolean);
 
-export const isOriginAllowed = (origin) => {
-  if (!origin) return true;
-  if (allowedOrigins.includes(origin)) return true;
-  // Strictly permit Track Here official domains, Vercel, Render, and Cloudflare deployments
-  if (/^https:\/\/track-here(-[a-z0-9-]+)?\.vercel\.app$/.test(origin)) return true;
-  if (/^https:\/\/track-here(-[a-z0-9-]+)?\.onrender\.com$/.test(origin)) return true;
-  if (/^https:\/\/track-here\.[a-z0-9-]+\.workers\.dev$/.test(origin)) return true;
-  if (/^https:\/\/[a-z0-9-]+\.workers\.dev$/.test(origin)) return true;
-  if (/^https:\/\/track-here(-[a-z0-9-]+)?\.pages\.dev$/.test(origin)) return true;
-  return false;
-};
+export const isOriginAllowed = (origin) => origin === undefined || allowedOrigins.includes(origin);
 
 const corsOptions = {
   origin: function (origin, callback) {
     if (isOriginAllowed(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(ApiError.forbidden('Origin not allowed'));
     }
   },
   credentials: true,

@@ -175,7 +175,7 @@ export const updateTask = asyncHandler(async (req, res) => {
   const task = await Task.findOneAndUpdate(
     { _id: req.params.id, user: req.user.id },
     { $set: updateData },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   );
 
   if (!task) throw ApiError.notFound('Task not found');
@@ -222,7 +222,7 @@ export const updateTaskStatus = asyncHandler(async (req, res) => {
   const task = await Task.findOneAndUpdate(
     { _id: req.params.id, user: req.user.id },
     { $set: updateData },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   );
 
   if (!task) throw ApiError.notFound('Task not found');

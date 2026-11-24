@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { OAuth2Client } from 'google-auth-library';
 import User from '../models/User.js';
 import RefreshSession from '../models/RefreshSession.js';
 import asyncHandler from '../utils/asyncHandler.js';
@@ -338,22 +339,7 @@ export const resetPassword = asyncHandler(async (req, res) => {
   });
 });
 
-function parseGoogleIdToken(token) {
-  if (!token || typeof token !== 'string') return null;
-  const parts = token.split('.');
-  if (parts.length !== 3) return null;
-  try {
-    const raw = Buffer.from(parts[1], 'base64url').toString('utf8');
-    return JSON.parse(raw);
-  } catch {
-    try {
-      const raw = Buffer.from(parts[1], 'base64').toString('utf8');
-      return JSON.parse(raw);
-    } catch {
-      return null;
-    }
-  }
-}
+const googleClient = new OAuth2Client();
 
 /**
  * POST /api/auth/google
@@ -365,89 +351,28 @@ export const googleAuth = asyncHandler(async (req, res) => {
     throw ApiError.badRequest('Google credential is required');
   }
 
-  let payload = null;
-  let fetchError = null;
-
+  let payload;
   try {
-    const gRes = await fetch(
-      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`,
-      { signal: AbortSignal.timeout(6000) }
-    );
-    if (gRes.ok) {
-      payload = await gRes.json();
-    } else {
-      fetchError = `Google tokeninfo returned status ${gRes.status}`;
-    }
-  } catch (err) {
-    fetchError = err.message || 'fetch failed';
+    const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: env.GOOGLE_CLIENT_ID });
+    payload = ticket.getPayload();
+  } catch {
+    throw ApiError.unauthorized('Could not verify Google sign-in. Please try again.');
+  }
+  if (!payload?.sub || !payload.email || payload.email_verified !== true) {
+    throw ApiError.unauthorized('Google sign-in requires a verified email address.');
   }
 
-  // If tokeninfo fetch failed or was blocked by sandbox network isolation,
-  // decode and validate the signed Google ID token payload directly:
-  if (!payload) {
-    const decoded = parseGoogleIdToken(credential);
-    if (
-      decoded &&
-      (decoded.iss === 'https://accounts.google.com' || decoded.iss === 'accounts.google.com') &&
-      decoded.sub &&
-      decoded.email
-    ) {
-      console.log('[Google Auth] Using parsed ID token (tokeninfo note:', fetchError, ')');
-      payload = decoded;
-    } else {
-      console.error('[Google Auth Verification Error]', fetchError);
-      throw ApiError.unauthorized('Invalid or expired Google token');
-    }
-  }
-
-  // Validate expiration only when system clock is synchronized with the token's issue time.
-  // When running with local machine clock drift (e.g. system clock in a different year/month),
-  // do not reject legitimately minted Google tokens.
-  const nowSec = Math.floor(Date.now() / 1000);
-  const tokenIat = payload.iat ? Number(payload.iat) : null;
-  const isClockSkewed = tokenIat && Math.abs(nowSec - tokenIat) > 86400 * 2;
-
-  if (!isClockSkewed && payload.exp && payload.exp < nowSec - 300) {
-    throw ApiError.unauthorized('Google token has expired. Please sign in again.');
-  }
-
-  // Validate audience: accept any valid client ID from the user's Google Cloud project
-  const expectedClientId = env.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
-  const legacyClientId = '66278150520-opea4khlpt7udornbleesgu5si21oi2d.apps.googleusercontent.com';
-  const newClientId = '971371287072-ajlh3snp83fl8e5311coh3t3n38aa9ud.apps.googleusercontent.com';
-
-  const allowedAudiences = [expectedClientId, legacyClientId, newClientId].filter(Boolean);
-
-  const audience = payload.aud || payload.azp;
-  const isAllowedAudience =
-    !audience ||
-    allowedAudiences.includes(audience) ||
-    audience.startsWith('971371287072-') ||
-    audience.startsWith('66278150520-') ||
-    audience.endsWith('.apps.googleusercontent.com');
-
-  if (!isAllowedAudience) {
-    console.warn(`[Google Auth] Audience rejected: "${audience}"`);
-    throw ApiError.unauthorized('Google token audience mismatch');
-  }
-
-  const email = payload.email?.toLowerCase().trim();
-  if (!email) {
-    throw ApiError.badRequest('Google account did not provide an email address');
-  }
-
-  // Find existing user by googleId or email
-  let user = await User.findOne({
-    $or: [{ googleId: payload.sub }, { email }],
-  });
-
+  const email = payload.email.toLowerCase().trim();
+  let user = await User.findOne({ googleId: payload.sub });
   if (!user) {
-    // New user registration via Google
+    if (await User.exists({ email })) {
+      throw ApiError.conflict('An account already uses this email. Sign in with your existing method.');
+    }
     user = await User.create({
       name: payload.name || email.split('@')[0],
       email,
       googleId: payload.sub,
-      isVerified: payload.email_verified === 'true' || payload.email_verified === true,
+      isVerified: true,
       avatar: payload.picture,
       ageBand: '18_plus',
       dailyStudyGoal: 240,
@@ -456,17 +381,12 @@ export const googleAuth = asyncHandler(async (req, res) => {
       onboardingCompleted: false,
     });
   } else {
-    // Existing user: link Google ID and avatar if missing
     let needsSave = false;
-    if (!user.googleId) {
-      user.googleId = payload.sub;
-      needsSave = true;
-    }
     if (payload.picture && !user.avatar) {
       user.avatar = payload.picture;
       needsSave = true;
     }
-    if (!user.isVerified && (payload.email_verified === 'true' || payload.email_verified === true)) {
+    if (!user.isVerified) {
       user.isVerified = true;
       needsSave = true;
     }

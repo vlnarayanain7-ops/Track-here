@@ -43,7 +43,7 @@ export const markAsRead = asyncHandler(async (req, res) => {
   const notification = await NotificationLog.findOneAndUpdate(
     { _id: req.params.id, user: req.user.id },
     { $set: { read: true } },
-    { new: true }
+    { returnDocument: 'after' }
   );
 
   if (!notification) {
@@ -99,7 +99,7 @@ export const subscribe = asyncHandler(async (req, res) => {
       keys,
       userAgent: userAgent || req.headers['user-agent'],
     },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: 'after' }
   );
 
   res.status(201).json(subscription);
@@ -136,7 +136,7 @@ export const snoozeNotification = asyncHandler(async (req, res) => {
   const notification = await NotificationLog.findOneAndUpdate(
     { _id: req.params.id, user: req.user.id },
     { $set: { snoozedUntil: snoozeUntil } },
-    { new: true }
+    { returnDocument: 'after' }
   );
 
   if (!notification) {

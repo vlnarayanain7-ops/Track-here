@@ -64,7 +64,7 @@ export const updateTimetableSlot = asyncHandler(async (req, res) => {
   const slot = await TimetableSlot.findOneAndUpdate(
     { _id: req.params.id, user: req.user.id },
     { $set: req.body },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   );
 
   if (!slot) throw ApiError.notFound('Timetable slot not found');

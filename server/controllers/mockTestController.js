@@ -216,7 +216,7 @@ export const updateMockTest = asyncHandler(async (req, res) => {
   const test = await MockTest.findOneAndUpdate(
     { _id: req.params.id, user: req.user.id },
     { $set: req.body },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   );
 
   if (!test) throw ApiError.notFound('Mock test record not found');

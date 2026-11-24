@@ -19,6 +19,8 @@ services:
         sync: false
       - key: CLIENT_URL
         sync: false
+      - key: ADMIN_USER_IDS
+        value: "6af5d00f4262d1c164689fee,6b05e161ea773812dc73dd0b"
       - key: BREVO_API_KEY
         sync: false
       - key: MAIL_FROM_EMAIL

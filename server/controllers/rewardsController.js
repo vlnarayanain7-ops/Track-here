@@ -157,13 +157,12 @@ export async function claimSurprise(req, res) {
 }
 
 export const requireAdmin = async (req, res, next) => {
-  const u = await User.findById(req.user.id).select('email').lean();
-  const admins = (process.env.ADMIN_EMAILS || '')
+  const admins = (process.env.ADMIN_USER_IDS || '')
     .toLowerCase()
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
-  if (!u || !admins.includes(u.email.toLowerCase())) return res.status(404).json({ error: 'not_found' });
+  if (!admins.includes(String(req.user.id))) return res.status(404).json({ error: 'not_found' });
   next();
 };
 

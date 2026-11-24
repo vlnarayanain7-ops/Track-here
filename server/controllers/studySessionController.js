@@ -180,7 +180,7 @@ export const updateSession = asyncHandler(async (req, res) => {
   const session = await StudySession.findOneAndUpdate(
     { _id: req.params.id, user: req.user.id },
     { $set: updateData },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   );
 
   if (!session) throw ApiError.notFound('Study session not found');

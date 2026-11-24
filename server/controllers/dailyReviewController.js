@@ -146,7 +146,7 @@ export const updateDailyReview = asyncHandler(async (req, res) => {
       date: { $gte: start, $lte: end },
     },
     { $set: req.body },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   ).populate('completedTasks');
 
   if (!review) {

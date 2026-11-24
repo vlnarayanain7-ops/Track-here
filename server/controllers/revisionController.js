@@ -113,7 +113,7 @@ export const updateRevision = asyncHandler(async (req, res) => {
   const revision = await Revision.findOneAndUpdate(
     { _id: req.params.id, user: req.user.id },
     { $set: req.body },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   );
 
   if (!revision) {

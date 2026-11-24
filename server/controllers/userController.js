@@ -119,7 +119,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.user.id,
     { $set: req.body },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   );
 
   if (!user) throw ApiError.notFound('User not found');
@@ -200,7 +200,7 @@ export const updateSettings = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.user.id,
     { $set: updateData },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   );
 
   if (!user) throw ApiError.notFound('User not found');

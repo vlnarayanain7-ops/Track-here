@@ -44,6 +44,11 @@ const errorHandler = (err, req, res, next) => {
     console.error('Internal Error:', err.stack);
   }
 
+  if (env.NODE_ENV === 'production' && statusCode >= 500) {
+    message = 'Internal server error';
+    errors = [];
+  }
+
   res.status(statusCode).json({
     success: false,
     message,

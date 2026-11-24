@@ -172,7 +172,7 @@ export const updateNote = asyncHandler(async (req, res) => {
   const note = await Note.findOneAndUpdate(
     { _id: req.params.id, user: req.user.id },
     { $set: updateData },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   );
 
   if (!note) throw ApiError.notFound('Note not found');
