@@ -96,6 +96,7 @@ app.get('/api/health', (req, res) => {
   const dbStates = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' };
 
   const healthData = {
+    ...(process.env.RENDER_GIT_COMMIT && { revision: process.env.RENDER_GIT_COMMIT }),
     status: dbConnected ? 'healthy' : 'unhealthy',
     database: {
       status: dbStates[mongoose.connection.readyState] || 'unknown',

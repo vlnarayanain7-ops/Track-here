@@ -95,7 +95,6 @@ export default function App() {
       <Route path="/finals-planner" element={<FinalsPlanner />} />
       <Route path="/rewards-rules" element={<RewardsRulesPage />} />
       <Route path="/verify/:serial" element={<VerifyCertificatePage />} />
-      <Route path="/admin" element={<AdminPage />} />
 
       {/* Guest Landing & Auth Routes */}
       <Route
@@ -154,6 +153,7 @@ export default function App() {
 
       {/* RequireAuth Protected Scope */}
       <Route element={<RequireAuth homeSignIn={<SignIn />} />}>
+        <Route path="/admin" element={<AdminPage />} />
         {/* Profile Completion (for Google signups missing ageBand) */}
         <Route path="/complete-profile" element={<CompleteProfile />} />
 

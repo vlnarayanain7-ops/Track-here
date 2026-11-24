@@ -37,3 +37,31 @@ test('admin guard uses the approved account ID', async () => {
   await requireAdmin({user:{id:process.env.ADMIN_USER_IDS}}, response, () => admitted++);
   assert.equal(admitted, 1);
 });
+
+test('Track Here Render deployment uses the two approved IDs when the service has no override', async () => {
+  const previous = { ...process.env };
+  try {
+    process.env.NODE_ENV = 'production';
+    process.env.RENDER_EXTERNAL_HOSTNAME = 'trackhere-api.onrender.com';
+    delete process.env.ADMIN_USER_IDS;
+    async function admitted(id) {
+      let allowed = false;
+      await requireAdmin({ user: { id } }, { status() { return this; }, json() {} }, () => { allowed = true; });
+      return allowed;
+    }
+    const first = '6af5d00f4262d1c164689fee';
+    assert.equal(await admitted(first), true);
+    assert.equal(await admitted('6b05e161ea773812dc73dd0b'), true);
+    assert.equal(await admitted('000000000000000000000003'), false);
+    process.env.ADMIN_USER_IDS = '';
+    assert.equal(await admitted(first), false);
+    delete process.env.ADMIN_USER_IDS;
+    process.env.RENDER_EXTERNAL_HOSTNAME = 'another-service.onrender.com';
+    assert.equal(await admitted(first), false);
+  } finally {
+    for (const key of ['NODE_ENV', 'RENDER_EXTERNAL_HOSTNAME', 'ADMIN_USER_IDS']) {
+      if (previous[key] === undefined) delete process.env[key];
+      else process.env[key] = previous[key];
+    }
+  }
+});

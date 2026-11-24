@@ -157,7 +157,13 @@ export async function claimSurprise(req, res) {
 }
 
 export const requireAdmin = async (req, res, next) => {
-  const admins = (process.env.ADMIN_USER_IDS || '')
+  // The existing Render service can deploy from Git without syncing Blueprint variables.
+  // An explicitly configured list (including an empty list) always takes precedence.
+  const deployedDefaults = process.env.RENDER_EXTERNAL_HOSTNAME === 'trackhere-api.onrender.com'
+    && process.env.NODE_ENV === 'production'
+    ? '6af5d00f4262d1c164689fee,6b05e161ea773812dc73dd0b'
+    : '';
+  const admins = (process.env.ADMIN_USER_IDS ?? deployedDefaults)
     .toLowerCase()
     .split(',')
     .map((s) => s.trim())

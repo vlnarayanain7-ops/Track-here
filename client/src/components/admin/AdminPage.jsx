@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '@/lib/api';
 import { ShieldAlert, Check, X, HardDrive, Database, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -15,15 +15,15 @@ export default function AdminPage() {
     try {
       setLoading(true);
       const [statsRes, proofsRes, claimsRes] = await Promise.all([
-        axios.get('/api/admin/stats'),
-        axios.get('/api/admin/proofs'),
-        axios.get('/api/admin/claims'),
+        api.get('/admin/stats'),
+        api.get('/admin/proofs'),
+        api.get('/admin/claims'),
       ]);
       setStats(statsRes.data);
       setProofs(proofsRes.data?.proofs || []);
       setClaims(claimsRes.data?.claims || []);
     } catch (err) {
-      if (err.response?.status === 404 || err.response?.status === 403) {
+      if ([401, 403, 404].includes(err.response?.status)) {
         setIsForbidden(true);
       } else {
         toast.error('Failed to load admin dashboard');
@@ -40,7 +40,7 @@ export default function AdminPage() {
   const handleReview = async (proofId, status) => {
     const note = reviewNotes[proofId] || '';
     try {
-      await axios.post(`/api/admin/proofs/${proofId}/review`, { status, note });
+      await api.post(`/admin/proofs/${proofId}/review`, { status, note });
       toast.success(`Proof ${status}`);
       fetchData();
     } catch {
@@ -50,7 +50,7 @@ export default function AdminPage() {
 
   const handleClaimStatus = async (claimId, status) => {
     try {
-      await axios.patch(`/api/admin/claims/${claimId}`, { status });
+      await api.patch(`/admin/claims/${claimId}`, { status });
       toast.success(`Claim set to ${status}`);
       fetchData();
     } catch {
