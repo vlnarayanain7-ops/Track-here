@@ -177,9 +177,6 @@ export default function NotesPage() {
       const created = res?.data?.note || res?.note || res;
       if (created?._id) {
         setActiveNoteId(created._id);
-        setTitle(created.title || 'Untitled note');
-        setBody('');
-        setFolder(created.folder || targetFolder);
         setMobileEditing(true);
       }
       await refetch();
@@ -223,7 +220,7 @@ export default function NotesPage() {
     try {
       await updateNoteMutation.mutateAsync({
         id: activeNote._id,
-        data: { pinned: !activeNote.pinned },
+        data: { isPinned: !activeNote.isPinned },
       });
       refetch();
     } catch (err) {
@@ -294,7 +291,7 @@ export default function NotesPage() {
                     className={`ni ${isActive ? 'on' : ''}`}
                   >
                     <b className="flex items-center gap-1.5">
-                      {note.pinned && <Pin className="w-3 h-3 text-[var(--pr)] fill-current shrink-0" />}
+                      {note.isPinned && <Pin className="w-3 h-3 text-[var(--pr)] fill-current shrink-0" />}
                       <span className="truncate">{note.title || 'Untitled note'}</span>
                     </b>
                     <span className="flex items-center justify-between text-[11px] text-[var(--mu)] mt-0.5">
@@ -354,6 +351,7 @@ export default function NotesPage() {
               value={title}
               onChange={handleTitleChange}
               placeholder="Note title"
+              disabled={!activeNote}
               aria-label="Title"
               className="tt"
             />
@@ -375,11 +373,11 @@ export default function NotesPage() {
                     type="button"
                     onClick={handleTogglePin}
                     className={`p-1.5 rounded-lg border border-[var(--ln)] transition-colors ${
-                      activeNote.pinned ? 'bg-[var(--soft)] text-[var(--pr)]' : 'text-[var(--mu)] hover:text-[var(--tx)]'
+                      activeNote.isPinned ? 'bg-[var(--soft)] text-[var(--pr)]' : 'text-[var(--mu)] hover:text-[var(--tx)]'
                     }`}
-                    aria-label={activeNote.pinned ? 'Unpin note' : 'Pin note'}
+                    aria-label={activeNote.isPinned ? 'Unpin note' : 'Pin note'}
                   >
-                    <Pin className={`w-3.5 h-3.5 ${activeNote.pinned ? 'fill-current' : ''}`} />
+                    <Pin className={`w-3.5 h-3.5 ${activeNote.isPinned ? 'fill-current' : ''}`} />
                   </button>
                   <button
                     type="button"
@@ -456,6 +454,7 @@ export default function NotesPage() {
             value={body}
             onChange={handleBodyChange}
             placeholder="Write your note here... Markdown is supported."
+            disabled={!activeNote}
             aria-label="Note"
           />
         </div>

@@ -23,7 +23,7 @@ export default {
         method: request.method,
         headers,
         body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body,
-        redirect: 'follow',
+        redirect: 'manual',
       });
 
       return fetch(backendRequest);

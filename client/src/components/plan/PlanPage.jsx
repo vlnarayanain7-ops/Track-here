@@ -17,7 +17,8 @@ const SUBJECT_COLORS = ['--c-blue', '--c-green', '--c-amber', '--c-rose', '--c-v
 
 export default function PlanPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const currentTab = searchParams.get('tab') || 'tasks';
+  const requestedTab = searchParams.get('tab');
+  const currentTab = ['tasks', 'week', 'subjects'].includes(requestedTab) ? requestedTab : 'tasks';
 
   const setTab = (t) => {
     setSearchParams({ tab: t });

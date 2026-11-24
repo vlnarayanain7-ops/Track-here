@@ -85,7 +85,11 @@ export default function Circles() {
   const mutation = useMutation({
     mutationFn: ({ action, body }) => api.post(action ? path + '/' + action : path, body),
     onSuccess: async ({ data }, { action }) => {
-      if (action === 'leave') navigate('/circles', { replace: true });
+      if (action === 'leave') {
+        await cache.invalidateQueries({ queryKey: ['circles', user?._id || user?.id, 'list'] });
+        navigate('/circles', { replace: true });
+        return;
+      }
       if (data.id) navigate('/circles/' + data.id);
       await cache.invalidateQueries({ queryKey: ['circles'] });
     },

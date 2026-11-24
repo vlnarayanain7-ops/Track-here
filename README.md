@@ -378,3 +378,9 @@ Run `npm run check:launch` with Node 24 to check local configuration without pri
 - Verify an error event in the intended Sentry project after deployment. A configured DSN alone does not establish event delivery.
 
 Social previews use `client/public/social-preview.png` (1200 × 630) and the Workers URL in `client/index.html`. Update those URLs if the public domain changes. New students see a first-session guide until a saved session exists.
+
+### Administrator access and localhost verification
+
+Set `ADMIN_USER_IDS` on the API to the comma-separated MongoDB IDs of confirmed administrator accounts. Deployments previously using `ADMIN_EMAILS` must migrate to those IDs. Add each approved preview frontend origin to `CLIENT_URLS`. Set the API's `GOOGLE_CLIENT_ID` to the same web client ID used by the frontend.
+
+With root, client and server dependencies installed, run `npm --prefix client run build`, then `npm run test:localhost`. The desktop check uses the built frontend, a loopback API and a disposable MongoDB instance. It requires Playwright Chromium and its FFmpeg binary, plus a MongoDB binary compatible with mongodb-memory-server. Set `MONGOMS_SYSTEM_BINARY` to use an existing MongoDB executable. The desktop video and results are written under `.qa-artifacts/`. The separate `npm run test:e2e` mobile recording uses API fixtures for offline and failure scenarios.

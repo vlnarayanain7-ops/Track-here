@@ -49,7 +49,8 @@ function formatDuration(minutes) {
 export default function ProgressPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const rawTab = searchParams.get('tab') || 'streak';
-  const tab = rawTab.toLowerCase();
+  const requestedTab = rawTab.toLowerCase();
+  const tab = ['streak', 'stats', 'practice'].includes(requestedTab) ? requestedTab : 'streak';
 
   const setTab = (t) => {
     setSearchParams({ tab: t });

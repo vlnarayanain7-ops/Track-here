@@ -21,7 +21,7 @@ const base = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch({ headless: true });
 await mkdir('.qa-artifacts', { recursive: true });
 try {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1, serviceWorkers: 'block' });
+  const context = await browser.newContext({ recordVideo: { dir: '.qa-artifacts', size: { width: 390, height: 844 } }, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1, serviceWorkers: 'block' });
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -125,7 +125,7 @@ try {
   await page.getByRole('link', { name: 'Start your first study session' }).click();
   await page.getByRole('button', { name: 'Start', exact: true }).click();
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
+  await expect(page.getByTitle('Pause (Press Space)', { exact: true })).toBeVisible();
   await page.clock.install();
   await page.clock.fastForward(65_000);
   offline = true;
@@ -171,7 +171,10 @@ try {
   expect(png.readUInt32BE(16)).toBe(1200);
   expect(png.readUInt32BE(20)).toBe(630);
   console.log('PASS: session restoration, no duplicate saves, no uncaught browser errors');
+  const video = page.video();
   await context.close();
+  await video.saveAs('.qa-artifacts/mobile-workflow.webm');
+  await video.delete();
 } finally {
   await browser.close();
   await new Promise(resolve => server.close(resolve));

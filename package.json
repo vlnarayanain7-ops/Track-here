@@ -14,8 +14,9 @@
     "test:sessions": "node --test client/src/lib/sessions.test.js",
     "test:history": "node --test client/src/lib/history.test.js",
     "test:unit": "node --test client/src/lib/*.test.js",
-    "test:server": "node --test server/services/*.test.js",
+    "test:server": "node --test server/services/*.test.js server/models/*.test.js",
     "test:e2e": "node scripts/launch-browser-check.mjs",
+    "test:localhost": "node scripts/localhost-browser-check.mjs",
     "check:launch": "node scripts/check-launch.mjs"
   },
   "devDependencies": {
