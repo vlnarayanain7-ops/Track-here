@@ -84,7 +84,7 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Storage Limit Monitor (Step 14.7 d) */}
+      {/* Storage Limit Monitor */}
       {stats && (
         <div className="p-5 rounded-2xl bg-[var(--surface)] border border-[var(--line)] space-y-3">
           <div className="flex items-center justify-between">

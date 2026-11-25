@@ -7,7 +7,7 @@
     "dev:client": "npm --prefix client run dev",
     "dev:server": "npm --prefix server run dev",
     "postinstall": "npm --prefix client install --include=dev",
-    "build": "npm --prefix client install --include=dev && npm --prefix client run build && node -e \"require('fs').cpSync('client/dist', 'dist', {recursive: true}); try { require('fs').unlinkSync('dist/_redirects'); } catch(e){}\"",
+    "build": "npm --prefix client install --include=dev && npm --prefix client run build && node -e \"const fs=require('fs'); fs.rmSync('dist', {recursive: true, force: true}); fs.cpSync('client/dist', 'dist', {recursive: true}); try { fs.unlinkSync('dist/_redirects'); } catch(e){}\"",
     "start": "npm --prefix server start",
     "migrate:sessions:dry": "node server/scripts/migrate-session-durations.mjs",
     "test:pomodoro": "node --test client/src/lib/pomodoro.test.js",

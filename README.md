@@ -55,7 +55,7 @@ Track Here/
 │       ├── main.jsx               # React DOM entry with QueryClient & Toaster
 │       ├── App.jsx                # Router & ProtectedRoute guard
 │       ├── index.css              # Tailwind base, dark scrollbars, ProseMirror
-│       ├── api/                   # Typed API service modules (Axios)
+│       ├── api/                   # API service modules (Axios)
 │       │   ├── axios.js           # Interceptor with token refresh queue
 │       │   ├── auth.js            # Authentication endpoints
 │       │   ├── studySessions.js   # Study sessions & timer
@@ -65,13 +65,15 @@ Track Here/
 │       │   ├── dailyPlans.js      # Morning accountability plans
 │       │   ├── dailyReviews.js    # Evening reviews & auto-stats
 │       │   ├── revisions.js       # Spaced repetition queue
-│       │   ├── notifications.js   # Push subscription & logs
+│       │   ├── mockTests.js       # Mock test logs
+│       │   ├── timetable.js       # Weekly timetable slots
 │       │   ├── analytics.js       # Dashboard & review metrics
 │       │   ├── search.js          # Global multi-entity search
 │       │   └── users.js           # Profile, preferences, backup
 │       ├── hooks/                 # TanStack Query & state hooks
 │       │   ├── useAuth.jsx        # Auth context & session recovery
 │       │   ├── useTimer.js        # Active timer with recovery after refresh
+│       │   ├── usePomodoro.js     # Timestamp-driven Pomodoro engine
 │       │   ├── useStudySessions.js
 │       │   ├── useTasks.js
 │       │   ├── useNotes.js
@@ -79,22 +81,24 @@ Track Here/
 │       │   ├── useDailyPlans.js
 │       │   ├── useDailyReviews.js
 │       │   ├── useRevisions.js
-│       │   ├── useNotifications.js
+│       │   ├── useMockTests.js
+│       │   ├── useTimetable.js
+│       │   ├── useRewards.js
 │       │   └── useAnalytics.js
 │       ├── components/
-│       │   ├── ui/                # 16 Accessible dark UI primitives
-│       │   ├── layout/            # AppLayout, Sidebar, Header, MobileNav, AuthLayout
-│       │   ├── auth/              # Login, Register, Forgot & Reset Password
-│       │   ├── dashboard/         # StatsCards, StudyChart, HeatmapCard, TodayTasks
-│       │   ├── study/             # FocusTimer, SessionForm, SessionCard, Calendar
-│       │   ├── tasks/             # TasksPage, TaskCard, TaskForm
-│       │   ├── notes/             # NotesPage, NoteEditor, RichText, Markdown
-│       │   ├── problems/          # ProblemsPage, ProblemCard, AttemptForm, History
-│       │   ├── accountability/    # MorningCheckIn, EveningReview
-│       │   ├── streaks/           # StreakDisplay, Heatmap, Achievements
-│       │   ├── revisions/         # RevisionsPage, RevisionCard, RevisionForm
-│       │   ├── analytics/         # StudyTimeChart, CategoryBreakdown, WeeklySummary
-│       │   ├── settings/          # Profile, StudySettings, Notifications, Backup
+│       │   ├── ui/                # Accessible UI primitives
+│       │   ├── layout/            # AppLayout, Header, MobileTabBar, SyncStatus
+│       │   ├── dashboard/         # DashboardPage, ErrorLog, FirstSessionGuide
+│       │   ├── study/             # StudyPage, PomodoroTimer, TodaySessions, HistoryDrawer
+│       │   ├── plan/              # PlanPage (Tasks, Week, Subjects)
+│       │   ├── notes/             # NotesPage (Markdown & local draft persistence)
+│       │   ├── progress/          # ProgressPage, StudyInsights, ReportModal
+│       │   ├── journal/           # MorningPlan, EveningReview
+│       │   ├── revisions/         # RevisionsPage, ReviewSheet, RevisionCard, RevisionForm
+│       │   ├── discover/          # Discover, Garden, Achievements, Circles, Roadmaps, PublicTools
+│       │   ├── settings/          # SettingsPage
+│       │   ├── rewards/           # RewardsSheet
+│       │   ├── admin/             # AdminPage
 │       │   └── search/            # CommandPalette (Ctrl+K)
 │       └── lib/
 │           ├── utils.js           # cn(), date & duration formatters

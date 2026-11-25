@@ -12,7 +12,7 @@ import { AuthProvider } from './hooks/useAuth';
 import { initSentry } from './lib/sentry';
 import App from './App';
 
-// Initialize privacy-preserving error reporting (Phase 8)
+// Initialize privacy-preserving error reporting
 initSentry();
 
 // Request persistent browser storage for offline data
