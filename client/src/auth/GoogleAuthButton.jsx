@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import toast from 'react-hot-toast';
+import googleOAuth from '../../../server/config/google-oauth.json';
 
 export function GoogleAuthButton({ buttonText = 'Continue with Google' }) {
   const { googleLogin } = useAuth();
@@ -9,7 +10,7 @@ export function GoogleAuthButton({ buttonText = 'Continue with Google' }) {
   const btnContainerRef = useRef(null);
   const [loading, setLoading] = useState(false);
 
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || (import.meta.env.PROD ? googleOAuth.productionClientId : '');
 
   const [gsiReady, setGsiReady] = useState(false);
 
@@ -66,7 +67,7 @@ export function GoogleAuthButton({ buttonText = 'Continue with Google' }) {
             theme: isDark ? 'filled_black' : 'outline',
             text: 'continue_with',
             size: 'large',
-            width: '100%',
+            width: 320,
           });
           setGsiReady(true);
         } catch (e) {
@@ -85,6 +86,8 @@ export function GoogleAuthButton({ buttonText = 'Continue with Google' }) {
   function handleFallbackClick() {
     if (window.google?.accounts?.id) {
       window.google.accounts.id.prompt();
+    } else {
+      toast.error('Google sign-in is still loading. Try again in a moment.');
     }
   }
 
@@ -134,7 +137,6 @@ export function GoogleAuthButton({ buttonText = 'Continue with Google' }) {
         )}
       </div>
 
-      {/* Quick Setup Modal if Client ID is missing */}
     </>
   );
 }
