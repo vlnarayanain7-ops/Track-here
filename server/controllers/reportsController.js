@@ -1,10 +1,13 @@
+import User from '../models/User.js';
+import { studyRows } from '../services/analyticsService.js';
 import { z } from 'zod';
-import { DailyTotal, DailyReport } from '../models/rewards.js';
+import { DailyReport } from '../models/rewards.js';
 import { addDays } from '../lib/streaks.js';
 
 export async function weekly(req, res) { // available any time, nothing stored
   const start = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).parse(req.query.start);
-  const rows = await DailyTotal.find({ user: req.user.id, date: { $gte: start, $lte: addDays(start, 6) } }).lean();
+  const profile = await User.findById(req.user.id).select('timezone').lean();
+  const rows = await studyRows(req.user.id, profile?.timezone || 'Asia/Kolkata', start, addDays(start, 6));
   const byDate = new Map(rows.map((r) => [r.date, r]));
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = addDays(start, i);

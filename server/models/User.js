@@ -38,7 +38,6 @@ const userSchema = new mongoose.Schema(
     ageBand: {
       type: String,
       enum: ['13_17', '18_plus'],
-      default: '18_plus',
     },
     verificationToken: { type: String, select: false },
     resetPasswordToken: { type: String, select: false },
@@ -161,6 +160,8 @@ userSchema.methods.toJSON = function () {
   delete obj.verificationToken;
   delete obj.resetPasswordToken;
   delete obj.resetPasswordExpires;
+  delete obj.resetTokenHash;
+  delete obj.resetTokenExpires;
   delete obj.__v;
   return obj;
 };

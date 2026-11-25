@@ -180,10 +180,6 @@ export default function NotesPage() {
         setMobileEditing(true);
       }
       await refetch();
-      setTimeout(() => {
-        titleInputRef.current?.focus();
-        titleInputRef.current?.select();
-      }, 50);
     } catch (err) {
       toast.error('Failed to create note');
     }
@@ -275,7 +271,7 @@ export default function NotesPage() {
 
           {/* Notes list */}
           {notes.length === 0 ? (
-            <p className="note py-6 text-center text-xs"><EmptyIllustration kind="notes" className="w-28 h-auto mx-auto mb-3" />No notes in this subject yet</p>
+            <div className="note py-6 text-center text-xs"><EmptyIllustration kind="notes" className="w-28 h-auto mx-auto mb-3" />No notes in this subject yet</div>
           ) : (
             <div className="nl">
               {notes.map((note) => {

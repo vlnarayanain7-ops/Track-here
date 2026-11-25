@@ -25,10 +25,20 @@ router.get('/stats', async (_req, res) => {
 // Pending proofs for admin review
 router.get('/proofs', async (_req, res) => {
   const proofs = await Proof.find({ status: 'pending' })
+    .select('-files.data')
     .populate('user', 'name email rewardRun')
     .sort({ submittedAt: -1 })
     .lean();
   res.json({ proofs });
+});
+
+router.get('/proofs/:id/files/:index', async (req, res) => {
+  const index = Number(req.params.index);
+  if (!Number.isInteger(index) || index < 0 || index > 2) return res.sendStatus(404);
+  const proof = await Proof.findOne({ _id: req.params.id, status: 'pending' }, { files: { $slice: [index, 1] } });
+  const file = proof?.files?.[0];
+  if (!file?.data) return res.sendStatus(404);
+  res.set('Cache-Control', 'private, no-store').type(file.type).send(file.data);
 });
 
 router.post('/proofs/:id/review', reviewProof);

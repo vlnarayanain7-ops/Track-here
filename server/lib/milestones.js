@@ -1,40 +1,29 @@
+import mongoose from 'mongoose';
+import StudySession from '../models/StudySession.js';
 import crypto from 'crypto';
-import { DailyTotal, Certificate } from '../models/rewards.js';
+import { Certificate } from '../models/rewards.js';
 import User from '../models/User.js';
 import { addDays, todayIn, currentRun, REWARD_MINUTES, MILESTONE_MINUTES } from './streaks.js';
 
-const safeKey = (n) => String(n || 'none').replace(/[.$]/g, '_').slice(0, 40);
+export async function applySession(user, session) {
+  if (!session.isTimerSession || !session.heartbeatOk) return;
+  const userId = user._id || user.id;
+  const timezone = user.timezone || (await User.findById(userId).select('timezone').lean())?.timezone || 'Asia/Kolkata';
+  await checkMilestones(userId, timezone);
+}
 
-export async function applySession(user, session) { // call ONCE for each newly created session (skip duplicates)
-  const tz = user?.timezone || (await User.findById(user._id || user.id).select('timezone').lean())?.timezone || 'Asia/Kolkata';
-  const startedAt = session.startedAt || session.startTime || session.date || new Date();
-  const date = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(startedAt);
-  const minutes = Math.round((session.durationSec || (session.focusDuration * 60)) / 60);
-  const valid = session.source === 'timer' && session.heartbeatOk ? minutes : 0;
-  const subject = session.subjectName || session.category || 'Focus';
-
-  await DailyTotal.updateOne(
-    { user: user._id || user.id, date },
-    {
-      $inc: {
-        minutes,
-        validMinutes: valid,
-        sessions: 1,
-        [`bySubject.${safeKey(subject)}`]: minutes,
-      },
-    },
-    { upsert: true }
-  );
-
-  await checkMilestones(user._id || user.id, tz);
+export async function verifiedDays(userId, timezone) {
+  const rows = await StudySession.aggregate([
+    { $match: { user: new mongoose.Types.ObjectId(String(userId)), isTimerSession: true, source: 'timer',
+      heartbeatOk: true, 'timerState.status': 'completed', startedAt: { $gte: new Date(Date.now() - 202 * 86400000) } } },
+    { $group: { _id: { $dateToString: { format: '%Y-%m-%d', timezone, date: '$startedAt' } }, seconds: { $sum: '$durationSec' } } },
+  ]);
+  return new Map(rows.map(row => [row._id, Math.floor(row.seconds / 60)]));
 }
 
 export async function checkMilestones(userId, tz) {
   const today = todayIn(tz);
-  const rows = await DailyTotal.find({ user: userId, date: { $gte: addDays(today, -200) } })
-    .select('date validMinutes')
-    .lean();
-  const valid = new Map(rows.map((r) => [r.date, r.validMinutes]));
+  const valid = await verifiedDays(userId, tz);
   const milestoneRun = currentRun(valid, MILESTONE_MINUTES, today);
   const rewardRun = currentRun(valid, REWARD_MINUTES, today);
 
@@ -59,7 +48,7 @@ export async function checkMilestones(userId, tz) {
 
 export const serialFor = (userId, milestone) =>
   `TH${milestone}-${crypto
-    .createHmac('sha256', process.env.CERT_SECRET || 'th-cert-default-secret-2026')
+    .createHmac('sha256', process.env.CERT_SECRET || process.env.JWT_ACCESS_SECRET)
     .update(`${userId}:${milestone}`)
     .digest('base64url')
     .slice(0, 10)

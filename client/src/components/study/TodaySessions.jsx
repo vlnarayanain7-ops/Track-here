@@ -27,7 +27,7 @@ export function TodaySessions({ sessions = [], subjectsById = {}, onHistory }) {
       </div>
 
       {sessions.length === 0 ? (
-        <p className="note py-2"><EmptyIllustration kind="focus" className="w-28 h-auto mx-auto mb-3" />No sessions yet today. Press Start to begin.</p>
+        <div className="note py-2"><EmptyIllustration kind="focus" className="w-28 h-auto mx-auto mb-3" />No sessions yet today. Press Start to begin.</div>
       ) : (
         sessions.map((s) => {
           const sid = s.subjectId || s.category || s.subject;
@@ -37,7 +37,7 @@ export function TodaySessions({ sessions = [], subjectsById = {}, onHistory }) {
 
           return (
             <div
-              key={s.id || s._id || s.clientId || Math.random()}
+              key={s.id || s._id || s.clientId || `${s.startedAt || s.date}-${sid}-${s.topic}`}
               style={{
                 display: 'flex',
                 alignItems: 'center',

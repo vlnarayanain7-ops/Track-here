@@ -2,15 +2,20 @@ import { startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, en
 import { toZonedTime } from 'date-fns-tz';
 import mongoose from 'mongoose';
 import StudySession from '../models/StudySession.js';
-import { DailyTotal } from '../models/rewards.js';
 import Task from '../models/Task.js';
 import Problem from '../models/Problem.js';
-import { getStreakInfo } from './streakService.js';
+import { getStreakInfo, getStudyDays } from './streakService.js';
 import { parseDateRange } from '../utils/dateRange.js';
 
 /**
  * Get the "today" boundaries in user's timezone.
  */
+export async function studyRows(user, timezone, start, end, studyDays) {
+  const days = await (studyDays || getStudyDays(user, timezone));
+  return [...days].filter(([date]) => date >= start && date <= end).map(([date, day]) =>
+    ({ ...day, date, minutes: Math.floor(day.seconds / 60) }));
+}
+
 function getTodayRange(timezone) {
   return parseDateRange('today', timezone);
 }
@@ -18,7 +23,7 @@ function getTodayRange(timezone) {
 /**
  * Get comprehensive dashboard statistics.
  */
-export async function getDashboardStats(userId, timezone = 'Asia/Kolkata') {
+export async function getDashboardStats(userId, timezone = 'Asia/Kolkata', studyDays = getStudyDays(userId, timezone)) {
   const userObjId = new mongoose.Types.ObjectId(userId);
   const { start: todayStart, end: todayEnd } = getTodayRange(timezone);
 
@@ -33,39 +38,15 @@ export async function getDashboardStats(userId, timezone = 'Asia/Kolkata') {
   const monthStartStr = format(monthStart, 'yyyy-MM-dd');
   const monthEndStr = format(monthEnd, 'yyyy-MM-dd');
 
-  const { start: weekStartBound, end: weekEndBound } = parseDateRange(weekStartStr, timezone);
-  const { start: monthStartBound, end: monthEndBound } = parseDateRange(monthStartStr, timezone);
-
   const todayStr = format(now, 'yyyy-MM-dd');
-
-  // Run all queries in parallel
   const [
-    todayStudyDoc,
-    weekStudy,
-    monthStudy,
-    totalStudy,
+    days,
     todayTasks,
     pendingTasks,
     problemStats,
     streakInfo,
   ] = await Promise.all([
-    // Today's study time from DailyTotal
-    DailyTotal.findOne({ user: userObjId, date: todayStr }).lean(),
-    // This week's study time from DailyTotal
-    DailyTotal.aggregate([
-      { $match: { user: userObjId, date: { $gte: weekStartStr, $lte: weekEndStr } } },
-      { $group: { _id: null, total: { $sum: '$minutes' } } },
-    ]),
-    // This month's study time from DailyTotal
-    DailyTotal.aggregate([
-      { $match: { user: userObjId, date: { $gte: monthStartStr, $lte: monthEndStr } } },
-      { $group: { _id: null, total: { $sum: '$minutes' } } },
-    ]),
-    // All-time total from DailyTotal
-    DailyTotal.aggregate([
-      { $match: { user: userObjId } },
-      { $group: { _id: null, total: { $sum: '$minutes' } } },
-    ]),
+    studyDays,
     // Today's completed tasks
     Task.countDocuments({
       user: userId,
@@ -90,23 +71,26 @@ export async function getDashboardStats(userId, timezone = 'Asia/Kolkata') {
       },
     ]),
     // Streaks
-    getStreakInfo(userId),
+    getStreakInfo(userId, studyDays),
   ]);
 
+  const sumMinutes = (start = '', end = todayStr) => Math.floor([...days].reduce(
+    (seconds, [date, day]) => seconds + (date >= start && date <= end ? day.seconds : 0), 0) / 60);
+  const today = days.get(todayStr);
   return {
     today: {
-      studyMinutes: todayStudyDoc?.minutes || 0,
-      sessions: todayStudyDoc?.sessions || 0,
+      studyMinutes: Math.floor((today?.seconds || 0) / 60),
+      sessions: today?.sessions || 0,
       tasksCompleted: todayTasks,
     },
     week: {
-      studyMinutes: weekStudy[0]?.total || 0,
+      studyMinutes: sumMinutes(weekStartStr, weekEndStr),
     },
     month: {
-      studyMinutes: monthStudy[0]?.total || 0,
+      studyMinutes: sumMinutes(monthStartStr, monthEndStr),
     },
     allTime: {
-      studyMinutes: totalStudy[0]?.total || 0,
+      studyMinutes: sumMinutes(),
     },
     tasks: {
       pending: pendingTasks,
@@ -124,7 +108,6 @@ export async function getDashboardStats(userId, timezone = 'Asia/Kolkata') {
  * Get study time broken down by period (daily, weekly, monthly).
  */
 export async function getStudyTimeStats(userId, period = 'daily', timezone = 'Asia/Kolkata', days = 30) {
-  const userObjId = new mongoose.Types.ObjectId(userId);
   const now = toZonedTime(new Date(), timezone);
   const todayStr = format(now, 'yyyy-MM-dd');
   const pastDateStr = format(subDays(now, days), 'yyyy-MM-dd');
@@ -132,22 +115,7 @@ export async function getStudyTimeStats(userId, period = 'daily', timezone = 'As
   const { start: startDate } = parseDateRange(pastDateStr, timezone);
   const { end: endDate } = parseDateRange(todayStr, timezone);
 
-  let groupFormat;
-  switch (period) {
-    case 'weekly':
-      groupFormat = '%Y-W%V';
-      break;
-    case 'monthly':
-      groupFormat = '%Y-%m';
-      break;
-    default:
-      groupFormat = '%Y-%m-%d';
-  }
-
-  const rows = await DailyTotal.find({
-    user: userObjId,
-    date: { $gte: pastDateStr, $lte: todayStr },
-  }).lean();
+  const rows = await studyRows(userId, timezone, pastDateStr, todayStr);
 
   // For daily, fill in missing dates with 0
   if (period === 'daily') {
@@ -186,7 +154,6 @@ export async function getStudyTimeStats(userId, period = 'daily', timezone = 'As
  * Get weekly summary with category breakdown.
  */
 export async function getWeeklySummary(userId, timezone = 'Asia/Kolkata') {
-  const userObjId = new mongoose.Types.ObjectId(userId);
   const now = toZonedTime(new Date(), timezone);
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
@@ -194,13 +161,8 @@ export async function getWeeklySummary(userId, timezone = 'Asia/Kolkata') {
   const weekStartStr = format(weekStart, 'yyyy-MM-dd');
   const weekEndStr = format(weekEnd, 'yyyy-MM-dd');
 
-  const { start: weekStartDate } = parseDateRange(weekStartStr, timezone);
-  const { end: weekEndDate } = parseDateRange(weekEndStr, timezone);
 
-  const weekRows = await DailyTotal.find({
-    user: userObjId,
-    date: { $gte: weekStartStr, $lte: weekEndStr },
-  }).lean();
+  const weekRows = await studyRows(userId, timezone, weekStartStr, weekEndStr);
 
   const subjectsMap = new Map();
   for (const r of weekRows) {
@@ -258,13 +220,14 @@ export async function getHeatmapData(userId, year, timezone = 'Asia/Kolkata') {
     {
       $match: {
         user: userObjId,
+        'timerState.status': { $nin: ['running', 'paused'] },
         date: { $gte: yearStart, $lte: yearEnd },
       },
     },
     {
       $group: {
         _id: { $dateToString: { format: '%Y-%m-%d', date: '$date', timezone } },
-        totalMinutes: { $sum: '$focusDuration' },
+        totalMinutes: { $sum: { $cond: [{ $gt: ['$durationSec', 0] }, { $divide: ['$durationSec', 60] }, '$focusDuration'] } },
         sessions: { $sum: 1 },
       },
     },
@@ -313,13 +276,14 @@ export async function getConsistencyMetrics(userId, timezone = 'Asia/Kolkata') {
     {
       $match: {
         user: userObjId,
+        'timerState.status': { $nin: ['running', 'paused'] },
         date: { $gte: thirtyDaysAgo, $lte: todayEnd },
       },
     },
     {
       $group: {
         _id: { $dateToString: { format: '%Y-%m-%d', date: '$date', timezone } },
-        totalMinutes: { $sum: '$focusDuration' },
+        totalMinutes: { $sum: { $cond: [{ $gt: ['$durationSec', 0] }, { $divide: ['$durationSec', 60] }, '$focusDuration'] } },
       },
     },
   ]);
@@ -334,13 +298,14 @@ export async function getConsistencyMetrics(userId, timezone = 'Asia/Kolkata') {
     {
       $match: {
         user: userObjId,
+        'timerState.status': { $nin: ['running', 'paused'] },
         startTime: { $exists: true, $ne: null },
       },
     },
     {
       $group: {
         _id: { $hour: '$startTime' },
-        totalMinutes: { $sum: '$focusDuration' },
+        totalMinutes: { $sum: { $cond: [{ $gt: ['$durationSec', 0] }, { $divide: ['$durationSec', 60] }, '$focusDuration'] } },
         sessions: { $sum: 1 },
       },
     },

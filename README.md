@@ -210,9 +210,7 @@ Track Here/
 - Problem solving distribution by difficulty and platform.
 
 ### K. Web Push Notifications
-- Browser push reminders via Web Push API and VAPID keys.
-- Scheduled backend cron jobs check morning reminders, evening reviews, task deadlines, and due revisions every minute.
-- Configurable quiet hours and per-channel switches.
+- The focus timer can notify you when the current block ends. Scheduled push reminders are disabled.
 
 ### L. Global Search & Command Palette (`Ctrl + K` / `Cmd + K`)
 - Fast global search across Study Sessions, Tasks, Notes, and Problems.

@@ -38,7 +38,7 @@ test('admin guard uses the approved account ID', async () => {
   assert.equal(admitted, 1);
 });
 
-test('Track Here Render deployment uses the two approved IDs when the service has no override', async () => {
+test('Render denies administrator access when the allowlist is missing or empty', async () => {
   const previous = { ...process.env };
   try {
     process.env.NODE_ENV = 'production';
@@ -49,10 +49,8 @@ test('Track Here Render deployment uses the two approved IDs when the service ha
       await requireAdmin({ user: { id } }, { status() { return this; }, json() {} }, () => { allowed = true; });
       return allowed;
     }
-    const first = '6af5d00f4262d1c164689fee';
-    assert.equal(await admitted(first), true);
-    assert.equal(await admitted('6b05e161ea773812dc73dd0b'), true);
-    assert.equal(await admitted('000000000000000000000003'), false);
+    const first = '000000000000000000000001';
+    assert.equal(await admitted(first), false);
     process.env.ADMIN_USER_IDS = '';
     assert.equal(await admitted(first), false);
     delete process.env.ADMIN_USER_IDS;
@@ -63,5 +61,17 @@ test('Track Here Render deployment uses the two approved IDs when the service ha
       if (previous[key] === undefined) delete process.env[key];
       else process.env[key] = previous[key];
     }
+  }
+});
+
+test('manual session updates accept only editable fields and preserve omitted properties', async () => {
+  const { updateSessionSchema } = await import('../controllers/studySessionController.js');
+  assert.deepEqual(updateSessionSchema.parse({ topic: 'Algebra', heartbeatOk: true, source: 'timer' }), { topic: 'Algebra' });
+});
+
+test('profile and settings discard account security fields', async () => {
+  const { updateProfileSchema, updateSettingsSchema } = await import('../controllers/userController.js');
+  for (const schema of [updateProfileSchema, updateSettingsSchema]) {
+    assert.deepEqual(schema.parse({ password: 'ignored', milestones: [], rewardRun: 100, isVerified: true }), {});
   }
 });

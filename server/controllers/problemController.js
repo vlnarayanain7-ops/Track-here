@@ -22,7 +22,7 @@ export const createProblemSchema = z.object({
   status: z.enum(['Unsolved', 'Attempted', 'Solved', 'Review']).optional(),
   solvedIndependently: z.boolean().optional(),
   nextRevisionDate: z.string().or(z.date()).optional().nullable(),
-}).passthrough().transform((val) => ({
+}).transform((val) => ({
   ...val,
   name: val.name || val.title || 'Untitled Problem',
   topic: val.topic || val.category || 'General',
@@ -41,7 +41,7 @@ export const updateProblemSchema = z.object({
   status: z.enum(['Unsolved', 'Attempted', 'Solved', 'Review']).optional(),
   solvedIndependently: z.boolean().optional(),
   nextRevisionDate: z.string().or(z.date()).optional().nullable(),
-}).passthrough();
+});
 
 export const createAttemptSchema = z.object({
   duration: z.number().min(0).optional(),

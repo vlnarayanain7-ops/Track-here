@@ -12,7 +12,6 @@ import corsOptions from './config/cors.js';
 import connectDB from './config/db.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 import errorHandler from './middleware/errorHandler.js';
-import { startNotificationCrons } from './services/notificationService.js';
 import { initSocket } from './services/socketService.js';
 
 // Route imports
@@ -180,8 +179,6 @@ const startServer = async () => {
       console.log(`📡 Client URL: ${env.CLIENT_URL}`);
       console.log(`⚡ Real-time WebSocket engine active`);
 
-      // Start notification scheduler crons
-      startNotificationCrons();
     });
   } catch (error) {
     console.error('Failed to start server:', error.message);
@@ -204,11 +201,13 @@ process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
 process.on('uncaughtException', (err) => {
-  console.error('[UNCAUGHT EXCEPTION - Server Kept Alive]', err);
+  console.error('[UNCAUGHT EXCEPTION]', err);
+  process.exit(1);
 });
 
 process.on('unhandledRejection', (reason) => {
-  console.error('[UNHANDLED REJECTION - Server Kept Alive]', reason);
+  console.error('[UNHANDLED REJECTION]', reason);
+  process.exit(1);
 });
 
 startServer();

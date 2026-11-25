@@ -149,7 +149,8 @@ export default function AdminPage() {
                     {p.files.map((f, idx) => (
                       <img
                         key={idx}
-                        src={`data:${f.type};base64,${f.data?.toString('base64') || f.data}`}
+                        loading="lazy"
+                        src={api.getUri({ url: `/admin/proofs/${p._id}/files/${idx}` })}
                         alt="Proof screenshot"
                         className="rounded-lg border border-[var(--line)] object-cover max-h-40 w-full"
                       />

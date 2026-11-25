@@ -1,89 +1,19 @@
-import crypto from 'crypto';
+import { verifiedDays } from '../lib/milestones.js';
 import { z } from 'zod';
-import { Proof, ProofHash, Claim, RewardCounter, Certificate, DailyTotal } from '../models/rewards.js';
+import { Proof, Claim, Certificate } from '../models/rewards.js';
 import User from '../models/User.js';
 import {
-  REWARD_DAYS,
-  REWARD_SLOTS,
   MILESTONE_MINUTES,
-  REWARD_MINUTES,
   todayIn,
   currentRun,
-  addDays,
 } from '../lib/streaks.js';
 
-const MAGIC = { 'image/jpeg': [0xff, 0xd8, 0xff], 'image/png': [0x89, 0x50, 0x4e, 0x47] };
-const isImage = (buf, type) =>
-  type === 'image/webp'
-    ? buf.slice(0, 4).toString() === 'RIFF' && buf.slice(8, 12).toString() === 'WEBP'
-    : MAGIC[type]?.every((b, i) => buf[i] === b);
-
-const proofSchema = z
-  .object({
-    month: z.number().int().min(1).max(5),
-    note: z.string().trim().max(300).default(''),
-    link: z.string().url().max(300).optional(),
-    files: z
-      .array(
-        z.object({
-          type: z.enum(['image/jpeg', 'image/png', 'image/webp']),
-          data: z.string().max(280_000),
-        })
-      )
-      .max(3)
-      .default([]),
-  })
-  .strict();
-
-export async function submitProof(req, res) {
-  const b = proofSchema.parse(req.body);
-  const user = await User.findById(req.user.id).select('ageBand rewardRun').lean();
-  if (user.ageBand !== '18_plus')
-    return res
-      .status(403)
-      .json({ error: 'not_eligible', message: 'This is available to users aged 18 and over.' });
-  if (user.rewardRun < b.month * 30)
-    return res
-      .status(409)
-      .json({ error: 'not_yet', message: 'Keep your streak going to unlock this month.' });
-  if (!b.files.length && !b.link)
-    return res.status(400).json({ error: 'empty', message: 'Add a photo or a link.' });
-
-  const files = b.files.map((f) => {
-    const data = Buffer.from(f.data, 'base64');
-    if (data.length > 200_000 || !isImage(data, f.type))
-      throw Object.assign(new Error('That file is not allowed.'), { status: 400 });
-    return {
-      data,
-      type: f.type,
-      sha: crypto.createHash('sha256').update(data).digest('hex'),
-    };
-  });
-
-  const proof = await Proof.create({
-    user: req.user.id,
-    month: b.month,
-    note: b.note,
-    link: b.link,
-    files,
-    expireAt: new Date(Date.now() + 45 * 864e5),
-  }).catch((e) => {
-    if (e.code === 11000)
-      throw Object.assign(new Error('You already submitted this month.'), { status: 409 });
-    throw e;
-  });
-
-  try {
-    await ProofHash.insertMany(files.map((f) => ({ sha: f.sha, user: req.user.id, month: b.month })));
-  } catch {
-    await Proof.deleteOne({ _id: proof._id });
-    throw Object.assign(new Error('One of these files was already submitted before.'), {
-      status: 409,
-    });
-  }
-
-  res.status(201).json({ ok: true });
+export function physicalRewardsClosed(_req, res) {
+  return res.status(410).json({ error: 'closed', message: 'New physical reward submissions are closed.' });
 }
+
+export const submitProof = physicalRewardsClosed;
+export const claimSurprise = physicalRewardsClosed;
 
 export async function reviewProof(req, res) {
   // admin only
@@ -111,59 +41,8 @@ export async function reviewProof(req, res) {
   res.json({ ok: true });
 }
 
-const addressSchema = z
-  .object({
-    name: z.string().trim().min(2).max(80),
-    line1: z.string().trim().min(3).max(100),
-    line2: z.string().trim().max(100).optional(),
-    city: z.string().trim().min(2).max(60),
-    state: z.string().trim().length(2).toUpperCase(),
-    zip: z.string().regex(/^\d{5}(-\d{4})?$/),
-    phone: z.string().trim().max(20).optional(),
-  })
-  .strict();
-
-export async function claimSurprise(req, res) {
-  const address = addressSchema.parse(req.body);
-  const user = await User.findById(req.user.id).select('ageBand rewardRun').lean();
-  const approved = await Proof.countDocuments({ user: req.user.id, status: 'approved' });
-  if (user.ageBand !== '18_plus' || user.rewardRun < REWARD_DAYS || approved < 5)
-    return res.status(403).json({ error: 'not_eligible', message: 'Not eligible yet.' });
-
-  const slot = await RewardCounter.findOneAndUpdate(
-    { _id: 'surprise', claimed: { $lt: REWARD_SLOTS } },
-    { $inc: { claimed: 1 } },
-    { returnDocument: 'after' }
-  );
-  if (!slot)
-    return res.status(409).json({ error: 'closed', message: 'All surprise rewards have been claimed.' });
-
-  const addrHash = crypto
-    .createHash('sha256')
-    .update(`${address.line1}|${address.zip}`.toLowerCase().replace(/\s+/g, ''))
-    .digest('hex');
-
-  try {
-    await Claim.create({ user: req.user.id, address, addrHash });
-  } catch (e) {
-    await RewardCounter.updateOne({ _id: 'surprise' }, { $inc: { claimed: -1 } }); // give the slot back
-    if (e.code === 11000)
-      return res
-        .status(409)
-        .json({ error: 'duplicate', message: 'A claim already exists for this person or address.' });
-    throw e;
-  }
-  res.status(201).json({ ok: true });
-}
-
 export const requireAdmin = async (req, res, next) => {
-  // The existing Render service can deploy from Git without syncing Blueprint variables.
-  // An explicitly configured list (including an empty list) always takes precedence.
-  const deployedDefaults = process.env.RENDER_EXTERNAL_HOSTNAME === 'trackhere-api.onrender.com'
-    && process.env.NODE_ENV === 'production'
-    ? '6af5d00f4262d1c164689fee,6b05e161ea773812dc73dd0b'
-    : '';
-  const admins = (process.env.ADMIN_USER_IDS ?? deployedDefaults)
+  const admins = (process.env.ADMIN_USER_IDS || '')
     .toLowerCase()
     .split(',')
     .map((s) => s.trim())
@@ -178,10 +57,7 @@ export async function getRewardsMe(req, res) {
     .lean();
   const tz = user?.timezone || 'Asia/Kolkata';
   const today = todayIn(tz);
-  const rows = await DailyTotal.find({ user: req.user.id, date: { $gte: addDays(today, -200) } })
-    .select('date validMinutes')
-    .lean();
-  const valid = new Map(rows.map((r) => [r.date, r.validMinutes]));
+  const valid = await verifiedDays(req.user.id, tz);
   const milestoneRun = currentRun(valid, MILESTONE_MINUTES, today);
   const proofs = await Proof.find({ user: req.user.id })
     .select('month status note link reviewNote reviewedAt submittedAt')
@@ -195,7 +71,7 @@ export async function getRewardsMe(req, res) {
     bestRewardRun: user?.bestRewardRun || 0,
     milestones: (user?.milestones || []).map((m) => m.days),
     proofs,
-    eligible: user?.ageBand === '18_plus',
+    eligible: false,
     certificate: cert
       ? {
           serial: cert.serial,

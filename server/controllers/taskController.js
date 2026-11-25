@@ -26,7 +26,7 @@ export const createTaskSchema = z.object({
     endDate: z.string().or(z.date()).optional().nullable(),
   }).optional().nullable(),
   linkedStudySession: z.string().optional().nullable(),
-}).passthrough();
+});
 
 export const updateTaskSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').optional(),
@@ -49,7 +49,7 @@ export const updateTaskSchema = z.object({
   }).optional().nullable(),
   linkedStudySession: z.string().optional().nullable(),
   completedAt: z.string().or(z.date()).optional().nullable(),
-}).passthrough();
+});
 
 export const updateStatusSchema = z.object({
   status: z.enum(['Todo', 'In Progress', 'Completed', 'Cancelled']),

@@ -41,8 +41,8 @@
     <script>
       (function() {
         try {
-          var t = localStorage.getItem('th-theme') || 'light';
-          document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+          var t = localStorage.getItem('th-theme') || 'system';
+          document.documentElement.setAttribute('data-theme', t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light');
         } catch(e) {}
       })();
     </script>

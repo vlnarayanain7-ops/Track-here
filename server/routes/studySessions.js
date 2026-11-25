@@ -37,6 +37,7 @@ router.post('/timer/resume', resumeTimer);
 router.put('/timer/:id/finish', finishTimer);
 router.post('/timer/:id/finish', finishTimer);
 router.post('/timer/finish', finishTimer);
+router.post('/timer/:id/cancel', cancelTimer);
 router.post('/timer/cancel', cancelTimer);
 router.post('/timer/heartbeat', heartbeatTimer);
 router.post('/timer/:id/heartbeat', heartbeatTimer);

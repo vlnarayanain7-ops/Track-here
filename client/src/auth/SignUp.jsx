@@ -30,7 +30,7 @@ export function SignUp() {
 
     if (!form.name.trim()) errors.name = 'Enter your name.';
     if (!/^\S+@\S+\.\S+$/.test(form.email)) errors.email = 'Enter a valid email.';
-    if (form.password.length < 8) errors.password = 'Use at least 8 characters.';
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/.test(form.password)) errors.password = 'Use at least 8 characters with uppercase, lowercase, a number and a symbol.';
 
     if (!form.age) {
       errors.age = 'Choose your age group.';

@@ -7,14 +7,12 @@ import {
   X,
   AlertTriangle,
   BookOpen,
-  Bell,
   Palette,
   User as UserIcon,
   Check,
   Edit2,
   Download,
   Trash2,
-  Clock,
   Calendar,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -50,13 +48,6 @@ export default function SettingsPage() {
   );
   const [weekStartsOn, setWeekStartsOn] = useState(user?.weekStartsOn === 0 ? 'Sun' : 'Mon');
 
-  // Section 2: Reminders
-  const [remindersOn, setRemindersOn] = useState(
-    Boolean(user?.activeNotifications?.dailyReminder || user?.morningReminderActive || false)
-  );
-  const [morningTime, setMorningTime] = useState(user?.morningReminderTime || '07:00');
-  const [eveningTime, setEveningTime] = useState(user?.eveningReminderTime || '21:00');
-
   // Section 3: Appearance
   const [themeValue, setThemeValue] = useState(() => {
     const t = getTheme();
@@ -89,9 +80,6 @@ export default function SettingsPage() {
       const hStr = `${Math.round((user.dailyStudyGoal || 240) / 60)}h`;
       setDailyTarget(['2h', '3h', '4h', '6h'].includes(hStr) ? hStr : '4h');
       setWeekStartsOn(user.weekStartsOn === 0 ? 'Sun' : 'Mon');
-      setRemindersOn(Boolean(user.activeNotifications?.dailyReminder || user.morningReminderActive));
-      setMorningTime(user.morningReminderTime || '07:00');
-      setEveningTime(user.eveningReminderTime || '21:00');
       setNameValue(user.name || '');
     }
   }, [user]);
@@ -148,51 +136,11 @@ export default function SettingsPage() {
     await saveSettingsChange({ weekStartsOn: val === 'Sun' ? 0 : 1 });
   };
 
-  // Reminder actions
-  const handleToggleReminders = async () => {
-    const next = !remindersOn;
-    if (next && typeof window !== 'undefined' && 'Notification' in window) {
-      if (Notification.permission === 'default') {
-        const perm = await Notification.requestPermission();
-        if (perm !== 'granted') {
-          toast.error('Browser notifications were not granted');
-        }
-      }
-    }
-    setRemindersOn(next);
-    await saveSettingsChange({
-      notificationsEnabled: next,
-      morningReminderActive: next,
-      activeNotifications: {
-        ...(user?.activeNotifications || {}),
-        dailyReminder: next,
-        morning: next,
-        evening: next,
-      },
-    });
-  };
-
-  const handleSaveMorningTime = async (val) => {
-    setMorningTime(val);
-    await saveSettingsChange({ morningReminderTime: val });
-  };
-
-  const handleSaveEveningTime = async (val) => {
-    setEveningTime(val);
-    await saveSettingsChange({ eveningReminderTime: val });
-  };
-
   // Appearance actions
   const handleSelectTheme = (t) => {
     setThemeValue(t);
-    if (t === 'System') {
-      localStorage.removeItem('th-theme');
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
-    } else {
-      setTheme(t.toLowerCase());
-    }
-    saveSettingsChange({ theme: t === 'System' ? 'dark' : t.toLowerCase() });
+    setTheme(t.toLowerCase());
+    saveSettingsChange({ theme: t.toLowerCase() });
   };
 
   // Account actions
@@ -396,68 +344,6 @@ export default function SettingsPage() {
                   </button>
                 ))}
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 2: REMINDERS */}
-      <section className="space-y-2">
-        <div className="flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-wider text-[var(--mu)]">
-          <Bell className="w-4 h-4 text-[var(--pr)]" />
-          <span>Reminders</span>
-        </div>
-
-        <div className="rounded-2xl border border-[var(--ln)] bg-[var(--sf)] shadow-xs divide-y divide-[var(--ln)] overflow-hidden">
-          {/* Daily reminders switch */}
-          <div className="flex items-center justify-between p-4 gap-4">
-            <div className="min-w-0">
-              <div className="text-sm font-medium text-[var(--tx)]">Daily reminders</div>
-              <div className="text-xs text-[var(--mu)] mt-0.5">Morning plan prompt and evening review</div>
-            </div>
-            <div className="shrink-0">
-              <button
-                type="button"
-                className="sw"
-                role="switch"
-                aria-checked={remindersOn}
-                aria-label="Daily reminders"
-                onClick={handleToggleReminders}
-              />
-            </div>
-          </div>
-
-          {/* Morning time */}
-          <div className="flex items-center justify-between p-4 gap-4">
-            <div className="min-w-0">
-              <div className="text-sm font-medium text-[var(--tx)]">Morning plan reminder</div>
-              <div className="text-xs text-[var(--mu)] mt-0.5">Time for your daily intention check-in</div>
-            </div>
-            <div className="shrink-0">
-              <input
-                type="time"
-                value={morningTime}
-                onChange={(e) => handleSaveMorningTime(e.target.value)}
-                className="h-9 px-3 rounded-xl border border-[var(--ln)] bg-[var(--sf2)] text-xs font-medium text-[var(--tx)] focus:border-[var(--pr)] focus:bg-[var(--sf)] focus:outline-none transition-all cursor-pointer"
-                aria-label="Morning reminder time"
-              />
-            </div>
-          </div>
-
-          {/* Evening time */}
-          <div className="flex items-center justify-between p-4 gap-4">
-            <div className="min-w-0">
-              <div className="text-sm font-medium text-[var(--tx)]">Evening review reminder</div>
-              <div className="text-xs text-[var(--mu)] mt-0.5">Time to reflect and close out your day</div>
-            </div>
-            <div className="shrink-0">
-              <input
-                type="time"
-                value={eveningTime}
-                onChange={(e) => handleSaveEveningTime(e.target.value)}
-                className="h-9 px-3 rounded-xl border border-[var(--ln)] bg-[var(--sf2)] text-xs font-medium text-[var(--tx)] focus:border-[var(--pr)] focus:bg-[var(--sf)] focus:outline-none transition-all cursor-pointer"
-                aria-label="Evening reminder time"
-              />
             </div>
           </div>
         </div>

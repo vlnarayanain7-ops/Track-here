@@ -8,6 +8,7 @@ const dailySchema = new Schema({
   minutes: { type: Number, default: 0 },                                      // all focus minutes
   validMinutes: { type: Number, default: 0 },                                 // verified timer minutes only
   sessions: { type: Number, default: 0 },
+  archivedStudy: Schema.Types.Mixed,
   bySubject: { type: Map, of: Number },                                       // minutes per subject name (for reports)
 }, { versionKey: false });
 dailySchema.index({ user: 1, date: 1 }, { unique: true });
@@ -24,7 +25,7 @@ const proofSchema = new Schema({
   user: ref, month: { type: Number, min: 1, max: 5, required: true },
   status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
   note: { type: String, maxlength: 300, default: '' }, link: { type: String, maxlength: 300 },
-  files: [{ data: Buffer, type: String, sha: String }],                       // max 3 files, 200 KB each, deleted at review
+  files: [{ data: Buffer, type: { type: String }, sha: String }],                       // max 3 files, 200 KB each, deleted at review
   reviewNote: { type: String, maxlength: 300 }, reviewedAt: Date, submittedAt: { type: Date, default: Date.now },
   expireAt: Date,                                                             // pending: +45 days; decided: +400 days (metadata only)
 }, { versionKey: false });

@@ -89,8 +89,8 @@ export function ResetPassword() {
     e.preventDefault();
     setErr('');
 
-    if (password.length < 8) {
-      setErr('Password must be at least 8 characters.');
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/.test(password)) {
+      setErr('Use at least 8 characters with uppercase, lowercase, a number and a symbol.');
       return;
     }
     if (password !== confirmPassword) {

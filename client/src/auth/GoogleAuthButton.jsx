@@ -8,10 +8,8 @@ export function GoogleAuthButton({ buttonText = 'Continue with Google' }) {
   const navigate = useNavigate();
   const btnContainerRef = useRef(null);
   const [loading, setLoading] = useState(false);
-  const [showConfigModal, setShowConfigModal] = useState(false);
 
-  const GOOGLE_CLIENT_ID = '971371287072-ajlh3snp83fl8e5311coh3t3n38aa9ud.apps.googleusercontent.com';
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID;
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   const [gsiReady, setGsiReady] = useState(false);
 
@@ -31,7 +29,9 @@ export function GoogleAuthButton({ buttonText = 'Continue with Google' }) {
                 setLoading(true);
                 const user = await googleLogin(response.credential);
                 toast.success('Signed in with Google!');
-                if (!user?.subjects || user.subjects.length === 0) {
+                if (!user?.ageBand) {
+                  navigate('/complete-profile', { replace: true });
+                } else if (!user?.subjects || user.subjects.length === 0) {
                   navigate('/onboarding', { replace: true });
                 } else {
                   navigate('/', { replace: true });
@@ -83,13 +83,12 @@ export function GoogleAuthButton({ buttonText = 'Continue with Google' }) {
   }, [clientId, googleLogin, navigate]);
 
   function handleFallbackClick() {
-    if (!clientId) {
-      setShowConfigModal(true);
-    } else if (window.google?.accounts?.id) {
+    if (window.google?.accounts?.id) {
       window.google.accounts.id.prompt();
     }
   }
 
+  if (!clientId) return null;
   return (
     <>
       <div className="w-full">
@@ -136,42 +135,6 @@ export function GoogleAuthButton({ buttonText = 'Continue with Google' }) {
       </div>
 
       {/* Quick Setup Modal if Client ID is missing */}
-      {showConfigModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-[var(--sf)] border border-[var(--ln)] rounded-xl max-w-md w-full p-6 shadow-xl space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600 font-bold">
-                G
-              </div>
-              <div>
-                <h3 className="font-semibold text-[var(--ink)] text-base">Google Sign-In Configuration</h3>
-                <p className="text-xs text-[var(--mu)]">One-step setup with Google Cloud</p>
-              </div>
-            </div>
-
-            <p className="text-sm text-[var(--mu)] leading-relaxed">
-              The backend endpoint <code className="px-1.5 py-0.5 rounded bg-[var(--sf2)] text-[var(--ink)] font-mono text-xs">/api/auth/google</code> is live and ready. To display Google&apos;s 1-tap sign-in dialog, add your Google OAuth Client ID:
-            </p>
-
-            <ol className="text-xs text-[var(--mu)] space-y-2 list-decimal list-inside bg-[var(--sf2)] p-3 rounded-lg border border-[var(--ln)]">
-              <li>Open <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer" className="text-blue-500 underline font-medium">Google Cloud Console</a>.</li>
-              <li>Create an <strong>OAuth 2.0 Client ID</strong> (Web application).</li>
-              <li>Add Authorized JavaScript Origin: <code className="font-mono text-blue-600 dark:text-blue-400">https://track-here.vercel.app</code></li>
-              <li>Set <code className="font-mono font-semibold">VITE_GOOGLE_CLIENT_ID</code> in Vercel project environment variables.</li>
-            </ol>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowConfigModal(false)}
-                className="btn btn-primary px-4 py-2 text-xs font-semibold rounded-lg"
-              >
-                Got it
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

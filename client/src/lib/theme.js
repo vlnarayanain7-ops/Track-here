@@ -1,7 +1,7 @@
 /**
  * Theme Management for Track Here
  * Reads localStorage "th-theme" ('light' | 'dark' | 'system')
- * Default: 'light'
+ * Default: 'system'
  * Applies data-theme attribute on <html> element
  */
 
@@ -9,7 +9,7 @@ const THEME_KEY = 'th-theme';
 
 export function getTheme() {
   if (typeof window === 'undefined') return 'light';
-  return localStorage.getItem(THEME_KEY) || 'light';
+  return localStorage.getItem(THEME_KEY) || 'system';
 }
 
 export function applyTheme(theme) {
@@ -41,7 +41,7 @@ export function toggleTheme() {
   return next;
 }
 
-// Initialize theme on load (default to light)
+// Initialize theme before mounting the app
 if (typeof window !== 'undefined') {
   applyTheme(getTheme());
 

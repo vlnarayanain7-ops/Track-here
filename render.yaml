@@ -20,10 +20,12 @@ services:
       - key: CLIENT_URL
         sync: false
       - key: ADMIN_USER_IDS
-        value: "6af5d00f4262d1c164689fee,6b05e161ea773812dc73dd0b"
+        sync: false
       - key: BREVO_API_KEY
         sync: false
       - key: MAIL_FROM_EMAIL
         sync: false
       - key: GOOGLE_CLIENT_ID
-        value: 971371287072-ajlh3snp83fl8e5311coh3t3n38aa9ud.apps.googleusercontent.com
+        sync: false
+      - key: CERT_SECRET
+        generateValue: true

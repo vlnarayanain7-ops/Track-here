@@ -265,7 +265,7 @@ export function RewardsRulesPage() {
           <section id="r-3" className="space-y-2">
             <h2 className="text-base font-heading font-bold text-[var(--text)]">3. Surprise Reward Programme</h2>
             <p>
-              The Sponsor offers a limited number of surprise rewards. Each is a physical item chosen by the Sponsor with an approximate retail value of up to US$50. The item is not disclosed in advance. No substitution, exchange, upgrade or cash alternative; the Sponsor may substitute an item of similar value if the original is not available. The total number of surprise rewards available is limited to ten (10) in total during the programme.
+              New physical reward claims and proof submissions are closed. Existing claims continue under the rules below. Each is a physical item chosen by the Sponsor with an approximate retail value of up to US$50. The item is not disclosed in advance. No substitution, exchange, upgrade or cash alternative; the Sponsor may substitute an item of similar value if the original is not available. The total number of surprise rewards available is limited to ten (10) in total during the programme.
             </p>
           </section>
 

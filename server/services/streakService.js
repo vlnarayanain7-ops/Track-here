@@ -7,6 +7,75 @@ import { DailyTotal } from '../models/rewards.js';
 
 const MINIMUM_ACTIVE_MINUTES = 25;
 
+async function getLiveStudyDays(userId, timezone) {
+  const userObjId = new mongoose.Types.ObjectId(userId);
+  // Recent sessions are editable. Recompute their totals rather than relying
+  // on an increment that may have failed after the session was inserted.
+  // Historical compaction retained daily summaries beyond 180 days.
+  const now = toZonedTime(new Date(), timezone);
+  const todayStr = format(now, 'yyyy-MM-dd');
+  const groups = await StudySession.aggregate([
+      { $match: { user: userObjId, 'timerState.status': { $nin: ['running', 'paused'] } } },
+      { $project: {
+        date: { $dateToString: { format: '%Y-%m-%d', timezone, date: { $ifNull: ['$startedAt', '$startTime', '$date'] } } },
+        seconds: { $cond: [{ $gt: ['$durationSec', 0] }, '$durationSec', { $multiply: [{ $ifNull: ['$focusDuration', '$duration', 0] }, 60] }] },
+        subject: { $ifNull: ['$category', 'Focus'] },
+      } },
+      { $match: { seconds: { $gt: 0 }, date: { $lte: todayStr } } },
+      { $group: { _id: { date: '$date', subject: '$subject' }, seconds: { $sum: '$seconds' }, sessions: { $sum: 1 } } },
+  ]);
+  const days = new Map();
+  for (const group of groups) {
+    const { date, subject } = group._id;
+    const day = days.get(date) || { seconds: 0, sessions: 0, bySubject: Object.create(null) };
+    day.seconds += group.seconds;
+    day.sessions += group.sessions;
+    day.bySubject[subject] = group.seconds / 60;
+    days.set(date, day);
+  }
+  return days;
+}
+
+// Older installations compacted some raw sessions. Freeze only the missing
+// portion before a live session can change, so a later deletion stays deleted.
+export async function preserveArchivedStudy(userId, timezone) {
+  const rows = await DailyTotal.find({ user: userId, archivedStudy: { $exists: false } }).lean();
+  if (!rows.length) return;
+  const zone = timezone || (await User.findById(userId).select('timezone').lean())?.timezone || 'Asia/Kolkata';
+  const cutoff = format(subDays(toZonedTime(new Date(), zone), 180), 'yyyy-MM-dd');
+  const liveDays = await getLiveStudyDays(userId, zone);
+  const writes = rows.map(row => {
+    const live = liveDays.get(row.date);
+    const sessions = row.sessions - (live?.sessions || 0);
+    let archivedStudy = null;
+    if (row.date <= cutoff && sessions > 0) {
+      const bySubject = Object.fromEntries(Object.entries(row.bySubject || {}).map(([name, minutes]) =>
+        [name, Math.max(0, minutes - (live?.bySubject[name] || 0))]));
+      archivedStudy = { sessions, seconds: Math.max(0, row.minutes * 60 - (live?.seconds || 0)), bySubject };
+    }
+    return { updateOne: { filter: { _id: row._id, archivedStudy: { $exists: false } }, update: { $set: { archivedStudy } } } };
+  });
+  await DailyTotal.bulkWrite(writes);
+}
+
+export async function getStudyDays(userId, timezone) {
+  await preserveArchivedStudy(userId, timezone);
+  const [days, archive] = await Promise.all([
+    getLiveStudyDays(userId, timezone),
+    DailyTotal.find({ user: userId, 'archivedStudy.sessions': { $gt: 0 } }).select('date archivedStudy').lean(),
+  ]);
+  for (const { date, archivedStudy } of archive) {
+    const day = days.get(date) || { seconds: 0, sessions: 0, bySubject: Object.create(null) };
+    day.seconds += archivedStudy.seconds;
+    day.sessions += archivedStudy.sessions;
+    for (const [name, minutes] of Object.entries(archivedStudy.bySubject || {})) {
+      day.bySubject[name] = (day.bySubject[name] || 0) + minutes;
+    }
+    days.set(date, day);
+  }
+  return days;
+}
+
 /**
  * Calculate streak, heatmap history, and activity info for a user.
  * Single source of truth for both streaks and heatmap.
@@ -22,7 +91,7 @@ const MINIMUM_ACTIVE_MINUTES = 25;
  *   last7Days: Array<{ day: string, date: string, minutes: number, hours: number, isActive: boolean }>
  * }>}
  */
-export async function getStreakInfo(userId) {
+export async function getStreakInfo(userId, studyDays) {
   const user = await User.findById(userId).select('timezone streakGraceDays');
   const timezone = user?.timezone || 'Asia/Kolkata';
   const graceDays = user?.streakGraceDays || 0;
@@ -37,38 +106,7 @@ export async function getStreakInfo(userId) {
   const dayOfWeek = (now.getDay() + 6) % 7;
   const startDate = subDays(now, dayOfWeek + (53 - 1) * 7);
 
-  const userObjId = new mongoose.Types.ObjectId(userId);
-  // Recent sessions are editable. Recompute their totals rather than relying
-  // on an increment that may have failed after the session was inserted.
-  // Historical compaction retained daily summaries beyond 180 days.
-  const cutoff = format(subDays(now, 180), 'yyyy-MM-dd');
-  const [archive, groups] = await Promise.all([
-    DailyTotal.find({ user: userObjId, date: { $lte: cutoff } }).select('date minutes sessions bySubject').lean(),
-    StudySession.aggregate([
-      { $match: { user: userObjId, 'timerState.status': { $nin: ['running', 'paused'] } } },
-      { $project: {
-        date: { $dateToString: { format: '%Y-%m-%d', timezone, date: { $ifNull: ['$startedAt', '$startTime', '$date'] } } },
-        seconds: { $cond: [{ $gt: ['$durationSec', 0] }, '$durationSec', { $multiply: [{ $ifNull: ['$focusDuration', '$duration', 0] }, 60] }] },
-        subject: { $ifNull: ['$category', 'Focus'] },
-      } },
-      { $match: { seconds: { $gt: 0 }, date: { $lte: todayStr } } },
-      { $group: { _id: { date: '$date', subject: '$subject' }, seconds: { $sum: '$seconds' }, sessions: { $sum: 1 } } },
-    ]),
-  ]);
-  const days = new Map();
-  for (const group of groups) {
-    const { date, subject } = group._id;
-    const day = days.get(date) || { seconds: 0, sessions: 0, bySubject: Object.create(null) };
-    day.seconds += group.seconds;
-    day.sessions += group.sessions;
-    day.bySubject[subject] = group.seconds / 60;
-    days.set(date, day);
-  }
-  for (const row of archive) {
-    if (!days.has(row.date) || row.sessions > days.get(row.date).sessions) {
-      days.set(row.date, { seconds: row.minutes * 60, sessions: row.sessions, bySubject: row.bySubject });
-    }
-  }
+  const days = await (studyDays || getStudyDays(userId, timezone));
   const map = Object.fromEntries([...days].map(([date, day]) => [date, Math.floor(day.seconds / 60)]));
 
   // Build the 53-week history array

@@ -91,7 +91,7 @@ export default function RevisionCard({ revision, onDelete }) {
             title="Remembered (Advance to next interval: 1d -> 3d -> 7d -> 14d -> 30d)"
           >
             <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-            <span>Remembered ? {reviewDate(revision.intervalDays, 'Remembered')}</span>
+            <span>Remembered · {reviewDate(revision.intervalDays, 'Remembered')}</span>
           </button>
 
           <button
@@ -102,7 +102,7 @@ export default function RevisionCard({ revision, onDelete }) {
             title="Hard / Forgot (Reset review interval back to 1 day)"
           >
             <RotateCcw className="w-3.5 h-3.5 text-[var(--muted)] shrink-0" />
-            <span>Hard ? {reviewDate(revision.intervalDays, 'Hard')}</span>
+            <span>Hard · {reviewDate(revision.intervalDays, 'Hard')}</span>
           </button>
         </div>
 

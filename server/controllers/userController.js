@@ -1,3 +1,5 @@
+import { preserveArchivedStudy } from '../services/streakService.js';
+import { passwordSchema } from '../utils/passwordSchema.js';
 import { z } from 'zod';
 import FriendChallenge from '../models/FriendChallenge.js';
 import StudyCircle from '../models/StudyCircle.js';
@@ -15,6 +17,8 @@ import Revision from '../models/Revision.js';
 import PushSubscription from '../models/PushSubscription.js';
 import NotificationLog from '../models/NotificationLog.js';
 import RefreshSession from '../models/RefreshSession.js';
+import Feedback from '../models/Feedback.js';
+import { DailyTotal, Certificate, Proof, ProofHash, DailyReport, Claim } from '../models/rewards.js';
 import MockTest from '../models/MockTest.js';
 import TimetableSlot from '../models/TimetableSlot.js';
 import asyncHandler from '../utils/asyncHandler.js';
@@ -37,21 +41,25 @@ export const acceptTerms = asyncHandler(async (req, res) => {
 export const updateProfileSchema = z.object({
   name: z.string().trim().min(2).max(50).optional(),
   avatar: z.string().optional().nullable(),
-  ageBand: z.enum(['under13', '13_17', '18_plus']).optional(),
+  ageBand: z.enum(['13_17', '18_plus']).optional(),
   dailyStudyGoal: z.number().min(1).max(1440).optional(),
-  timezone: z.string().optional(),
+  timezone: z.string().refine(value => {
+    try { new Intl.DateTimeFormat('en', { timeZone: value }); return true; }
+    catch { return false; }
+  }, 'Invalid timezone').optional(),
   preparationType: z.string().trim().max(100).optional().nullable(),
   subjects: z.array(z.object({
+    _id: z.string().regex(/^[a-f\d]{24}$/i).optional(),
     name: z.string().trim().min(1).max(100),
     color: z.string().optional(),
     icon: z.string().optional(),
     chapters: z.array(z.any()).optional(),
-  }).passthrough()).optional(),
+  })).optional(),
   examDate: z.string().or(z.date()).optional().nullable(),
   targetExamDate: z.string().or(z.date()).optional().nullable(),
   examName: z.string().trim().max(100).optional().nullable(),
   onboardingCompleted: z.boolean().optional(),
-}).passthrough();
+});
 
 export const renameSubjectSchema = z.object({
   oldName: z.string().trim().min(1),
@@ -71,7 +79,7 @@ export const updateSettingsSchema = z.object({
     revisions: z.boolean().optional(),
     taskDeadline: z.boolean().optional(),
     revision: z.boolean().optional(),
-  }).passthrough().optional(),
+  }).optional(),
   quietHoursStart: z.string().regex(/^\d{2}:\d{2}$/).optional().nullable(),
   quietHoursEnd: z.string().regex(/^\d{2}:\d{2}$/).optional().nullable(),
   activeWeekdays: z.array(z.number().min(0).max(6)).optional(),
@@ -83,18 +91,12 @@ export const updateSettingsSchema = z.object({
   targetExam: z.string().trim().max(100).optional().nullable(),
   dailyGoalMinutes: z.number().min(1).max(1440).optional(),
   dailyStudyGoal: z.number().min(1).max(1440).optional(),
-  preferences: z.record(z.any()).optional(),
-}).passthrough();
+  preferences: z.record(z.string(), z.any()).optional(),
+});
 
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
-  newPassword: z
-    .string()
-    .min(8, 'New password must be at least 8 characters')
-    .regex(/[A-Z]/, 'New password must contain at least one uppercase letter')
-    .regex(/[a-z]/, 'New password must contain at least one lowercase letter')
-    .regex(/[0-9]/, 'New password must contain at least one number')
-    .regex(/[^A-Za-z0-9]/, 'New password must contain at least one special character'),
+  newPassword: passwordSchema,
 });
 
 // ─── Controllers ──────────────────────────────────────────────
@@ -116,12 +118,15 @@ export const getProfile = asyncHandler(async (req, res) => {
  * PUT /api/users/profile
  */
 export const updateProfile = asyncHandler(async (req, res) => {
-  const user = await User.findByIdAndUpdate(
-    req.user.id,
+  const filter = { _id: req.user.id };
+  if (req.body.ageBand) filter.$or = [{ ageBand: null }, { ageBand: req.body.ageBand }];
+  const user = await User.findOneAndUpdate(
+    filter,
     { $set: req.body },
     { returnDocument: 'after', runValidators: true }
   );
 
+  if (!user && req.body.ageBand) throw ApiError.conflict('Age group has already been declared.');
   if (!user) throw ApiError.notFound('User not found');
   emitToUser(req.user.id, 'user:updated', user);
 
@@ -139,6 +144,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
 export const renameSubject = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const { oldName, newName, color } = req.body;
+  await preserveArchivedStudy(userId);
 
   const user = await User.findById(userId);
   if (!user) throw ApiError.notFound('User not found');
@@ -263,6 +269,7 @@ export const exportData = asyncHandler(async (req, res) => {
 export const importData = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const data = req.body || {};
+  await preserveArchivedStudy(userId);
 
   const counts = {
     studySessions: 0,
@@ -273,6 +280,12 @@ export const importData = asyncHandler(async (req, res) => {
     dailyPlans: 0,
     dailyReviews: 0,
     revisions: 0,
+  };
+
+  const batches = [];
+  const stage = (model, documents) => {
+    batches.push({ model, documents });
+    return documents.length;
   };
 
   // Maps to translate old export IDs to freshly minted ObjectIds
@@ -338,8 +351,7 @@ export const importData = asyncHandler(async (req, res) => {
       };
     });
 
-    const result = await Task.insertMany(sanitizedTasks, { ordered: false }).catch((e) => e.insertedDocs || []);
-    counts.tasks = Array.isArray(result) ? result.length : 0;
+    counts.tasks = stage(Task, sanitizedTasks);
   }
 
   // 3. Insert Notes
@@ -363,8 +375,7 @@ export const importData = asyncHandler(async (req, res) => {
       };
     });
 
-    const result = await Note.insertMany(sanitizedNotes, { ordered: false }).catch((e) => e.insertedDocs || []);
-    counts.notes = Array.isArray(result) ? result.length : 0;
+    counts.notes = stage(Note, sanitizedNotes);
   }
 
   // 4. Insert Problems
@@ -390,8 +401,7 @@ export const importData = asyncHandler(async (req, res) => {
       };
     });
 
-    const result = await Problem.insertMany(sanitizedProblems, { ordered: false }).catch((e) => e.insertedDocs || []);
-    counts.problems = Array.isArray(result) ? result.length : 0;
+    counts.problems = stage(Problem, sanitizedProblems);
   }
 
   // 5. Insert Problem Attempts (strictly remapping problem ID)
@@ -420,8 +430,7 @@ export const importData = asyncHandler(async (req, res) => {
     }
 
     if (sanitizedAttempts.length > 0) {
-      const result = await ProblemAttempt.insertMany(sanitizedAttempts, { ordered: false }).catch((e) => e.insertedDocs || []);
-      counts.problemAttempts = Array.isArray(result) ? result.length : 0;
+      counts.problemAttempts = stage(ProblemAttempt, sanitizedAttempts);
     }
   }
 
@@ -437,10 +446,12 @@ export const importData = asyncHandler(async (req, res) => {
         _id: newId,
         user: userId,
         category: s.category ? String(s.category).slice(0, 100) : 'Other',
-        activityType: ['Video/tutorial', 'Reading', 'Coding', 'Problem solving', 'Revision', 'Practice'].includes(s.activityType) ? s.activityType : 'Coding',
+        activityType: StudySession.schema.path('activityType').enumValues.find(type => type.toLowerCase() === String(s.activityType).toLowerCase()) || 'Coding',
         topic: String(s.topic || 'General study').slice(0, 200),
         subtopic: s.subtopic ? String(s.subtopic).slice(0, 200) : undefined,
         date: s.date ? new Date(s.date) : new Date(),
+        durationSec: s.durationSec ?? Math.round((Number(s.focusDuration) || 0) * 60),
+        startedAt: s.startedAt || s.startTime || s.date,
         focusDuration: Number(s.focusDuration) || 0,
         videoDuration: Number(s.videoDuration) || 0,
         problemsAttempted: Number(s.problemsAttempted) || 0,
@@ -455,8 +466,7 @@ export const importData = asyncHandler(async (req, res) => {
       };
     });
 
-    const result = await StudySession.insertMany(sanitizedSessions, { ordered: false }).catch((e) => e.insertedDocs || []);
-    counts.studySessions = Array.isArray(result) ? result.length : 0;
+    counts.studySessions = stage(StudySession, sanitizedSessions);
   }
 
   // 7. Insert Daily Plans (remapping priorityTasks)
@@ -480,8 +490,7 @@ export const importData = asyncHandler(async (req, res) => {
       };
     });
 
-    const result = await DailyPlan.insertMany(sanitizedPlans, { ordered: false }).catch((e) => e.insertedDocs || []);
-    counts.dailyPlans = Array.isArray(result) ? result.length : 0;
+    counts.dailyPlans = stage(DailyPlan, sanitizedPlans);
   }
 
   // 8. Insert Daily Reviews (remapping completedTasks)
@@ -511,8 +520,7 @@ export const importData = asyncHandler(async (req, res) => {
       };
     });
 
-    const result = await DailyReview.insertMany(sanitizedReviews, { ordered: false }).catch((e) => e.insertedDocs || []);
-    counts.dailyReviews = Array.isArray(result) ? result.length : 0;
+    counts.dailyReviews = stage(DailyReview, sanitizedReviews);
   }
 
   // 9. Insert Revisions (remapping linkedNote & linkedProblem)
@@ -540,8 +548,35 @@ export const importData = asyncHandler(async (req, res) => {
       };
     });
 
-    const result = await Revision.insertMany(sanitizedRevisions, { ordered: false }).catch((e) => e.insertedDocs || []);
-    counts.revisions = Array.isArray(result) ? result.length : 0;
+    counts.revisions = stage(Revision, sanitizedRevisions);
+  }
+
+  for (const [key, model] of [['mockTests', MockTest], ['timetableSlots', TimetableSlot]]) {
+    const rows = Array.isArray(data[key]) ? data[key] : [];
+    const fields = Object.keys(model.schema.paths).filter(key => !['_id', 'user', '__v'].includes(key));
+    const documents = rows.map(row => ({
+      ...Object.fromEntries(fields.filter(key => Object.hasOwn(row, key)).map(key => [key, row[key]])),
+      _id: new mongoose.Types.ObjectId(),
+      user: userId,
+    }));
+    counts[key] = stage(model, documents);
+  }
+
+  // Every document has an ID allocated by this restore. On standalone MongoDB
+  // this also lets us roll back a partially written batch without touching
+  // existing data. Only attempted batches can contain new documents.
+  const attempted = [];
+  try {
+    for (const batch of batches) {
+      if (!batch.documents.length) continue;
+      attempted.push(batch);
+      await batch.model.insertMany(batch.documents);
+    }
+  } catch (error) {
+    for (const { model, documents } of attempted.reverse()) {
+      await model.deleteMany({ user: userId, _id: { $in: documents.map(doc => doc._id) } });
+    }
+    throw error;
   }
 
   res.json({
@@ -591,7 +626,7 @@ export const deleteAccount = asyncHandler(async (req, res) => {
   const user = await User.findById(userId).select('+password');
   if (!user) throw ApiError.notFound('User not found');
 
-  const isUnder13 = req.body?.reason === 'under13';
+  const isUnder13 = !user.ageBand && req.body?.reason === 'under13';
 
   if (!isUnder13) {
     if (user.password) {
@@ -631,8 +666,9 @@ export const deleteAccount = asyncHandler(async (req, res) => {
     PushSubscription.deleteMany({ user: userId }),
     NotificationLog.deleteMany({ user: userId }),
     RefreshSession.deleteMany({ user: userId }),
-    User.findByIdAndDelete(userId),
+    ...[DailyTotal, Certificate, Proof, ProofHash, DailyReport, Claim, Feedback].map(model => model.deleteMany({ user: userId })),
   ]);
+  await User.findByIdAndDelete(userId);
 
   clearAuthCookies(res);
 

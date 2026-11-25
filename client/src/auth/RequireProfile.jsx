@@ -6,7 +6,7 @@ import { Button } from '../components/ui.jsx';
 import { AuthLayout } from './AuthLayout';
 import toast from 'react-hot-toast';
 
-export function RequireAuth({ homeSignIn }) {
+export function RequireAuth() {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
   useEffect(() => {
@@ -14,8 +14,6 @@ export function RequireAuth({ homeSignIn }) {
       sessionStorage.setItem('pendingChallenge', location.pathname);
     }
   }, [isAuthenticated, location.pathname]);
-
-  if (!isAuthenticated && location.pathname === '/') return homeSignIn;
 
   if (isLoading) {
     return (
@@ -28,6 +26,7 @@ export function RequireAuth({ homeSignIn }) {
     );
   }
 
+  if (!isAuthenticated && location.pathname === '/') return <Navigate to="/welcome" replace />;
   return isAuthenticated ? <Outlet /> : <Navigate to="/signin" state={{ from: location }} replace />;
 }
 

@@ -102,6 +102,7 @@ const studySessionSchema = new mongoose.Schema(
     heartbeats: [{
       type: Date,
     }],
+    verifiedSeconds: { type: Number, default: 0 },
     lastHeartbeatAt: {
       type: Date,
     },

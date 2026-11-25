@@ -30,7 +30,7 @@ export const createMockTestSchema = z.object({
   mistakes: z.string().trim().optional().nullable(),
   weakTopics: z.array(z.string().trim()).optional(),
   notes: z.string().trim().optional().nullable(),
-}).passthrough().transform((val) => ({
+}).transform((val) => ({
   ...val,
   obtainedMarks: val.obtainedMarks !== undefined ? val.obtainedMarks : (val.score !== undefined ? val.score : 0),
   totalMarks: val.totalMarks || 100,
@@ -59,7 +59,7 @@ export const updateMockTestSchema = z.object({
   mistakes: z.string().trim().optional().nullable(),
   weakTopics: z.array(z.string().trim()).optional(),
   notes: z.string().trim().optional().nullable(),
-}).passthrough();
+});
 
 // ─── Controllers ──────────────────────────────────────────────
 

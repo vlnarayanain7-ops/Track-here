@@ -1,3 +1,4 @@
+import { preserveArchivedStudy } from '../services/streakService.js';
 import Task from '../models/Task.js';
 import { z } from 'zod';
 import StudySession from '../models/StudySession.js';
@@ -5,25 +6,27 @@ import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import { emitToUser } from '../services/socketService.js';
 import { defaultSessionName } from '../utils/sessionName.js';
-import { applySession } from '../lib/milestones.js';
+import { applySession, checkMilestones } from '../lib/milestones.js';
 
 // ─── Validation Schemas ───────────────────────────────────────
 
 const categorySchema = z.string().trim().max(100, 'Subject must be at most 100 characters').optional();
 
+const sessionDateSchema = z.coerce.date().min(new Date('1970-01-01')).refine(
+  date => date.getTime() <= Date.now() + 300000, 'Session date is in the future');
+
 export const createSessionSchema = z.object({
-  category: categorySchema.default('Focus'),
-  activityType: z.enum(['Video/Tutorial', 'Reading', 'Coding', 'Problem Solving', 'Revision', 'Practice']).optional().default('Problem Solving'),
+  category: categorySchema,
+  activityType: z.enum(['Video/Tutorial', 'Reading', 'Coding', 'Problem Solving', 'Revision', 'Practice']).optional(),
   topic: z.string().trim().max(80).optional(),
   subtopic: z.string().trim().optional(),
-  date: z.string().or(z.date()).optional().default(() => new Date().toISOString()),
-  startTime: z.string().or(z.date()).optional().nullable(),
-  endTime: z.string().or(z.date()).optional().nullable(),
-  focusDuration: z.number().min(0, 'Focus duration must be non-negative'),
+  date: sessionDateSchema.optional(),
+  startTime: sessionDateSchema.optional().nullable(),
+  endTime: sessionDateSchema.optional().nullable(),
+  focusDuration: z.number().max(1440).min(0, 'Focus duration must be non-negative'),
   duration: z.number().optional().nullable(),
-  durationSec: z.number().optional().nullable(),
-  startedAt: z.string().or(z.date()).optional().nullable(),
-  source: z.string().optional(),
+  durationSec: z.number().min(0).max(86400).optional().nullable(),
+  startedAt: sessionDateSchema.optional().nullable(),
   clientId: z.string().optional().nullable(),
   completed: z.boolean().optional(),
   subjectName: z.string().optional().nullable(),
@@ -35,11 +38,12 @@ export const createSessionSchema = z.object({
   keyLearnings: z.string().optional().nullable(),
   nextAction: z.string().optional().nullable(),
   linkedTask: z.string().optional().nullable(),
-}).passthrough();
+});
 
-export const updateSessionSchema = createSessionSchema.partial().passthrough();
+export const updateSessionSchema = createSessionSchema.omit({ clientId: true }).partial();
 
 export const startTimerSchema = z.object({
+  clientId: z.string().min(1).max(128).optional(),
   category: categorySchema,
   activityType: z.enum(['Video/Tutorial', 'Reading', 'Coding', 'Problem Solving', 'Revision', 'Practice']).optional(),
   topic: z.string().trim().max(80).optional(),
@@ -100,13 +104,18 @@ export const getSessions = asyncHandler(async (req, res) => {
 /**
  * POST /api/study-sessions
  */
-export const createSession = asyncHandler(async (req, res) => {
+export const createSession = asyncHandler(async (req, res, next) => {
   if (req.body.linkedTask && !await Task.exists({ _id: req.body.linkedTask, user: req.user.id })) {
     throw ApiError.notFound('Linked task not found');
   }
   if (req.body.clientId) {
     const existing = await StudySession.findOne({ user: req.user.id, clientId: req.body.clientId });
+    if (existing?.activeTimerKey === 'active') {
+      req.params.id = existing.id;
+      return finishTimer(req, res, next);
+    }
     if (existing) {
+      await applySession(req.user, existing);
       return res.status(200).json({
         success: true,
         message: 'Study session already exists',
@@ -125,11 +134,13 @@ export const createSession = asyncHandler(async (req, res) => {
 
   const sessionData = {
     ...req.body,
+    category: req.body.category || 'Focus',
+    activityType: req.body.activityType || 'Problem Solving',
     topic,
     user: req.user.id,
     date: sessionDate,
-    source: req.body.source || 'manual',
-    heartbeatOk: req.body.heartbeatOk ?? false,
+    source: 'manual',
+    heartbeatOk: false,
     durationSec,
     startedAt: req.body.startedAt
       ? new Date(req.body.startedAt)
@@ -140,6 +151,7 @@ export const createSession = asyncHandler(async (req, res) => {
   if (req.body.startTime) sessionData.startTime = new Date(req.body.startTime);
   if (req.body.endTime) sessionData.endTime = new Date(req.body.endTime);
 
+  await preserveArchivedStudy(req.user.id);
   const session = await StudySession.create(sessionData);
   await applySession(req.user, session);
   emitToUser(req.user.id, 'session:created', session);
@@ -172,13 +184,26 @@ export const getSession = asyncHandler(async (req, res) => {
  * PUT /api/study-sessions/:id
  */
 export const updateSession = asyncHandler(async (req, res) => {
+  await preserveArchivedStudy(req.user.id);
   const updateData = { ...req.body };
+  if (updateData.linkedTask && !await Task.exists({ _id: updateData.linkedTask, user: req.user.id })) throw ApiError.notFound('Linked task not found');
+  if (updateData.durationSec != null) updateData.focusDuration = Math.round(updateData.durationSec / 60);
+  else if (updateData.focusDuration != null) updateData.durationSec = Math.round(updateData.focusDuration * 60);
+  if (updateData.date && !updateData.startedAt) updateData.startedAt = updateData.date;
   if (updateData.date) updateData.date = new Date(updateData.date);
   if (updateData.startTime) updateData.startTime = new Date(updateData.startTime);
   if (updateData.endTime) updateData.endTime = new Date(updateData.endTime);
 
+  const editableMetadata = ['topic', 'subtopic', 'category', 'activityType', 'linkedTask', 'keyLearnings', 'nextAction',
+    'mistakes', 'videoDuration', 'problemsAttempted', 'problemsSolved', 'problemsSolvedIndependently'];
+  const filter = { _id: req.params.id, user: req.user.id, 'timerState.status': { $nin: ['running', 'paused'] } };
+  if (Object.keys(updateData).some(key => !editableMetadata.includes(key))) {
+    filter.isTimerSession = { $ne: true };
+    filter.heartbeatOk = { $ne: true };
+  }
+  if (updateData.category) updateData.subjectName = updateData.category;
   const session = await StudySession.findOneAndUpdate(
-    { _id: req.params.id, user: req.user.id },
+    filter,
     { $set: updateData },
     { returnDocument: 'after', runValidators: true }
   );
@@ -197,12 +222,14 @@ export const updateSession = asyncHandler(async (req, res) => {
  * DELETE /api/study-sessions/:id
  */
 export const deleteSession = asyncHandler(async (req, res) => {
+  await preserveArchivedStudy(req.user.id);
   const session = await StudySession.findOneAndDelete({
     _id: req.params.id,
     user: req.user.id,
   });
 
   if (!session) throw ApiError.notFound('Study session not found');
+  if (session.heartbeatOk) await checkMilestones(req.user.id, req.user.timezone || 'Asia/Kolkata');
   emitToUser(req.user.id, 'session:deleted', { _id: req.params.id });
 
   res.json({
@@ -225,6 +252,9 @@ export const startTimer = asyncHandler(async (req, res) => {
     isTimerSession: true,
     'timerState.status': { $in: ['running', 'paused'] },
   });
+  if (req.body.clientId && activeSession?.clientId === req.body.clientId) {
+    return res.json({ success: true, data: { session: activeSession } });
+  }
   if (activeSession) {
     throw ApiError.conflict('A timer is already active. Resume, finish, or cancel it before starting another.');
   }
@@ -275,6 +305,7 @@ export const startTimer = asyncHandler(async (req, res) => {
  */
 export const cancelTimer = asyncHandler(async (req, res) => {
   await StudySession.deleteMany({
+    ...(req.params.id ? { _id: req.params.id } : {}),
     user: req.user.id,
     isTimerSession: true,
     'timerState.status': { $in: ['running', 'paused'] },
@@ -300,8 +331,10 @@ export const pauseTimer = asyncHandler(async (req, res) => {
     0,
     Math.floor((now - current.timerState.startedAt) / 1000) - (current.timerState.totalPausedDuration || 0)
   );
-  const session = await StudySession.findOneAndUpdate(query, {
+  const session = await StudySession.findOneAndUpdate({ ...query, lastHeartbeatAt: current.lastHeartbeatAt }, {
+    $inc: { verifiedSeconds: observedGap(current.lastHeartbeatAt, now) },
     $set: {
+      lastHeartbeatAt: now,
       'timerState.status': 'paused',
       'timerState.pausedAt': now,
       'timerState.accumulatedDuration': accumulatedDuration,
@@ -331,6 +364,7 @@ export const resumeTimer = asyncHandler(async (req, res) => {
   const pausedDuration = Math.max(0, Math.floor((now - current.timerState.pausedAt) / 1000));
   const session = await StudySession.findOneAndUpdate(query, {
     $set: {
+      lastHeartbeatAt: now,
       'timerState.status': 'running',
       'timerState.pausedAt': null,
       'timerState.totalPausedDuration': (current.timerState.totalPausedDuration || 0) + pausedDuration,
@@ -373,15 +407,14 @@ export const finishTimer = asyncHandler(async (req, res) => {
     const subName = (extra.category || current.category) !== 'Focus' ? (extra.category || current.category) : null;
     extra.topic = defaultSessionName(current.startTime || current.timerState?.startedAt || now, tz, subName);
   }
-  const clientMins = Number(req.body?.focusDuration);
-  const computedMins = accumulatedDuration >= 20 ? Math.max(1, Math.round(accumulatedDuration / 60)) : Math.floor(accumulatedDuration / 60);
-  const finalFocusDuration = !isNaN(clientMins) && clientMins > 0 ? Math.max(clientMins, computedMins) : computedMins;
-
-  const cappedDuration = Math.min(accumulatedDuration, 6 * 3600);
-  const heartbeatsCount = (current.heartbeats?.length || 0) + 1;
-  const heartbeatOk = cappedDuration <= 60
-    ? (heartbeatsCount >= 1)
-    : (heartbeatsCount * 60 >= 0.9 * cappedDuration);
+  await preserveArchivedStudy(req.user.id);
+  const localSeconds = req.body?.durationSec;
+  const cappedDuration = Math.min(accumulatedDuration, 6 * 3600, Number.isFinite(localSeconds) ? Math.max(0, localSeconds) : Infinity);
+  if (req.body?.linkedTask && await Task.exists({ _id: req.body.linkedTask, user: req.user.id })) extra.linkedTask = req.body.linkedTask;
+  const coverage = (current.verifiedSeconds || 0) + (current.timerState.status === 'running' ? observedGap(current.lastHeartbeatAt, now) : 0);
+  const reportedSeconds = Number.isFinite(localSeconds) ? Math.min(86400, Math.max(0, localSeconds)) : cappedDuration;
+  const heartbeatOk = coverage >= 0.9 * Math.max(accumulatedDuration, reportedSeconds);
+  const durationSec = heartbeatOk ? cappedDuration : reportedSeconds;
 
   const session = await StudySession.findOneAndUpdate(query, {
     $set: {
@@ -392,8 +425,8 @@ export const finishTimer = asyncHandler(async (req, res) => {
       'timerState.pausedAt': null,
       'timerState.totalPausedDuration': totalPausedDuration,
       'timerState.accumulatedDuration': cappedDuration,
-      focusDuration: finalFocusDuration,
-      durationSec: cappedDuration,
+      focusDuration: Math.round(durationSec / 60),
+      durationSec,
       source: 'timer',
       heartbeatOk,
       startedAt: current.timerState?.startedAt || current.startTime || now,
@@ -418,7 +451,12 @@ export const finishTimer = asyncHandler(async (req, res) => {
 /**
  * POST /api/study-sessions/timer/heartbeat
  */
-export const heartbeatTimer = asyncHandler(async (req, res) => {
+function observedGap(previous, now) {
+  const seconds = (now - previous) / 1000;
+  return seconds >= 0 && seconds <= 75 ? seconds : 0;
+}
+
+export const heartbeatTimer = asyncHandler(async (req, res, next) => {
   const now = new Date();
   const query = req.params.id
     ? { _id: req.params.id, user: req.user.id, isTimerSession: true, 'timerState.status': 'running' }
@@ -434,38 +472,14 @@ export const heartbeatTimer = asyncHandler(async (req, res) => {
 
   // A timer running over 6 hours is closed at 6 hours
   if (currentElapsed >= 6 * 3600) {
-    const cappedDuration = 6 * 3600;
-    const heartbeatsCount = (current.heartbeats?.length || 0) + 1;
-    const heartbeatOk = heartbeatsCount * 60 >= 0.9 * cappedDuration;
-    const finalFocusMinutes = Math.round(cappedDuration / 60);
-
-    current.activeTimerKey = null;
-    current.timerState.status = 'completed';
-    current.timerState.accumulatedDuration = cappedDuration;
-    current.endTime = now;
-    current.focusDuration = finalFocusMinutes;
-    current.durationSec = cappedDuration;
-    current.source = 'timer';
-    current.heartbeatOk = heartbeatOk;
-    current.heartbeats.push(now);
-    current.lastHeartbeatAt = now;
-    await current.save();
-
-    await applySession(req.user, current);
-    emitToUser(req.user.id, 'timer:finished', current);
-
-    return res.json({
-      ok: true,
-      autoClosed: true,
-      message: 'Timer reached maximum duration of 6 hours and was closed.',
-      session: current,
-    });
+    req.params.id = current.id;
+    return finishTimer(req, res, next);
   }
 
-  current.heartbeats = current.heartbeats || [];
-  current.heartbeats.push(now);
-  current.lastHeartbeatAt = now;
-  await current.save();
+  if (now - current.lastHeartbeatAt >= 30000) {
+    await StudySession.updateOne({ ...query, _id: current._id, lastHeartbeatAt: current.lastHeartbeatAt },
+      { $inc: { verifiedSeconds: observedGap(current.lastHeartbeatAt, now) }, $set: { lastHeartbeatAt: now } });
+  }
 
   res.json({ ok: true, active: true });
 });

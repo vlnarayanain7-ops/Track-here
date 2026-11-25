@@ -36,7 +36,7 @@ const env = {
   COOKIE_DOMAIN: process.env.COOKIE_DOMAIN || undefined,
   BREVO_API_KEY: process.env.BREVO_API_KEY || undefined,
   MAIL_FROM_EMAIL: process.env.MAIL_FROM_EMAIL || undefined,
-  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '971371287072-ajlh3snp83fl8e5311coh3t3n38aa9ud.apps.googleusercontent.com',
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
   DISABLE_RATE_LIMIT: process.env.DISABLE_RATE_LIMIT === 'true',
   VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY || '',

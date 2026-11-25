@@ -8,13 +8,14 @@ import asyncHandler from '../utils/asyncHandler.js';
 import { subDays, startOfMonth, startOfYear, format } from 'date-fns';
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import {
+  studyRows,
   getDashboardStats,
   getStudyTimeStats,
   getWeeklySummary as getWeeklySummaryService,
   getHeatmapData,
   getConsistencyMetrics,
 } from '../services/analyticsService.js';
-import { getStreakInfo } from '../services/streakService.js';
+import { getStreakInfo, getStudyDays } from '../services/streakService.js';
 import { parseDateRange } from '../utils/dateRange.js';
 
 export const getMission = asyncHandler(async (req, res) => {
@@ -35,7 +36,7 @@ export const getMission = asyncHandler(async (req, res) => {
 /**
  * Helper to compute by-subject breakdown for a given range (week | month | year)
  */
-async function computeBySubject(userId, timezone, range = 'week', userSubjects = []) {
+async function computeBySubject(userId, timezone, range = 'week', userSubjects = [], studyDays) {
   const now = toZonedTime(new Date(), timezone);
   let startDate;
 
@@ -52,21 +53,14 @@ async function computeBySubject(userId, timezone, range = 'week', userSubjects =
     startDate = parseDateRange(startStr, timezone).start;
   }
 
-  const subjectAgg = await StudySession.aggregate([
-    {
-      $match: {
-        user: new mongoose.Types.ObjectId(userId),
-        date: { $gte: startDate },
-      },
-    },
-    {
-      $group: {
-        _id: '$category',
-        minutes: { $sum: '$focusDuration' },
-      },
-    },
-    { $sort: { minutes: -1 } },
-  ]);
+  const rows = await studyRows(userId, timezone, format(toZonedTime(startDate, timezone), 'yyyy-MM-dd'), format(now, 'yyyy-MM-dd'), studyDays);
+  const totals = new Map();
+  for (const row of rows) {
+    for (const [subject, minutes] of Object.entries(row.bySubject || {})) {
+      totals.set(subject, (totals.get(subject) || 0) + minutes);
+    }
+  }
+  const subjectAgg = [...totals].map(([_id, minutes]) => ({ _id, minutes })).sort((a, b) => b.minutes - a.minutes);
 
   const subjectMap = new Map((userSubjects || []).map((s) => [s.name, s.color]));
   return subjectAgg
@@ -87,9 +81,10 @@ export const getDashboard = asyncHandler(async (req, res) => {
   const timezone = user?.timezone || 'Asia/Kolkata';
   const range = (req.query.range || 'week').toLowerCase();
 
+  const studyDays = getStudyDays(req.user.id, timezone);
   const [stats, bySubject, recurringMistakes] = await Promise.all([
-    getDashboardStats(req.user.id, timezone),
-    computeBySubject(req.user.id, timezone, range, user?.subjects || []),
+    getDashboardStats(req.user.id, timezone, studyDays),
+    computeBySubject(req.user.id, timezone, range, user?.subjects || [], studyDays),
     ProblemAttempt.aggregate([
       { $match: { user: new mongoose.Types.ObjectId(req.user.id), attemptedAt: { $gte: new Date(Date.now() - 90 * 86400000) }, mistakes: { $type: 'string', $ne: '' } } },
       { $group: { _id: { $toLower: { $trim: { input: '$mistakes' } } }, count: { $sum: 1 }, example: { $first: '$mistakes' } } },
@@ -124,7 +119,7 @@ export const getStudyTime = asyncHandler(async (req, res) => {
  */
 export const getCategories = asyncHandler(async (req, res) => {
   const { startDate, endDate } = req.query;
-  const query = { user: new mongoose.Types.ObjectId(req.user.id) };
+  const query = { user: new mongoose.Types.ObjectId(req.user.id), 'timerState.status': { $nin: ['running', 'paused'] } };
 
   if (startDate || endDate) {
     query.date = {};
@@ -138,7 +133,7 @@ export const getCategories = asyncHandler(async (req, res) => {
       {
         $group: {
           _id: '$category',
-          totalMinutes: { $sum: '$focusDuration' },
+          totalMinutes: { $sum: { $cond: [{ $gt: ['$durationSec', 0] }, { $divide: ['$durationSec', 60] }, '$focusDuration'] } },
           sessions: { $sum: 1 },
         },
       },
@@ -149,7 +144,7 @@ export const getCategories = asyncHandler(async (req, res) => {
       {
         $group: {
           _id: '$activityType',
-          totalMinutes: { $sum: '$focusDuration' },
+          totalMinutes: { $sum: { $cond: [{ $gt: ['$durationSec', 0] }, { $divide: ['$durationSec', 60] }, '$focusDuration'] } },
           sessions: { $sum: 1 },
         },
       },
@@ -161,7 +156,7 @@ export const getCategories = asyncHandler(async (req, res) => {
         $group: {
           _id: '$topic',
           category: { $first: '$category' },
-          totalMinutes: { $sum: '$focusDuration' },
+          totalMinutes: { $sum: { $cond: [{ $gt: ['$durationSec', 0] }, { $divide: ['$durationSec', 60] }, '$focusDuration'] } },
           sessions: { $sum: 1 },
         },
       },

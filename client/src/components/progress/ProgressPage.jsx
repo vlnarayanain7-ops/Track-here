@@ -7,7 +7,7 @@ import { useStreakData, useAnalytics } from '@/hooks/useAnalytics';
 import { useProblems, useCreateProblem } from '@/hooks/useProblems';
 import { useMockTests, useCreateMockTest } from '@/hooks/useMockTests';
 import { useCreateRevision } from '@/hooks/useRevisions';
-import { useRewardsMe, useSubmitProof, useClaimReward } from '@/hooks/useRewards';
+import { useRewardsMe } from '@/hooks/useRewards';
 import { useAuth } from '@/hooks/useAuth';
 import { StatsPanel } from '@/components/StatsPanel';
 import { MonthHeatmap } from '@/components/MonthHeatmap';
@@ -68,8 +68,6 @@ export default function ProgressPage() {
   const createProblemMutation = useCreateProblem();
   const createMockTestMutation = useCreateMockTest();
   const createRevisionMutation = useCreateRevision();
-  const submitProofMutation = useSubmitProof();
-  const claimRewardMutation = useClaimReward();
 
   // Rewards Sheet state
   const [rewardsOpen, setRewardsOpen] = useState(false);
@@ -249,16 +247,6 @@ export default function ProgressPage() {
     }
   };
 
-  const handleProofSubmit = async (payload) => {
-    await submitProofMutation.mutateAsync(payload);
-    toast.success(`Month ${payload.month} proof submitted for review.`);
-  };
-
-  const handleClaimSubmit = async (address) => {
-    await claimRewardMutation.mutateAsync(address);
-    toast.success('Surprise reward claim submitted successfully!');
-  };
-
   const handleDeleteSavedReport = async (id) => {
     try {
       await deleteReportLocal(id);
@@ -366,13 +354,6 @@ export default function ProgressPage() {
 
               <span className="text-[var(--muted)] select-none">·</span>
 
-              {/* Small locked gift that says "Surprise" */}
-              <div className="flex items-center gap-1.5 text-xs">
-                <Gift className={`w-4 h-4 ${rewardsData?.rewardRun >= 150 ? 'text-purple-400' : 'text-[var(--muted)]'}`} />
-                <span className={rewardsData?.rewardRun >= 150 ? 'font-semibold text-[var(--text)]' : 'text-[var(--muted)]'}>
-                  Surprise {rewardsData?.rewardRun >= 150 ? 'Unlocked' : 'Locked'}
-                </span>
-              </div>
             </div>
 
             <span className="text-[11px] text-[var(--primary)] font-medium shrink-0 group-hover:underline">
@@ -721,9 +702,7 @@ export default function ProgressPage() {
         open={rewardsOpen}
         onClose={() => setRewardsOpen(false)}
         data={rewardsData}
-        onProof={handleProofSubmit}
         onCertificate={handleDownloadCertificate}
-        onClaim={handleClaimSubmit}
       />
 
       {/* Focus Report Modal */}

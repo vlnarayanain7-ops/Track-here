@@ -60,7 +60,8 @@ export function MonthHeatmap({ minutesByDay, weekStartsOn = 1, today = ymd(new D
       year: 'numeric',
     })}${c.minutes ? ` · ${fmt(c.minutes)}` : ''}`;
 
-  const dayLabels = ['Mon', '', 'Wed', '', 'Fri', '', '']; // rotate this list if weekStartsOn is not Monday
+  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayLabels = weekdays.map((_, row) => row % 2 === 0 ? weekdays[(weekStartsOn + row) % 7] : '');
 
   return (
     <div className="w-full min-w-0">

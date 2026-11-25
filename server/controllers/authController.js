@@ -1,3 +1,4 @@
+import { passwordSchema } from '../utils/passwordSchema.js';
 import { z } from 'zod';
 import { OAuth2Client } from 'google-auth-library';
 import User from '../models/User.js';
@@ -22,8 +23,8 @@ import env from '../config/env.js';
 export const registerSchema = z.object({
   name: z.string().trim().min(2, 'Name must be at least 2 characters').max(50, 'Name must be at most 50 characters'),
   email: z.string().trim().email('Invalid email address').toLowerCase(),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  ageBand: z.enum(['under13', '13_17', '18_plus']).optional(),
+  password: passwordSchema,
+  ageBand: z.enum(['under13', '13_17', '18_plus']),
   termsVersion: z.string().optional(),
 });
 
@@ -37,7 +38,7 @@ export const forgotPasswordSchema = z.object({
 });
 
 export const resetPasswordSchema = z.object({
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: passwordSchema,
 });
 
 // ─── Controllers ──────────────────────────────────────────────
@@ -64,7 +65,7 @@ export const register = asyncHandler(async (req, res) => {
     name,
     email,
     password,
-    ageBand: ageBand === '13_17' ? '13_17' : '18_plus',
+    ageBand,
     termsVersion,
     termsAcceptedAt: new Date(),
   });
@@ -353,6 +354,7 @@ export const googleAuth = asyncHandler(async (req, res) => {
 
   let payload;
   try {
+    if (!env.GOOGLE_CLIENT_ID) throw ApiError.badRequest("Google sign-in is unavailable");
     const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: env.GOOGLE_CLIENT_ID });
     payload = ticket.getPayload();
   } catch {
@@ -374,7 +376,6 @@ export const googleAuth = asyncHandler(async (req, res) => {
       googleId: payload.sub,
       isVerified: true,
       avatar: payload.picture,
-      ageBand: '18_plus',
       dailyStudyGoal: 240,
       timezone: 'Asia/Kolkata',
       subjects: [],

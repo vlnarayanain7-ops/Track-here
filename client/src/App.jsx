@@ -152,7 +152,7 @@ export default function App() {
       <Route path="/register" element={<Navigate to="/signup" replace />} />
 
       {/* RequireAuth Protected Scope */}
-      <Route element={<RequireAuth homeSignIn={<SignIn />} />}>
+      <Route element={<RequireAuth />}>
         <Route path="/admin" element={<AdminPage />} />
         {/* Profile Completion (for Google signups missing ageBand) */}
         <Route path="/complete-profile" element={<CompleteProfile />} />

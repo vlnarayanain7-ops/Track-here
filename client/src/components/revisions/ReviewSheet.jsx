@@ -167,7 +167,7 @@ export default function ReviewSheet({ isOpen, open, onClose }) {
                     onClick={() => handleFeedback(item._id, 'Remembered')}
                     title="Remembered — increase interval"
                   >
-                    Remembered ? {reviewDate(item.intervalDays, 'Remembered')}
+                    Remembered · {reviewDate(item.intervalDays, 'Remembered')}
                   </button>
                   <button
                     type="button"
@@ -176,7 +176,7 @@ export default function ReviewSheet({ isOpen, open, onClose }) {
                     onClick={() => handleFeedback(item._id, 'Hard')}
                     title="Hard / Forgot — reset to 1 day"
                   >
-                    Hard ? {reviewDate(item.intervalDays, 'Hard')}
+                    Hard · {reviewDate(item.intervalDays, 'Hard')}
                   </button>
                   <button
                     type="button"

@@ -11,7 +11,7 @@ const requireServer = createRequire(new URL('../server/package.json', import.met
 const { MongoMemoryServer } = requireServer('mongodb-memory-server');
 const artifacts = '.qa-artifacts';
 await mkdir(artifacts, { recursive: true });
-const mongo = await MongoMemoryServer.create();
+const mongo = await MongoMemoryServer.create({ instance: { launchTimeout: 60000 } });
 let previewServer, api, browser, context, page;
 const results = [];
 const errors = [];
@@ -30,13 +30,14 @@ try {
   const { MongoClient, ObjectId } = requireServer('mongodb');
   const adminId = new ObjectId();
   const adminPassword = randomBytes(20).toString('hex');
+  const proofImage = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jq7sAAAAASUVORK5CYII=', 'base64');
   const seed = new MongoClient(uri);
   try {
     const db = seed.db();
     await db.collection('users').insertOne({ _id: adminId, name: 'Fixture Admin', email: 'admin@example.test',
       ageBand: '18_plus', termsVersion: '2026-11-20', onboardingCompleted: true,
       password: await requireServer('bcryptjs').hash(adminPassword, 10) });
-    await db.collection('proofs').insertMany([1,2].map(month => ({user:adminId, month, status:'pending', submittedAt:new Date()})));
+    await db.collection('proofs').insertMany([1,2].map(month => ({user:adminId, month, status:'pending', files: [{ type: 'image/png', data: proofImage }], submittedAt:new Date()})));
     await db.collection('claims').insertOne({user:adminId, status:'pending', createdAt:new Date()});
   } finally { await seed.close(); }
   api = spawn(process.execPath, ['server/index.js'], { windowsHide: true, env: {
@@ -61,6 +62,8 @@ try {
     results.push(route);
   };
   for (const route of ['/welcome','/explore','/tools','/roadmaps','/finals-planner','/terms','/privacy','/rewards-rules','/verify/local-qa','/signin','/forgot-password','/reset-password','/reset-password/local-test','/signup']) await visit(route);
+  await page.goto(base);
+  await expect(page).toHaveURL(/\/welcome$/);
   await page.goto(base + '/admin');
   await expect(page).toHaveURL(/\/signin$/);
   results.push('Guest admin guard');
@@ -74,6 +77,54 @@ try {
   await expect(page).toHaveURL(/\/onboarding$/);
   await page.getByRole('button', {name:'Skip for now'}).click();
   await page.getByRole('button', {name:'End tour'}).click();
+  const boundary = await page.evaluate(async () => {
+    const csrf = document.cookie.split('; ').find(cookie => cookie.startsWith('csrfToken='))?.split('=')[1];
+    const response = await fetch('/api/users/profile', { method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': decodeURIComponent(csrf || '') },
+      body: JSON.stringify({ name: 'Local QA', rewardRun: 150 }) });
+    const json = await response.json();
+    return { status: response.status, rewardRun: json.data?.user?.rewardRun };
+  });
+  expect(boundary.status).toBe(200);
+  expect(boundary.rewardRun).toBe(0);
+  const csrf = (await context.cookies()).find(cookie => cookie.name === 'csrfToken').value;
+  const headers = { 'X-CSRF-Token': csrf };
+  const request = context.request;
+  const sessionsUrl = base + '/api/study-sessions';
+  const created = await request.post(sessionsUrl, { headers, data: { topic: 'Audit fixture', focusDuration: 4, activityType: 'Video/Tutorial' } });
+  expect(created.status()).toBe(201);
+  const session = (await created.json()).data.session;
+  expect(session.heartbeatOk).toBe(false);
+  const dashboard = async () => (await (await request.get(base + '/api/analytics/dashboard')).json()).today.studyMinutes;
+  expect(await dashboard()).toBe(4);
+  expect((await request.patch(sessionsUrl + '/' + session._id, { headers, data: { focusDuration: 2 } })).ok()).toBe(true);
+  expect(await dashboard()).toBe(2);
+  const backup = (await (await request.get(base + '/api/users/me/export')).json()).data;
+  expect((await request.delete(sessionsUrl + '/' + session._id, { headers })).ok()).toBe(true);
+  expect(await dashboard()).toBe(0);
+  backup.mockTests = [{ title: 'Practice paper', obtainedMarks: 8, totalMarks: 10 }];
+  backup.timetableSlots = [{ dayOfWeek: 1, subject: 'Physics', startTime: '09:00', endTime: '10:00' }];
+  expect((await request.post(base + '/api/users/me/restore', { headers, data: backup })).ok()).toBe(true);
+  const restored = (await (await request.get(base + '/api/users/me/export')).json()).data;
+  expect(restored.studySessions[0].activityType).toBe('Video/Tutorial');
+  expect(restored.mockTests[0].title).toBe('Practice paper');
+  expect(restored.timetableSlots[0].subject).toBe('Physics');
+  expect(await dashboard()).toBe(2);
+  results.push('Session edits, deletion and backup restore update dashboard totals');
+  await visit('/study');
+  const started = page.waitForResponse(r => r.url().endsWith('/timer/start') && r.ok());
+  await page.getByRole('button', { name: 'Start', exact: true }).click();
+  await started;
+  await expect.poll(async () => {
+    const active = (await (await request.get(sessionsUrl + '/timer/active')).json()).data.session;
+    return active?.verifiedSeconds >= 30 && Date.now() - Date.parse(active.startedAt) >= 61000;
+  }, { timeout: 95000, intervals: [2000] }).toBe(true);
+  const [finished] = await Promise.all([
+    page.waitForResponse(r => r.url().endsWith('/finish') && r.ok()),
+    page.getByTitle('Finish session (Press S)').click(),
+  ]);
+  expect((await finished.json()).data.session.heartbeatOk).toBe(true);
+  results.push('Browser focus timer earned server-verified time');
   for (const route of ['/','/study','/notes','/plan','/progress','/settings','/revisions','/mission','/garden','/achievements','/circles','/challenges']) {
     await visit(route);
     const tabs = page.getByRole('tab');
@@ -179,6 +230,10 @@ try {
   await expect(page).not.toHaveURL(/\/signin$/);
   await visit('/admin');
   await expect(page.getByRole('heading',{name:'Admin Operations'})).toBeVisible();
+  const pending = (await (await request.get(base + '/api/admin/proofs')).json()).proofs;
+  expect(pending[0].files[0].data).toBeUndefined();
+  const image = await request.get(base + '/api/admin/proofs/' + pending[0]._id + '/files/0');
+  expect(await image.body()).toEqual(proofImage);
   const reviews = page.getByPlaceholder('Optional review note...');
   await reviews.first().fill('Local fixture review');
   await reviews.first().locator('..').getByRole('button',{name:'Approve'}).click();
@@ -188,6 +243,19 @@ try {
   await page.getByRole('button',{name:'Mark Shipped'}).click();
   await expect(page.getByText('shipped',{exact:true})).toBeVisible();
   results.push('Administrator sign-in, approve and reject proofs, ship a claim');
+  const adminCsrf = (await context.cookies()).find(cookie => cookie.name === 'csrfToken').value;
+  const adminHeaders = { 'X-CSRF-Token': adminCsrf };
+  for (const path of ['claim', 'proof']) {
+    expect((await request.post(base + '/api/rewards/' + path, { headers: adminHeaders, data: {} })).status()).toBe(410);
+  }
+  expect((await request.delete(base + '/api/users/me', { headers: adminHeaders, data: { password: adminPassword } })).ok()).toBe(true);
+  const inspection = new MongoClient(uri);
+  try {
+    for (const name of ['claims', 'proofs']) {
+      expect(await inspection.db().collection(name).countDocuments({ user: adminId })).toBe(0);
+    }
+  } finally { await inspection.close(); }
+  results.push('Closed claims, protected proof images and account deletion');
   expect(errors).toEqual([]);
 } catch (error) {
   failure = error.message;

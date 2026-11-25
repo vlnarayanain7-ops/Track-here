@@ -56,12 +56,6 @@ export default defineConfig({
         manualChunks(id) {
           const normalized = id.replace(/\\/g, '/');
           if (normalized.includes('/node_modules/')) {
-            if (normalized.includes('/@tiptap/') || normalized.includes('/prosemirror')) {
-              return 'vendor-editor';
-            }
-            if (normalized.includes('/recharts/') || normalized.includes('/d3-') || normalized.includes('/victory-vendor/')) {
-              return 'vendor-charts';
-            }
             if (normalized.includes('/lucide-react/')) {
               return 'vendor-icons';
             }

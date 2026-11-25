@@ -22,9 +22,9 @@ export const createDailyPlanSchema = z.object({
   notes: z.string().optional().nullable(),
   intentions: z.string().optional().nullable(),
   yesterdayIncomplete: z.array(z.string()).optional(),
-}).passthrough();
+});
 
-export const updateDailyPlanSchema = createDailyPlanSchema.partial().passthrough();
+export const updateDailyPlanSchema = createDailyPlanSchema.partial();
 
 // ─── Controllers ──────────────────────────────────────────────
 
