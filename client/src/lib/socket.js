@@ -10,8 +10,8 @@ const getSocketUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '');
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
-    if (host === 'localhost' || host === '127.0.0.1') {
-      // Connect via relative origin so Vite proxy forwards to 127.0.0.1:5000 without IPv6 resets
+    if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.workers.dev') || host.endsWith('.pages.dev')) {
+      // Use the same proxy as the API so the handshake carries the login cookie.
       return undefined;
     }
     return 'https://trackhere-api.onrender.com';
@@ -33,7 +33,7 @@ export function getSocket() {
       reconnectionAttempts: 20,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
     });
 
     // Auto-heal on 15-minute access token expiration:
@@ -41,7 +41,7 @@ export function getSocket() {
     // call /api/auth/refresh to rotate the cookie and reconnect seamlessly.
     socket.on('connect_error', async (err) => {
       const msg = String(err?.message || '').toLowerCase();
-      if (msg.includes('unauthorized') || msg.includes('origin_not_allowed')) {
+      if (msg.includes('unauthorized')) {
         const now = Date.now();
         // Cooldown: limit refresh attempts to at most once every 10 seconds
         if (isRefreshingSocket || (now - lastRefreshAttempt < 10000)) {
